@@ -8,11 +8,11 @@
  *   2. MultiSystemExample     — Gregorian + Hijri with system switcher.
  *   3. ThemedExample          — design-system tokens + custom labels.
  *   4. FullyComposedExample   — header parts placed in a custom layout,
- *                               action buttons living outside the calendar
- *                               in a sticky footer, custom day cell render.
+ *                               action buttons built by the consumer via
+ *                               useCalendarActions(), custom day cell.
  */
 import React, { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 // Hijri converter is brought in by the consumer (see #2 below) — the
 // calendar package itself has no converter dependency.
@@ -20,6 +20,8 @@ import * as hijriConverter from '@tabby_ai/hijri-converter';
 
 import {
   Calendar,
+  useCalendarActions,
+  useCalendarLabels,
   useCalendarSelector,
   useCalendarStore,
   type CalendarSystem,
@@ -48,7 +50,7 @@ function PresetExample() {
       >
         <Calendar.Header />
         <Calendar.View />
-        <Calendar.Actions />
+        <DemoActions />
       </Calendar.Root>
       <Text style={{ marginTop: 8 }}>
         Selected: {picked?.toDateString() ?? 'none'}
@@ -85,7 +87,7 @@ function MultiSystemExample() {
         <Calendar.SystemSwitcher />
         <Calendar.Header />
         <Calendar.View />
-        <Calendar.Actions />
+        <DemoActions />
       </Calendar.Root>
       <Text style={{ marginTop: 8 }}>
         Range: {range.start?.toDateString() ?? '—'} →{' '}
@@ -146,7 +148,7 @@ function ThemedExample() {
       >
         <Calendar.Header />
         <Calendar.View />
-        <Calendar.Actions />
+        <DemoActions />
       </Calendar.Root>
     </View>
   );
@@ -268,11 +270,9 @@ function FullyComposedExample() {
           <SelectionPreview />
         </View>
 
-        {/* Action buttons placed independently — they still control the store */}
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Calendar.Actions.ClearButton />
-          <Calendar.Actions.ConfirmButton />
-        </View>
+        {/* Action buttons built by the consumer — they still drive the store
+            because they live inside <Calendar.Root>. */}
+        <DemoActions />
       </Calendar.Root>
     </View>
   );
@@ -294,6 +294,58 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     >
       {children}
     </Text>
+  );
+}
+
+/**
+ * The package no longer ships <Calendar.Actions /> — confirm/clear are
+ * exposed as plain functions so the consumer brings their own buttons.
+ * This little helper is a typical recipe.
+ */
+function DemoActions() {
+  const { confirm, clear, canConfirm } = useCalendarActions();
+  const labels = useCalendarLabels();
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 12,
+      }}
+    >
+      <Pressable
+        onPress={clear}
+        style={{
+          flex: 1,
+          paddingVertical: 12,
+          borderRadius: 8,
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: '#CBD5E1',
+        }}
+      >
+        <Text style={{ color: '#0F172A', fontWeight: '600' }}>
+          {labels.clear}
+        </Text>
+      </Pressable>
+      <Pressable
+        disabled={!canConfirm}
+        onPress={confirm}
+        style={{
+          flex: 1,
+          paddingVertical: 12,
+          borderRadius: 8,
+          alignItems: 'center',
+          backgroundColor: canConfirm ? '#0EA5E9' : '#94A3B8',
+          opacity: canConfirm ? 1 : 0.7,
+        }}
+      >
+        <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
+          {labels.confirm}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 

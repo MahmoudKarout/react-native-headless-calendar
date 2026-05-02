@@ -18,10 +18,10 @@ export { DayCell, DayGrid } from './components/DayGrid';
 export { MonthGrid } from './components/MonthGrid';
 export { YearGrid } from './components/YearGrid';
 export { SystemSwitcher } from './components/SystemSwitcher';
-export { Actions } from './components/Actions';
 
 // Hooks for custom UI that needs to participate in calendar state.
 export {
+  useCalendarActions,
   useCalendarConfig,
   useCalendarLabels,
   useCalendarPrimitives,
@@ -29,6 +29,7 @@ export {
   useCalendarStore,
   useCalendarTheme,
 } from './context';
+export type { CalendarActions } from './context';
 
 // Store types for advanced consumers.
 export type { CalendarSnapshot, CalendarStore } from './store';

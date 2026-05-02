@@ -39,7 +39,7 @@ import {
 import type { CalendarSystem } from '../types';
 
 export interface SystemSwitcherRenderProps {
-  systems: CalendarSystem[];
+  systems: readonly CalendarSystem[];
   activeId: string;
   setActive: (systemId: string) => void;
 }

@@ -36,7 +36,7 @@ the `CalendarSystem<T>` contract.
 ## Quickstart
 
 ```tsx
-import { Calendar } from 'react-native-fast-calendar';
+import { Calendar, useCalendarActions } from 'react-native-fast-calendar';
 import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
 
 const systems = [gregorianSystem];
@@ -50,8 +50,21 @@ function MyDatePicker() {
     >
       <Calendar.Header />
       <Calendar.View />
-      <Calendar.Actions />
+      <MyConfirmBar />
     </Calendar.Root>
+  );
+}
+
+// Confirm/clear are exposed as plain functions — bring your own buttons.
+function MyConfirmBar() {
+  const { confirm, clear, canConfirm } = useCalendarActions();
+  return (
+    <View style={{ flexDirection: 'row', gap: 12 }}>
+      <Button onPress={clear}>Clear</Button>
+      <Button disabled={!canConfirm} onPress={confirm}>
+        Confirm
+      </Button>
+    </View>
   );
 }
 ```
@@ -81,7 +94,7 @@ const hijri = createHijriSystem({ converter });
   <Calendar.SystemSwitcher />
   <Calendar.Header />
   <Calendar.View />
-  <Calendar.Actions />
+  <MyConfirmBar /> {/* your own buttons — see useCalendarActions */}
 </Calendar.Root>;
 ```
 
@@ -234,15 +247,17 @@ import { Icon as MyIcon } from 'my-icon-set';
   </MyStickyBar>
 
   <MyDialogActions>
-    <Calendar.Actions.ClearButton />
-    <Calendar.Actions.ConfirmButton />
+    {/* useCalendarActions() works anywhere inside <Calendar.Root>, so a
+        sticky footer / dialog bar / drawer can drive the same store. */}
+    <MyClearButton />
+    <MyConfirmButton />
   </MyDialogActions>
 </Calendar.Root>
 ```
 
 The provider boundary is what matters — not the visual nesting. Any descendant
-of `<Calendar.Root>` can call `useCalendarStore()` / `useCalendarSelector()`
-to participate in the calendar's state.
+of `<Calendar.Root>` can call `useCalendarStore()` / `useCalendarSelector()` /
+`useCalendarActions()` to participate in the calendar's state.
 
 ## Custom day cell
 
@@ -287,6 +302,40 @@ function SelectionPreview() {
 Both can live anywhere inside `<Calendar.Root>` — sibling, ancestor of the
 grid, inside a different dialog — and stay in sync.
 
+## Confirm / clear actions
+
+The package ships **no opinion** on what an action button looks like.
+Confirm and clear are exposed as plain functions through `useCalendarActions()`,
+so you wire them to whatever button (or shortcut, or gesture, …) fits your
+design system.
+
+```tsx
+import { useCalendarActions, useCalendarLabels } from 'react-native-fast-calendar';
+
+function ConfirmBar() {
+  const { confirm, clear, canConfirm } = useCalendarActions();
+  const { confirm: confirmLabel, clear: clearLabel } = useCalendarLabels();
+
+  return (
+    <View style={{ flexDirection: 'row', gap: 12 }}>
+      <MyGhostButton onPress={clear}>{clearLabel}</MyGhostButton>
+      <MyPrimaryButton disabled={!canConfirm} onPress={confirm}>
+        {confirmLabel}
+      </MyPrimaryButton>
+    </View>
+  );
+}
+```
+
+| Returned                  | Description                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| `confirm()`               | Fires the `onConfirm` you passed to `<Calendar.Root>` with the latest payload. No-op if you didn't pass one. |
+| `clear()`                 | Wipes selection state and fires `onClear` (if provided).                     |
+| `canConfirm`              | `true` when the current selection is confirmable. Granular — only flips when the boolean changes. |
+
+The hook reads the latest snapshot at call time, so the returned function
+identities are stable and safe to pass to memoised buttons.
+
 ## Architecture
 
 ```
@@ -316,8 +365,7 @@ grid, inside a different dialog — and stay in sync.
 | `Calendar.Header.PrevButton/Next` | never (stable)                    |
 | `Calendar.View`                   | view switch only                  |
 | `Calendar.DayGrid` cells          | only the affected 2-4 cells       |
-| `Calendar.Actions.ConfirmButton`  | only when disabled state flips    |
-| `Calendar.Actions.ClearButton`    | never (stable)                    |
+| `useCalendarActions()` consumer   | only when `canConfirm` flips      |
 
 ## Contributing
 

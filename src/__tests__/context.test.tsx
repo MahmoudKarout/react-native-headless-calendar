@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
-import { Text } from 'react-native';
-import { act, render } from '@testing-library/react-native';
+import { Pressable, Text } from 'react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 import { Root } from '../components/Root';
 import {
   CalendarConfigContext,
+  useCalendarActions,
   useCalendarConfig,
   useCalendarLabels,
   useCalendarPrimitives,
@@ -118,5 +119,175 @@ describe('useCalendarPrimitives / useCalendarTheme / useCalendarLabels', () => {
     expect(captured.primitives).toBeDefined();
     expect(captured.theme).toBeDefined();
     expect(captured.labels).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useCalendarActions
+// ---------------------------------------------------------------------------
+
+describe('useCalendarActions', () => {
+  // Tiny harness that surfaces the hook's API as DOM nodes the test can
+  // press / inspect — keeps the assertions focused on the hook contract.
+  const ActionsHarness = () => {
+    const { confirm, clear, canConfirm } = useCalendarActions();
+    return (
+      <>
+        <Text testID="canConfirm">{canConfirm ? 'yes' : 'no'}</Text>
+        <Pressable onPress={confirm} testID="confirm">
+          <Text>confirm</Text>
+        </Pressable>
+        <Pressable onPress={clear} testID="clear">
+          <Text>clear</Text>
+        </Pressable>
+      </>
+    );
+  };
+
+  it('throws when used outside <Calendar.Root>', () => {
+    expect(() => render(<Capture run={() => useCalendarActions()} />)).toThrow(
+      /<Calendar.Root>/
+    );
+  });
+
+  it('canConfirm is false on first render in single mode', () => {
+    const { getByTestId } = render(
+      <Root systems={[gregorianSystem]}>
+        <ActionsHarness />
+      </Root>
+    );
+    expect(getByTestId('canConfirm').props.children).toBe('no');
+  });
+
+  it('canConfirm becomes true once a single date is preselected', () => {
+    const { getByTestId } = render(
+      <Root initialDate={new Date(2024, 4, 15)} systems={[gregorianSystem]}>
+        <ActionsHarness />
+      </Root>
+    );
+    expect(getByTestId('canConfirm').props.children).toBe('yes');
+  });
+
+  it('canConfirm stays false in range mode without both endpoints', () => {
+    const { getByTestId } = render(
+      <Root
+        initialStart={new Date(2024, 4, 15)}
+        mode="range"
+        systems={[gregorianSystem]}
+      >
+        <ActionsHarness />
+      </Root>
+    );
+    expect(getByTestId('canConfirm').props.children).toBe('no');
+  });
+
+  it('canConfirm flips to true once both range endpoints exist', () => {
+    const { getByTestId } = render(
+      <Root
+        initialEnd={new Date(2024, 4, 20)}
+        initialStart={new Date(2024, 4, 15)}
+        mode="range"
+        systems={[gregorianSystem]}
+      >
+        <ActionsHarness />
+      </Root>
+    );
+    expect(getByTestId('canConfirm').props.children).toBe('yes');
+  });
+
+  it('confirm fires onConfirm with the single-mode payload', () => {
+    const onConfirm = jest.fn();
+    const { getByTestId } = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        onConfirm={onConfirm}
+        systems={[gregorianSystem]}
+      >
+        <ActionsHarness />
+      </Root>
+    );
+    fireEvent.press(getByTestId('confirm'));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        systemId: 'gregorian',
+        date: expect.any(Date),
+      })
+    );
+  });
+
+  it('confirm fires onConfirm with start/end in range mode', () => {
+    const onConfirm = jest.fn();
+    const { getByTestId } = render(
+      <Root
+        initialEnd={new Date(2024, 4, 20)}
+        initialStart={new Date(2024, 4, 15)}
+        mode="range"
+        onConfirm={onConfirm}
+        systems={[gregorianSystem]}
+      >
+        <ActionsHarness />
+      </Root>
+    );
+    fireEvent.press(getByTestId('confirm'));
+    expect(onConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        systemId: 'gregorian',
+        startDate: expect.any(Date),
+        endDate: expect.any(Date),
+      })
+    );
+  });
+
+  it('confirm passes undefined date fields when nothing is selected', () => {
+    const onConfirm = jest.fn();
+    const { getByTestId } = render(
+      <Root onConfirm={onConfirm} systems={[gregorianSystem]}>
+        <ActionsHarness />
+      </Root>
+    );
+    fireEvent.press(getByTestId('confirm'));
+    expect(onConfirm).toHaveBeenCalledWith({
+      systemId: 'gregorian',
+      date: undefined,
+      startDate: undefined,
+      endDate: undefined,
+    });
+  });
+
+  it('confirm is a no-op when onConfirm is not provided', () => {
+    const { getByTestId } = render(
+      <Root initialDate={new Date(2024, 4, 15)} systems={[gregorianSystem]}>
+        <ActionsHarness />
+      </Root>
+    );
+    expect(() => fireEvent.press(getByTestId('confirm'))).not.toThrow();
+  });
+
+  it('clear wipes the selection and fires onClear', () => {
+    const onClear = jest.fn();
+    const { getByTestId } = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        onClear={onClear}
+        systems={[gregorianSystem]}
+      >
+        <ActionsHarness />
+      </Root>
+    );
+    expect(getByTestId('canConfirm').props.children).toBe('yes');
+    fireEvent.press(getByTestId('clear'));
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(getByTestId('canConfirm').props.children).toBe('no');
+  });
+
+  it('clear is safe when onClear was not provided', () => {
+    const { getByTestId } = render(
+      <Root initialDate={new Date(2024, 4, 15)} systems={[gregorianSystem]}>
+        <ActionsHarness />
+      </Root>
+    );
+    expect(() => fireEvent.press(getByTestId('clear'))).not.toThrow();
+    expect(getByTestId('canConfirm').props.children).toBe('no');
   });
 });

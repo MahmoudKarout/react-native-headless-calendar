@@ -5,7 +5,6 @@
  *     <Calendar.SystemSwitcher />
  *     <Calendar.Header />
  *     <Calendar.View />
- *     <Calendar.Actions />
  *   </Calendar.Root>
  *
  * Or fully composed:
@@ -21,11 +20,16 @@
  *       <Calendar.Header.NextButton><MyChevron dir="right" /></Calendar.Header.NextButton>
  *     </Calendar.Header.Root>
  *     <Calendar.View renderDay={(info) => <MyCustomCell info={info} />} />
- *     <Calendar.Actions.ClearButton />
- *     <Calendar.Actions.ConfirmButton />
  *   </Calendar.Root>
+ *
+ * Confirm / clear are intentionally NOT shipped as components — bring your
+ * own buttons and wire them via `useCalendarActions()`:
+ *
+ *   const { confirm, clear, canConfirm } = useCalendarActions();
+ *
+ *   <MyButton disabled={!canConfirm} onPress={confirm}>Done</MyButton>
+ *   <MyButton onPress={clear}>Reset</MyButton>
  */
-import { Actions } from './components/Actions';
 import { DayCell, DayGrid } from './components/DayGrid';
 import { Header } from './components/Header';
 import { MonthGrid } from './components/MonthGrid';
@@ -43,7 +47,6 @@ export const Calendar = {
   MonthGrid,
   YearGrid,
   SystemSwitcher,
-  Actions,
 } as const;
 
 export type CalendarNamespace = typeof Calendar;

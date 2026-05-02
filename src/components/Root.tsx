@@ -30,6 +30,7 @@ import type {
   CalendarLabels,
   CalendarMode,
   CalendarPrimitives,
+  CalendarSelectionPayload,
   CalendarSystem,
   CalendarTheme,
   CalendarThemeOverride,
@@ -39,6 +40,7 @@ import type {
   OnConfirm,
   OnSystemChange,
 } from '../types';
+import { useStableArray, useStableCallback } from '../utils/stableProps';
 
 export interface CalendarRootProps {
   /**
@@ -46,7 +48,7 @@ export interface CalendarRootProps {
    * `initialSystemId` is set. Pass `[gregorianSystem, hijriSystem]` to
    * enable a system switcher; pass a single system to lock it.
    */
-  systems: CalendarSystem[];
+  systems: readonly CalendarSystem[];
   /** ID of the system to start on. Defaults to `systems[0].id`. */
   initialSystemId?: string;
   /** Selection mode. */
@@ -139,11 +141,24 @@ export const Root: React.FC<CalendarRootProps> = ({
   testID,
   children,
 }) => {
+  // Stabilise inputs that consumers commonly write inline. Without this,
+  // every parent re-render (e.g. after a `setState` triggered by the
+  // user's own `onConfirm`) would create new identities for these props,
+  // rebuild `config` below, and force every CalendarConfigContext consumer
+  // to re-render. See ../utils/stableProps for the rationale.
+  const stableSystems = useStableArray(systems);
+  const stableOnConfirm: OnConfirm | undefined =
+    useStableCallback<[CalendarSelectionPayload]>(onConfirm);
+  const stableOnClear: OnClear | undefined = useStableCallback<[]>(onClear);
+  const stableOnSystemChange: OnSystemChange | undefined =
+    useStableCallback<[string]>(onSystemChange);
+  const stableOnSelectHaptic = useStableCallback<[]>(onSelectHaptic);
+
   // Store — created once, kept in a ref so identity is stable.
   const storeRef = useRef<CalendarStore | null>(null);
   if (!storeRef.current) {
     storeRef.current = new CalendarStore({
-      systems,
+      systems: stableSystems,
       initialSystemId,
       mode,
       initialDate,
@@ -162,7 +177,7 @@ export const Root: React.FC<CalendarRootProps> = ({
   // before paint so the first render reflects the latest props.
   useLayoutEffect(() => {
     store.syncProps({
-      systems,
+      systems: stableSystems,
       mode,
       minDate,
       maxDate,
@@ -174,48 +189,53 @@ export const Root: React.FC<CalendarRootProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, minDate, maxDate, disabledDates, disabledRanges, allowSameDay]);
 
-  // If the systems prop array changes identity, swap the active system.
+  // If the systems prop array changes identity (and therefore content),
+  // swap the active system. `stableSystems` only changes when an element
+  // identity actually changed, so inline `[gregorianSystem]` literals
+  // don't fire this effect.
   useEffect(() => {
     const currentId = store.getSnapshot().system.id;
-    const idx = systems.findIndex((s) => s.id === currentId);
+    const idx = stableSystems.findIndex((s) => s.id === currentId);
     if (idx === -1) {
       // Active system removed — fall back to the first system if one exists.
-      const next = systems[0];
+      const next = stableSystems[0];
       /* istanbul ignore else — `if (next)` guards against an empty systems[]
        * (CalendarStore would already have rejected at construction time). */
       if (next) store.replaceSystem(next, 0);
-    } else if (systems[idx] !== store.getSnapshot().system) {
+    } else if (stableSystems[idx] !== store.getSnapshot().system) {
       // Same id but a fresh adapter instance — adopt it.
-      const next = systems[idx];
+      const next = stableSystems[idx];
       /* istanbul ignore else — `next` is guaranteed defined because `idx` was
        * just resolved by findIndex; the guard satisfies TS only. */
       if (next) store.replaceSystem(next, idx);
     }
-  }, [systems, store]);
+  }, [stableSystems, store]);
 
   // Config context — memoised so primitives/theme/labels overrides don't
-  // create new context values per render.
+  // create new context values per render. All callback / array inputs
+  // were stabilised above, so inline-prop usage at the call site does not
+  // churn this value.
   const config = useMemo<CalendarConfig>(
     () => ({
       primitives: mergePrimitives(primitives),
       theme: mergeTheme(theme),
       labels: mergeLabels(labels),
-      systems,
-      onConfirm,
-      onClear,
-      onSystemChange,
-      onSelectHaptic,
+      systems: stableSystems,
+      onConfirm: stableOnConfirm,
+      onClear: stableOnClear,
+      onSystemChange: stableOnSystemChange,
+      onSelectHaptic: stableOnSelectHaptic,
       testID,
     }),
     [
       primitives,
       theme,
       labels,
-      systems,
-      onConfirm,
-      onClear,
-      onSystemChange,
-      onSelectHaptic,
+      stableSystems,
+      stableOnConfirm,
+      stableOnClear,
+      stableOnSystemChange,
+      stableOnSelectHaptic,
       testID,
     ]
   );

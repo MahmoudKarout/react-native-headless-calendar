@@ -52,7 +52,7 @@ export interface CalendarSnapshot<T = CalendarDateValue> {
 }
 
 export interface CalendarStoreOptions<T = CalendarDateValue> {
-  systems: CalendarSystem<T>[];
+  systems: readonly CalendarSystem<T>[];
   initialSystemId?: string;
   mode: CalendarMode;
   initialDate?: unknown;

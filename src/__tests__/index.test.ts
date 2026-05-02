@@ -12,15 +12,19 @@ describe('public surface — components', () => {
     'MonthGrid',
     'YearGrid',
     'SystemSwitcher',
-    'Actions',
   ])('exports %s', (name) => {
     expect(publicSurface).toHaveProperty(name);
     expect((publicSurface as Record<string, unknown>)[name]).toBeDefined();
+  });
+
+  it('does not export the removed <Actions /> component', () => {
+    expect(publicSurface).not.toHaveProperty('Actions');
   });
 });
 
 describe('public surface — hooks', () => {
   it.each([
+    'useCalendarActions',
     'useCalendarConfig',
     'useCalendarLabels',
     'useCalendarPrimitives',
@@ -54,10 +58,9 @@ describe('public surface — defaults & utilities', () => {
 });
 
 describe('Calendar namespace', () => {
-  it('contains the eight compound parts as static members', () => {
+  it('contains the compound parts as static members', () => {
     expect(Object.keys(Calendar).sort()).toEqual(
       [
-        'Actions',
         'DayCell',
         'DayGrid',
         'Header',
@@ -70,16 +73,15 @@ describe('Calendar namespace', () => {
     );
   });
 
+  it('does not expose Actions on the Calendar namespace', () => {
+    expect(Calendar).not.toHaveProperty('Actions');
+  });
+
   it('Header has Root / PrevButton / NextButton / MonthLabel / YearLabel as statics', () => {
     expect(Calendar.Header.Root).toBeDefined();
     expect(Calendar.Header.PrevButton).toBeDefined();
     expect(Calendar.Header.NextButton).toBeDefined();
     expect(Calendar.Header.MonthLabel).toBeDefined();
     expect(Calendar.Header.YearLabel).toBeDefined();
-  });
-
-  it('Actions has ConfirmButton / ClearButton as statics', () => {
-    expect(Calendar.Actions.ConfirmButton).toBeDefined();
-    expect(Calendar.Actions.ClearButton).toBeDefined();
   });
 });

@@ -9,7 +9,12 @@
  *      and the systems list. Updates infrequently. Splitting it from the
  *      store means a date tap doesn't propagate any context change at all.
  */
-import { createContext, useContext, useSyncExternalStore } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useSyncExternalStore,
+} from 'react';
 
 import type { CalendarStore, CalendarSnapshot } from './store';
 import type {
@@ -62,7 +67,7 @@ export interface CalendarConfig {
   primitives: CalendarPrimitives;
   theme: CalendarTheme;
   labels: CalendarLabels;
-  systems: CalendarSystem[];
+  systems: readonly CalendarSystem[];
   onConfirm?: OnConfirm;
   onClear?: OnClear;
   onSystemChange?: OnSystemChange;
@@ -92,3 +97,71 @@ export const useCalendarTheme = (): CalendarTheme => useCalendarConfig().theme;
 
 export const useCalendarLabels = (): CalendarLabels =>
   useCalendarConfig().labels;
+
+// ---------------------------------------------------------------------------
+// useCalendarActions — confirm + clear exposed as plain functions so the
+// consumer can wire them to whatever button (or shortcut, or gesture, …)
+// they want. The package ships no opinion on what an action button looks
+// like.
+//
+//   const { confirm, clear, canConfirm } = useCalendarActions();
+//
+//   <MyPrimaryButton disabled={!canConfirm} onPress={confirm}>
+//     Done
+//   </MyPrimaryButton>
+//   <MyGhostButton onPress={clear}>Reset</MyGhostButton>
+// ---------------------------------------------------------------------------
+
+export interface CalendarActions {
+  /**
+   * Fire the configured `onConfirm` (passed to <Calendar.Root>) with the
+   * current selection payload. Reads the latest snapshot at call time, so
+   * the function identity is stable across renders.
+   *
+   * No-op when `onConfirm` was not provided on <Calendar.Root>.
+   */
+  confirm: () => void;
+  /**
+   * Wipe all selection state (single date + range endpoints) and fire the
+   * configured `onClear` callback if one was provided. Stable identity.
+   */
+  clear: () => void;
+  /**
+   * `true` when the current selection is confirmable:
+   *   - single mode: a date is selected.
+   *   - range mode:  both endpoints are selected.
+   *
+   * Subscribed via a granular selector — toggling between two valid
+   * selections doesn't cause this to change, so consumers that pass it to
+   * a memoised button will skip re-renders.
+   */
+  canConfirm: boolean;
+}
+
+export function useCalendarActions(): CalendarActions {
+  const store = useCalendarStore();
+  const { onConfirm, onClear } = useCalendarConfig();
+
+  const canConfirm = useCalendarSelector((s) => {
+    if (s.mode === 'single') return !!s.selectedDate;
+    return !!(s.rangeStart && s.rangeEnd);
+  });
+
+  const confirm = useCallback(() => {
+    if (!onConfirm) return;
+    const s = store.getSnapshot();
+    onConfirm({
+      date: s.selectedDate ? s.system.toNativeDate(s.selectedDate) : undefined,
+      startDate: s.rangeStart ? s.system.toNativeDate(s.rangeStart) : undefined,
+      endDate: s.rangeEnd ? s.system.toNativeDate(s.rangeEnd) : undefined,
+      systemId: s.system.id,
+    });
+  }, [onConfirm, store]);
+
+  const clear = useCallback(() => {
+    store.clear();
+    onClear?.();
+  }, [store, onClear]);
+
+  return { confirm, clear, canConfirm };
+}
