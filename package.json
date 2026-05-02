@@ -6,9 +6,19 @@
   "types": "./lib/typescript/src/index.d.ts",
   "exports": {
     ".": {
-      "source": "./src/index.tsx",
+      "source": "./src/index.ts",
       "types": "./lib/typescript/src/index.d.ts",
       "default": "./lib/module/index.js"
+    },
+    "./systems/gregorian": {
+      "source": "./src/systems/gregorian.ts",
+      "types": "./lib/typescript/src/systems/gregorian.d.ts",
+      "default": "./lib/module/systems/gregorian.js"
+    },
+    "./systems/hijri": {
+      "source": "./src/systems/hijri.ts",
+      "types": "./lib/typescript/src/systems/hijri.d.ts",
+      "default": "./lib/module/systems/hijri.js"
     },
     "./package.json": "./package.json"
   },
@@ -37,7 +47,8 @@
     "prepare": "bob build",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
-    "test": "jest",
+    "test": "TZ=UTC jest",
+    "test:coverage": "TZ=UTC jest --coverage",
     "release": "release-it --only-version"
   },
   "keywords": [
@@ -68,7 +79,10 @@
     "@react-native/eslint-config": "0.85.0",
     "@react-native/jest-preset": "0.85.0",
     "@release-it/conventional-changelog": "^10.0.6",
+    "@testing-library/react-native": "^13",
+    "@types/jest": "^30.0.0",
     "@types/react": "^19.2.0",
+    "@types/react-test-renderer": "^19",
     "commitlint": "^20.5.0",
     "del-cli": "^7.0.0",
     "eslint": "^9.39.4",
@@ -81,6 +95,7 @@
     "react": "19.2.0",
     "react-native": "0.83.6",
     "react-native-builder-bob": "^0.41.0",
+    "react-test-renderer": "19.2.0",
     "release-it": "^19.2.4",
     "turbo": "^2.8.21",
     "typescript": "^6.0.2"
@@ -123,7 +138,28 @@
     "modulePathIgnorePatterns": [
       "<rootDir>/example/node_modules",
       "<rootDir>/lib/"
-    ]
+    ],
+    "globalSetup": "<rootDir>/jest.setup.ts",
+    "collectCoverageFrom": [
+      "src/**/*.{ts,tsx}",
+      "!src/**/*.d.ts",
+      "!src/types.ts",
+      "!src/index.ts"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "text-summary",
+      "lcov"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 100,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
+      }
+    }
   },
   "release-it": {
     "git": {
