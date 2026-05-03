@@ -2,14 +2,21 @@
  * Self-contained demo showing 4 different ways to use
  * react-native-fast-calendar.
  *
- * Each variant demonstrates a key composition pattern from the package:
+ * The library is **headless** beyond `<Calendar.Root>` and
+ * `<Calendar.DayGrid>` — every other piece of UI is built by the consumer
+ * using the `useCalendar*` hooks. The four examples below show different
+ * shapes that composition can take.
  *
- *   1. PresetExample          — minimal "just give me a calendar" usage.
- *   2. MultiSystemExample     — Gregorian + Hijri with system switcher.
+ *   1. PresetExample          — minimal "just give me a calendar" usage
+ *                               using the helper components defined right
+ *                               in this file.
+ *   2. MultiSystemExample     — Gregorian + Hijri with a custom segmented
+ *                               system switcher built from
+ *                               `useCalendarSystemSwitcher`.
  *   3. ThemedExample          — design-system tokens + custom labels.
  *   4. FullyComposedExample   — header parts placed in a custom layout,
- *                               action buttons built by the consumer via
- *                               useCalendarActions(), custom day cell.
+ *                               custom day cell, custom month + year
+ *                               pickers, "Today" shortcut.
  */
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -22,8 +29,14 @@ import {
   Calendar,
   useCalendarActions,
   useCalendarLabels,
+  useCalendarMonthLabel,
+  useCalendarMonthPicker,
+  useCalendarNavigation,
   useCalendarSelector,
   useCalendarStore,
+  useCalendarSystemSwitcher,
+  useCalendarYearLabel,
+  useCalendarYearPicker,
   type CalendarSystem,
   type DayCellInfo,
 } from 'react-native-fast-calendar';
@@ -41,21 +54,22 @@ function PresetExample() {
   const [picked, setPicked] = useState<Date | undefined>();
 
   return (
-    <View style={{ padding: 16 }}>
-      <SectionTitle>1. Preset (single date)</SectionTitle>
+    <>
+      <SectionTitle>1. Preset (single date, swipeable)</SectionTitle>
       <Calendar.Root
         mode="single"
         onConfirm={({ date }) => setPicked(date)}
         systems={[gregorianSystem]}
       >
-        <Calendar.Header />
-        <Calendar.View />
+        <DemoHeader />
+        {/* Swipe horizontally on the day grid to step between months. */}
+        <DemoView swipeable />
         <DemoActions />
       </Calendar.Root>
       <Text style={{ marginTop: 8 }}>
         Selected: {picked?.toDateString() ?? 'none'}
       </Text>
-    </View>
+    </>
   );
 }
 
@@ -84,9 +98,9 @@ function MultiSystemExample() {
         systems={MULTI_SYSTEMS}
         allowSameDay
       >
-        <Calendar.SystemSwitcher />
-        <Calendar.Header />
-        <Calendar.View />
+        <DemoSystemSwitcher />
+        <DemoHeader />
+        <DemoView />
         <DemoActions />
       </Calendar.Root>
       <Text style={{ marginTop: 8 }}>
@@ -123,8 +137,13 @@ const FRENCH_SYSTEM = createGregorianSystem({
 function ThemedExample() {
   return (
     <View style={{ padding: 16 }}>
-      <SectionTitle>3. Custom theme + French labels</SectionTitle>
+      <SectionTitle>
+        3. Custom theme + French labels (Monday-first)
+      </SectionTitle>
       <Calendar.Root
+        // French calendars start the week on Monday — pass `firstDayOfWeek={1}`
+        // and the day grid + weekday header rotate accordingly.
+        firstDayOfWeek={1}
         labels={{
           confirm: 'Valider',
           clear: 'Effacer',
@@ -146,8 +165,8 @@ function ThemedExample() {
         mode="single"
         systems={[FRENCH_SYSTEM]}
       >
-        <Calendar.Header />
-        <Calendar.View />
+        <DemoHeader />
+        <DemoView />
         <DemoActions />
       </Calendar.Root>
     </View>
@@ -235,26 +254,11 @@ function FullyComposedExample() {
       <SectionTitle>4. Fully composed (custom layout + cell)</SectionTitle>
       <Calendar.Root mode="single" systems={[gregorianSystem]}>
         {/* Custom header layout — month/year stacked, arrows on the right */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingVertical: 8,
-          }}
-        >
-          <View>
-            <Calendar.Header.MonthLabel />
-            <Calendar.Header.YearLabel />
-          </View>
-          <View style={{ flexDirection: 'row' }}>
-            <Calendar.Header.PrevButton />
-            <Calendar.Header.NextButton />
-          </View>
-        </View>
+        <CustomStackedHeader />
 
-        {/* Custom day-cell renderer */}
-        <Calendar.View renderDay={(info) => <CustomDayCell info={info} />} />
+        {/* Custom view switching — DayGrid stays as the only built-in
+            renderer, the month/year grids are entirely consumer code. */}
+        <DemoView renderDay={(info) => <CustomDayCell info={info} />} />
 
         {/* Custom UI that participates in calendar state, but lives
             OUTSIDE the calendar grid */}
@@ -278,8 +282,44 @@ function FullyComposedExample() {
   );
 }
 
+function CustomStackedHeader() {
+  const monthLabel = useCalendarMonthLabel();
+  const yearLabel = useCalendarYearLabel();
+  const { goPrev, goNext } = useCalendarNavigation();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 8,
+      }}
+    >
+      <View>
+        {monthLabel.isVisible && (
+          <Pressable onPress={monthLabel.toggle}>
+            <Text style={{ fontSize: 18, fontWeight: '700' }}>
+              {monthLabel.label}
+            </Text>
+          </Pressable>
+        )}
+        <Pressable onPress={yearLabel.toggle}>
+          <Text style={{ fontSize: 14, color: '#475569' }}>
+            {yearLabel.label}
+          </Text>
+        </Pressable>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Chevron direction="left" onPress={goPrev} />
+        <Chevron direction="right" onPress={goNext} />
+      </View>
+    </View>
+  );
+}
+
 // ===========================================================================
-// Helpers
+// Helpers — these used to be packaged components. Now they are recipe
+// snippets a consumer would copy/customise for their own design system.
 // ===========================================================================
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -294,6 +334,220 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     >
       {children}
     </Text>
+  );
+}
+
+/**
+ * Tiny chevron drawn with two diagonal Views — replaces the icon primitive
+ * the library used to ship. Consumers are expected to use whatever icon
+ * library they already depend on.
+ */
+function Chevron({
+  direction,
+  onPress,
+}: {
+  direction: 'left' | 'right';
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        width: 32,
+        height: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Text style={{ color: '#1F6FEB', fontSize: 18, fontWeight: '700' }}>
+        {direction === 'left' ? '‹' : '›'}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Default header — month label + year label on the left, two chevrons on
+ * the right. Built entirely from hooks; nothing in here is shipped by the
+ * library.
+ */
+function DemoHeader() {
+  const monthLabel = useCalendarMonthLabel();
+  const yearLabel = useCalendarYearLabel();
+  const { goPrev, goNext } = useCalendarNavigation();
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 8,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        {monthLabel.isVisible && (
+          <Pressable onPress={monthLabel.toggle}>
+            <Text style={{ color: '#1F6FEB', fontSize: 16, fontWeight: '600' }}>
+              {monthLabel.label}
+            </Text>
+          </Pressable>
+        )}
+        <Pressable onPress={yearLabel.toggle}>
+          <Text style={{ color: '#1F6FEB', fontSize: 16, fontWeight: '600' }}>
+            {yearLabel.label}
+          </Text>
+        </Pressable>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <Chevron direction="left" onPress={goPrev} />
+        <Chevron direction="right" onPress={goNext} />
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Switches between the day grid (built-in), a consumer-built month
+ * picker, and a consumer-built year picker — driven by the active
+ * `view` slice of the store. `swipeable` turns on horizontal swipe
+ * navigation between months — composes with the arrow buttons in
+ * `DemoHeader` because both go through `store.changeMonth`.
+ */
+function DemoView({
+  renderDay,
+  swipeable,
+}: {
+  renderDay?: (info: DayCellInfo) => React.ReactNode;
+  swipeable?: boolean;
+}) {
+  const view = useCalendarSelector((s) => s.view);
+  if (view === 'day')
+    return <Calendar.DayGrid renderDay={renderDay} swipeable={swipeable} />;
+  if (view === 'month') return <DemoMonthPicker />;
+  return <DemoYearPicker />;
+}
+
+/**
+ * 4×3 grid of months — example consumer code built on
+ * `useCalendarMonthPicker`.
+ */
+function DemoMonthPicker() {
+  const { months, activeMonth, selectMonth } = useCalendarMonthPicker();
+  return (
+    <View
+      style={{ flexDirection: 'row', flexWrap: 'wrap', paddingVertical: 8 }}
+    >
+      {months.map((m) => {
+        const isActive = m.index === activeMonth;
+        return (
+          <Pressable
+            key={m.index}
+            onPress={() => selectMonth(m.index)}
+            style={{
+              width: '33.3333%',
+              paddingVertical: 12,
+              alignItems: 'center',
+              borderRadius: 8,
+              backgroundColor: isActive ? '#1F6FEB' : 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                color: isActive ? '#FFFFFF' : '#0F172A',
+                fontWeight: isActive ? '600' : '500',
+              }}
+            >
+              {m.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * 4×3 grid of years — example consumer code built on
+ * `useCalendarYearPicker`.
+ */
+function DemoYearPicker() {
+  const { years, activeYear, selectYear } = useCalendarYearPicker();
+  return (
+    <View
+      style={{ flexDirection: 'row', flexWrap: 'wrap', paddingVertical: 8 }}
+    >
+      {years.map((y) => {
+        const isActive = y === activeYear;
+        return (
+          <Pressable
+            key={y}
+            onPress={() => selectYear(y)}
+            style={{
+              width: '33.3333%',
+              paddingVertical: 12,
+              alignItems: 'center',
+              borderRadius: 8,
+              backgroundColor: isActive ? '#1F6FEB' : 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                color: isActive ? '#FFFFFF' : '#0F172A',
+                fontWeight: isActive ? '600' : '500',
+              }}
+            >
+              {y}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * Pill-style segmented control built on `useCalendarSystemSwitcher`.
+ */
+function DemoSystemSwitcher() {
+  const { systems, activeId, setActive } = useCalendarSystemSwitcher();
+  if (systems.length < 2) return null;
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        backgroundColor: '#E5E7EB',
+        borderRadius: 8,
+        padding: 4,
+        marginBottom: 8,
+      }}
+    >
+      {systems.map((s) => {
+        const isActive = s.id === activeId;
+        return (
+          <Pressable
+            key={s.id}
+            onPress={() => setActive(s.id)}
+            style={{
+              flex: 1,
+              paddingVertical: 8,
+              alignItems: 'center',
+              borderRadius: 6,
+              backgroundColor: isActive ? '#FFFFFF' : 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                color: isActive ? '#1F6FEB' : '#0F172A',
+                fontWeight: isActive ? '600' : '500',
+              }}
+            >
+              {s.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -355,7 +609,7 @@ function DemoActions() {
 
 export default function CalendarDemo() {
   return (
-    <ScrollView contentContainerStyle={{ paddingVertical: 16 }}>
+    <ScrollView>
       <PresetExample />
       <MultiSystemExample />
       <ThemedExample />

@@ -1,52 +1,50 @@
 /**
  * Namespaced compound API.
  *
+ * The library is **headless** beyond two pieces:
+ *
+ *   - `<Calendar.Root>`    — the provider every other piece needs.
+ *   - `<Calendar.DayGrid>` — the only stable rendered component, because
+ *                            laying out and memoising a 6×7 grid of day
+ *                            cells is the one thing that genuinely
+ *                            benefits from a built-in implementation.
+ *                            (Per-cell visuals are still overridable via
+ *                            its `renderDay` prop and via the `Pressable`
+ *                            / `Text` primitives on `<Calendar.Root>`.)
+ *
+ * Everything else — system switcher, prev/next buttons, month/year
+ * header labels, month picker grid, year picker grid, confirm/clear
+ * buttons — is exposed as a hook so the consumer brings their own UI
+ * and wires it to the same store:
+ *
+ *   useCalendarActions       — confirm / clear / canConfirm
+ *   useCalendarNavigation    — goPrev / goNext (view + RTL aware)
+ *   useCalendarMonthLabel    — header "month" affordance
+ *   useCalendarYearLabel     — header "year" affordance
+ *   useCalendarSystemSwitcher— systems list + activeId + setter
+ *   useCalendarMonthPicker   — 12-cell month chooser data + actions
+ *   useCalendarYearPicker    — 12-cell year chooser data + actions
+ *
+ * Typical composition:
+ *
  *   <Calendar.Root systems={[gregorianSystem]} mode="single">
- *     <Calendar.SystemSwitcher />
- *     <Calendar.Header />
- *     <Calendar.View />
+ *     <MyHeader />        // built with useCalendarNavigation +
+ *                         //            useCalendarMonthLabel +
+ *                         //            useCalendarYearLabel
+ *     <MyView />          // calls useCalendarSelector(s => s.view)
+ *                         // and renders <Calendar.DayGrid /> /
+ *                         //              <MyMonthPicker /> /
+ *                         //              <MyYearPicker />
+ *     <MyConfirmBar />    // useCalendarActions()
  *   </Calendar.Root>
- *
- * Or fully composed:
- *
- *   <Calendar.Root ...>
- *     <Calendar.SystemSwitcher>
- *       {({ systems, activeId, setActive }) => <MyTabs ... />}
- *     </Calendar.SystemSwitcher>
- *     <Calendar.Header.Root>
- *       <Calendar.Header.PrevButton><MyChevron dir="left" /></Calendar.Header.PrevButton>
- *       <Calendar.Header.MonthLabel />
- *       <Calendar.Header.YearLabel />
- *       <Calendar.Header.NextButton><MyChevron dir="right" /></Calendar.Header.NextButton>
- *     </Calendar.Header.Root>
- *     <Calendar.View renderDay={(info) => <MyCustomCell info={info} />} />
- *   </Calendar.Root>
- *
- * Confirm / clear are intentionally NOT shipped as components — bring your
- * own buttons and wire them via `useCalendarActions()`:
- *
- *   const { confirm, clear, canConfirm } = useCalendarActions();
- *
- *   <MyButton disabled={!canConfirm} onPress={confirm}>Done</MyButton>
- *   <MyButton onPress={clear}>Reset</MyButton>
  */
 import { DayCell, DayGrid } from './components/DayGrid';
-import { Header } from './components/Header';
-import { MonthGrid } from './components/MonthGrid';
 import { Root } from './components/Root';
-import { SystemSwitcher } from './components/SystemSwitcher';
-import { View } from './components/View';
-import { YearGrid } from './components/YearGrid';
 
 export const Calendar = {
   Root,
-  Header,
-  View,
   DayGrid,
   DayCell,
-  MonthGrid,
-  YearGrid,
-  SystemSwitcher,
 } as const;
 
 export type CalendarNamespace = typeof Calendar;

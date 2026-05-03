@@ -4,7 +4,7 @@
  * Everything here is overridable via <Calendar.Root>'s props. The defaults
  * use raw RN primitives so the package has no design-system dependencies.
  */
-import React, { forwardRef, type ComponentRef } from 'react';
+import { forwardRef, type ComponentRef } from 'react';
 import {
   Pressable as RNPressable,
   Text as RNText,
@@ -18,7 +18,6 @@ import type {
   CalendarLabels,
   CalendarPrimitives,
   CalendarTheme,
-  IconProps,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -47,66 +46,10 @@ const DefaultPressable = forwardRef<
 >((props, ref) => <RNPressable ref={ref} {...props} />);
 DefaultPressable.displayName = 'Calendar.DefaultPressable';
 
-/**
- * Tiny chevron icon drawn with two diagonal Views — no SVG dependency.
- * Replace via <Calendar.Root primitives={{ Icon: MyIcon }}> for anything
- * fancier (vector-icons, react-native-svg, etc).
- */
-const DefaultIcon: React.FC<IconProps> = ({
-  name,
-  size = 16,
-  color = '#0A0A0A',
-  style,
-}) => {
-  const stroke = Math.max(1.5, size / 10);
-  const half = size / 2;
-  const armSize = size * 0.45;
-  const offset = (size - armSize) / 2;
-
-  return (
-    <RNView
-      accessible={false}
-      style={[
-        {
-          width: size,
-          height: size,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        style,
-      ]}
-    >
-      <RNView
-        style={{
-          position: 'absolute',
-          left: name === 'next' ? half - armSize / 2 - offset / 2 : offset,
-          top: half - stroke / 2 - armSize / 2.4,
-          width: armSize,
-          height: stroke,
-          backgroundColor: color,
-          transform: [{ rotate: name === 'next' ? '45deg' : '-45deg' }],
-        }}
-      />
-      <RNView
-        style={{
-          position: 'absolute',
-          left: name === 'next' ? half - armSize / 2 - offset / 2 : offset,
-          top: half - stroke / 2 + armSize / 2.4,
-          width: armSize,
-          height: stroke,
-          backgroundColor: color,
-          transform: [{ rotate: name === 'next' ? '-45deg' : '45deg' }],
-        }}
-      />
-    </RNView>
-  );
-};
-
 export const defaultPrimitives: CalendarPrimitives = {
   View: DefaultView as CalendarPrimitives['View'],
   Text: DefaultText as CalendarPrimitives['Text'],
   Pressable: DefaultPressable as CalendarPrimitives['Pressable'],
-  Icon: DefaultIcon,
 };
 
 // ---------------------------------------------------------------------------

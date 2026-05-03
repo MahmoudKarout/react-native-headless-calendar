@@ -1,35 +1,52 @@
 /**
  * react-native-fast-calendar — public surface.
  *
- *   import { Calendar } from 'react-native-fast-calendar';
+ *   import { Calendar, useCalendarNavigation } from 'react-native-fast-calendar';
  *   import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
  *   // hijri lives in an opt-in sub-export — you bring the converter:
  *   import { createHijriSystem } from 'react-native-fast-calendar/systems/hijri';
+ *
+ * The library is headless: the only rendered components it ships are
+ * `<Calendar.Root>` (the provider) and `<Calendar.DayGrid>` (the 6×7 day
+ * matrix). Everything else — the system switcher, the prev/next buttons,
+ * the month/year header labels, and the month/year pickers — is a hook,
+ * so the developer brings their own UI and wires it to the same store.
  */
 export { Calendar } from './Calendar';
 export type { CalendarNamespace } from './Calendar';
 
-// Compound parts — exported individually too, in case consumers prefer
-// `import { Header } from 'react-native-fast-calendar'` over the namespace.
+// The two stable rendered components — also exported individually for
+// consumers that prefer named imports over the namespace.
 export { Root } from './components/Root';
-export { Header } from './components/Header';
-export { View } from './components/View';
 export { DayCell, DayGrid } from './components/DayGrid';
-export { MonthGrid } from './components/MonthGrid';
-export { YearGrid } from './components/YearGrid';
-export { SystemSwitcher } from './components/SystemSwitcher';
 
-// Hooks for custom UI that needs to participate in calendar state.
+// Hooks — the headless surface. Compose into whatever UI you ship.
 export {
   useCalendarActions,
   useCalendarConfig,
+  useCalendarFirstDayOfWeek,
   useCalendarLabels,
-  useCalendarPrimitives,
+  useCalendarMonthLabel,
+  useCalendarMonthPicker,
+  useCalendarNavigation,
   useCalendarSelector,
   useCalendarStore,
+  useCalendarSystemSwitcher,
   useCalendarTheme,
+  useCalendarWeekdayLabels,
+  useCalendarYearLabel,
+  useCalendarYearPicker,
 } from './context';
-export type { CalendarActions } from './context';
+export type {
+  CalendarActions,
+  CalendarMonthLabel,
+  CalendarMonthPicker,
+  CalendarMonthPickerEntry,
+  CalendarNavigation,
+  CalendarSystemSwitcher,
+  CalendarYearLabel,
+  CalendarYearPicker,
+} from './context';
 
 // Store types for advanced consumers.
 export type { CalendarSnapshot, CalendarStore } from './store';
@@ -43,10 +60,12 @@ export {
   COLS,
   TOTAL_CELLS,
   YEAR_PAGE_SIZE,
+  DEFAULT_FIRST_DAY_OF_WEEK,
   buildMonthGrid,
   getYearPage,
   isBetween,
   isExplicitlyDisabled,
+  rotateWeekdayLabels,
 } from './utils/grid';
 
 // Public types.
@@ -65,14 +84,13 @@ export type {
   DayRenderer,
   DisabledDateInput,
   DisabledDateRangeInput,
-  IconProps,
-  IconPrimitive,
   OnClear,
   OnConfirm,
   OnSystemChange,
   PressablePrimitive,
   TextPrimitive,
   ViewPrimitive,
+  Weekday,
 } from './types';
 
 // Root prop type — useful when wrapping <Calendar.Root> in a project preset.

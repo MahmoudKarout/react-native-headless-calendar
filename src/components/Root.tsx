@@ -3,13 +3,16 @@
  *
  * Sole responsibilities:
  *   1. Construct the CalendarStore once (kept in a ref so it survives renders).
- *   2. Inject primitives / theme / labels / systems via CalendarConfigContext.
- *   3. Sync prop changes into the store via a single useEffect.
+ *   2. Inject theme / labels / systems via CalendarConfigContext.
+ *   3. Sync prop changes into the store via a single useLayoutEffect.
  *
- * Renders no UI by itself. Compose <Calendar.Header />, <Calendar.View />,
- * etc. inside it. Anything else (custom buttons, sticky footers, dialogs)
- * can live next to the calendar parts and still call useCalendarStore /
- * useCalendarSelector.
+ * Renders no UI by itself. The library is **headless** beyond
+ * `<Calendar.DayGrid>`: every other piece of UI is exposed as a hook
+ * (`useCalendarNavigation`, `useCalendarMonthLabel`, `useCalendarYearLabel`,
+ * `useCalendarSystemSwitcher`, `useCalendarMonthPicker`,
+ * `useCalendarYearPicker`, `useCalendarActions`, …) so the consumer
+ * brings their own buttons, layouts, and icons. Anything that calls one
+ * of those hooks must be a descendant of `<Calendar.Root>`.
  */
 import React, {
   useEffect,
@@ -24,12 +27,11 @@ import {
   CalendarStoreContext,
   type CalendarConfig,
 } from '../context';
-import { defaultLabels, defaultPrimitives, defaultTheme } from '../defaults';
+import { defaultLabels, defaultTheme } from '../defaults';
 import { CalendarStore } from '../store';
 import type {
   CalendarLabels,
   CalendarMode,
-  CalendarPrimitives,
   CalendarSelectionPayload,
   CalendarSystem,
   CalendarTheme,
@@ -39,7 +41,9 @@ import type {
   OnClear,
   OnConfirm,
   OnSystemChange,
+  Weekday,
 } from '../types';
+import { DEFAULT_FIRST_DAY_OF_WEEK } from '../utils/grid';
 import { useStableArray, useStableCallback } from '../utils/stableProps';
 
 export interface CalendarRootProps {
@@ -74,12 +78,19 @@ export interface CalendarRootProps {
   /** Allow selecting the same day for both range endpoints. */
   allowSameDay?: boolean;
 
-  /** Override visual primitives — see CalendarPrimitives. */
-  primitives?: Partial<CalendarPrimitives>;
   /** Override theme tokens — see CalendarTheme. */
   theme?: CalendarThemeOverride;
   /** Override user-facing strings — see CalendarLabels. */
   labels?: Partial<CalendarLabels>;
+
+  /**
+   * Which weekday occupies the first column of the day grid (and the
+   * weekday header). Defaults to `0` (Sunday). Common values:
+   *   - `0` Sunday   — US, Canada, Japan, …
+   *   - `1` Monday   — most of Europe, UK, ISO 8601
+   *   - `6` Saturday — many MENA locales
+   */
+  firstDayOfWeek?: Weekday;
 
   /** Called when the user taps the confirm action. */
   onConfirm?: OnConfirm;
@@ -95,15 +106,6 @@ export interface CalendarRootProps {
 
   children: ReactNode;
 }
-
-const mergePrimitives = (
-  override: Partial<CalendarPrimitives> | undefined
-): CalendarPrimitives => ({
-  View: override?.View ?? defaultPrimitives.View,
-  Text: override?.Text ?? defaultPrimitives.Text,
-  Pressable: override?.Pressable ?? defaultPrimitives.Pressable,
-  Icon: override?.Icon ?? defaultPrimitives.Icon,
-});
 
 const mergeTheme = (
   override: CalendarThemeOverride | undefined
@@ -131,9 +133,9 @@ export const Root: React.FC<CalendarRootProps> = ({
   disabledDates,
   disabledRanges,
   allowSameDay,
-  primitives,
   theme,
   labels,
+  firstDayOfWeek = DEFAULT_FIRST_DAY_OF_WEEK,
   onConfirm,
   onClear,
   onSystemChange,
@@ -211,16 +213,15 @@ export const Root: React.FC<CalendarRootProps> = ({
     }
   }, [stableSystems, store]);
 
-  // Config context — memoised so primitives/theme/labels overrides don't
   // create new context values per render. All callback / array inputs
   // were stabilised above, so inline-prop usage at the call site does not
   // churn this value.
   const config = useMemo<CalendarConfig>(
     () => ({
-      primitives: mergePrimitives(primitives),
       theme: mergeTheme(theme),
       labels: mergeLabels(labels),
       systems: stableSystems,
+      firstDayOfWeek,
       onConfirm: stableOnConfirm,
       onClear: stableOnClear,
       onSystemChange: stableOnSystemChange,
@@ -228,10 +229,10 @@ export const Root: React.FC<CalendarRootProps> = ({
       testID,
     }),
     [
-      primitives,
       theme,
       labels,
       stableSystems,
+      firstDayOfWeek,
       stableOnConfirm,
       stableOnClear,
       stableOnSystemChange,

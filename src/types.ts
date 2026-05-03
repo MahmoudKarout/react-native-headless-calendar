@@ -3,21 +3,13 @@
  *
  * The package is intentionally agnostic about:
  *   - which calendar system you use (Gregorian, Hijri, Chinese, ...)
- *   - which UI primitives you render with (RN, RN-Web, react-native-svg, ...)
  *   - how strings are localised
  *   - how state is themed
  *
  * Everything is injected through the <Calendar.Root> provider.
  */
-import type {
-  PressableProps,
-  StyleProp,
-  TextProps,
-  ViewProps,
-  ViewStyle,
-} from 'react-native';
 
-import type { ReactNode, RefAttributes, ComponentType } from 'react';
+import type { ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
 // CalendarDateValue — opaque per-system date value.
@@ -118,40 +110,19 @@ export type CalendarView = 'day' | 'month' | 'year';
 
 export type CalendarMode = 'single' | 'range';
 
+/**
+ * Day-of-week index, matching `CalendarSystem.weekday()`:
+ *   0 = Sunday, 1 = Monday, …, 6 = Saturday.
+ *
+ * Use as the `firstDayOfWeek` prop on `<Calendar.Root>` to pick which
+ * column the day grid (and its header) starts at — Sunday in the US,
+ * Monday in most of Europe, Saturday in many MENA locales, etc.
+ */
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
 export interface DateRange<T = CalendarDateValue> {
   start: T;
   end: T;
-}
-
-// ---------------------------------------------------------------------------
-// Primitives — every visual atom the calendar renders.
-//
-// Defaults are unstyled RN primitives. Override any of these on
-// <Calendar.Root primitives={...}> to integrate with your design system.
-// ---------------------------------------------------------------------------
-
-export type ViewPrimitive = ComponentType<ViewProps & RefAttributes<unknown>>;
-
-export type TextPrimitive = ComponentType<TextProps & RefAttributes<unknown>>;
-
-export type PressablePrimitive = ComponentType<
-  PressableProps & RefAttributes<unknown>
->;
-
-export interface IconProps {
-  name: 'prev' | 'next';
-  size?: number;
-  color?: string;
-  style?: StyleProp<ViewStyle>;
-}
-
-export type IconPrimitive = ComponentType<IconProps>;
-
-export interface CalendarPrimitives {
-  View: ViewPrimitive;
-  Text: TextPrimitive;
-  Pressable: PressablePrimitive;
-  Icon: IconPrimitive;
 }
 
 // ---------------------------------------------------------------------------

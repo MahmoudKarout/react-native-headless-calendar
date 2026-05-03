@@ -6,13 +6,16 @@
  * Gregorian, Hijri, Chinese, anything that satisfies the CalendarSystem
  * contract.
  */
-import type { CalendarSystem } from '../types';
+import type { CalendarSystem, Weekday } from '../types';
 
 export const ROWS = 6;
 export const COLS = 7;
 export const TOTAL_CELLS = ROWS * COLS;
 
 export const YEAR_PAGE_SIZE = 12;
+
+/** Default first column of the day grid — Sunday, matching the US convention. */
+export const DEFAULT_FIRST_DAY_OF_WEEK: Weekday = 0;
 
 export interface GridCell<T> {
   date: T;
@@ -23,11 +26,30 @@ export interface GridCell<T> {
 }
 
 /**
+ * Rotate a Sunday-first weekday array so that `firstDayOfWeek` is at index 0.
+ *
+ * Used by both the built-in `WeekdayHeader` and the public
+ * `useCalendarWeekdayLabels` hook so consumers building their own grids get
+ * exactly the same column order the day cells are laid out in.
+ *
+ * Returns the input array as-is when no rotation is needed, so consumers can
+ * memoise downstream off the returned identity.
+ */
+export function rotateWeekdayLabels<T>(
+  labels: readonly T[],
+  firstDayOfWeek: Weekday = DEFAULT_FIRST_DAY_OF_WEEK
+): readonly T[] {
+  if (firstDayOfWeek === 0) return labels;
+  return labels.slice(firstDayOfWeek).concat(labels.slice(0, firstDayOfWeek));
+}
+
+/**
  * Build the 6x7 grid for the month containing `displayed`.
  *
  * Strategy:
  *   - Find the first day of `displayed`'s month.
- *   - Walk back to the previous Sunday (or wherever weekday()===0 lands).
+ *   - Walk back to the previous `firstDayOfWeek` column (Sunday by default,
+ *     Monday for most of Europe, Saturday in many MENA locales).
  *   - Step forward TOTAL_CELLS times using `system.addMonths`/`withDay`.
  *
  * For systems where day stepping is cheap (most), we use `withDay(d, day+1)`
@@ -35,10 +57,12 @@ export interface GridCell<T> {
  */
 export function buildMonthGrid<T>(
   system: CalendarSystem<T>,
-  displayed: T
+  displayed: T,
+  firstDayOfWeek: Weekday = DEFAULT_FIRST_DAY_OF_WEEK
 ): GridCell<T>[] {
   const firstOfMonth = system.withDay(displayed, 1);
-  const offset = system.weekday(firstOfMonth);
+  // Wrap the difference into [0,7) so any starting weekday lines up correctly.
+  const offset = (system.weekday(firstOfMonth) - firstDayOfWeek + 7) % 7;
   const lastDay = system.daysInMonth(displayed);
 
   const cells: GridCell<T>[] = new Array(TOTAL_CELLS);
