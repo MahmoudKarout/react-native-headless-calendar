@@ -33,16 +33,19 @@ describe('public surface — components', () => {
 describe('public surface — hooks', () => {
   it.each([
     'useCalendarActions',
+    'useCalendarComponents',
     'useCalendarConfig',
     'useCalendarFirstDayOfWeek',
     'useCalendarLabels',
     'useCalendarMonthLabel',
     'useCalendarMonthPicker',
     'useCalendarNavigation',
+    'useCalendarSelectedDates',
     'useCalendarSelector',
     'useCalendarStore',
     'useCalendarSystemSwitcher',
     'useCalendarTheme',
+    'useCalendarWeekNumbers',
     'useCalendarWeekdayLabels',
     'useCalendarYearLabel',
     'useCalendarYearPicker',
@@ -57,7 +60,6 @@ describe('public surface — hooks', () => {
 describe('public surface — defaults & utilities', () => {
   it.each([
     'defaultLabels',
-    'defaultPrimitives',
     'defaultTheme',
     'ROWS',
     'COLS',
@@ -68,9 +70,16 @@ describe('public surface — defaults & utilities', () => {
     'getYearPage',
     'isBetween',
     'isExplicitlyDisabled',
+    'isoWeekNumber',
+    'matchDate',
     'rotateWeekdayLabels',
+    'usedRows',
   ])('exports %s', (name) => {
     expect(publicSurface).toHaveProperty(name);
+  });
+
+  it('does not export the removed defaultPrimitives', () => {
+    expect(publicSurface).not.toHaveProperty('defaultPrimitives');
   });
 });
 

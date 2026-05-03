@@ -11,10 +11,19 @@ month picker, the year picker, the confirm/clear buttons — is exposed as
 a `useCalendar*` hook so you bring your own UI and your own design system
 on top of the same store.
 
-- **Bring your own UI primitives** — `View`, `Text`, `Pressable`. The
-  package ships unstyled RN defaults and lets you override every visual atom.
 - **Bring your own buttons & icons** — there are no built-in chevrons, pills,
   or action bars. Hooks expose data + functions; you render whatever fits.
+- **Replace pieces, not the whole tree** — the `components` slot map on
+  `<Calendar.Root>` lets you swap `WeekdayHeader`, `DayCell`,
+  `WeekNumberCell`, `MonthCaption`, etc. independently. No fork required.
+- **Single / range / multi selection**, with `minRangeDays`,
+  `maxRangeDays`, `maxSelected`, and a dynamic `disabled(date)` predicate.
+- **Modifiers** — tag dates as `booked`, `holiday`, … with arrays,
+  `{ from, to }` ranges, or predicates; each tag flips a per-cell
+  boolean you can read in `renderDay` or a custom `DayCell`.
+- **Layout knobs** — `firstDayOfWeek`, `showOutsideDays`, `fixedWeeks`,
+  `showWeekNumbers`, `numberOfMonths`, and a swipeable mode for the
+  built-in day grid.
 - **Bring your own calendar system** — Gregorian is bundled. Hijri ships in an
   optional sub-export. Chinese, Ethiopian, Persian, ... are 80 lines of
   consumer code each (implement the `CalendarSystem` interface).
@@ -126,10 +135,12 @@ Every `useCalendar*` hook must be called inside `<Calendar.Root>`.
 | ---- | ------- | ------------- |
 | `useCalendarStore()` | the underlying store instance | never |
 | `useCalendarSelector(s => slice)` | your selected slice | when the slice's identity changes (`Object.is`) |
-| `useCalendarConfig()` | merged config (primitives, theme, labels, systems, callbacks, testID) | when the config object identity changes |
+| `useCalendarConfig()` | merged config (theme, labels, systems, callbacks, testID, modifiers, components, …) | when the config object identity changes |
 | `useCalendarTheme()` / `useCalendarLabels()` | their slice of the config | same as `useCalendarConfig` |
+| `useCalendarComponents()` | the merged `components` slot map (`WeekdayHeader`, `DayCell`, …) | when slot identities change |
 | `useCalendarFirstDayOfWeek()` | `0..6` matching `<Calendar.Root firstDayOfWeek>` | when the prop changes |
 | `useCalendarWeekdayLabels()` | weekday labels for the active system, rotated to `firstDayOfWeek` | when the active system or `firstDayOfWeek` changes |
+| `useCalendarWeekNumbers()` | 6 ISO week numbers matching the displayed month's rows | when the displayed month / system / `firstDayOfWeek` changes |
 | `useCalendarActions()` | `{ confirm, clear, canConfirm }` | only when `canConfirm` flips |
 | `useCalendarNavigation()` | `{ goPrev, goNext }` (view + RTL aware) | never (functions are stable) |
 | `useCalendarMonthLabel()` | `{ label, isVisible, toggle }` | when the month text changes or the view enters/leaves `'year'` |
@@ -137,6 +148,7 @@ Every `useCalendar*` hook must be called inside `<Calendar.Root>`.
 | `useCalendarSystemSwitcher()` | `{ systems, activeId, setActive }` | when the active system id changes |
 | `useCalendarMonthPicker()` | `{ months, activeMonth, selectMonth }` | when the active system or active month changes |
 | `useCalendarYearPicker()` | `{ years, activeYear, selectYear }` | when the active year changes (incl. paging) |
+| `useCalendarSelectedDates()` | `readonly T[]` of selected dates (multi-select mode) | when the selected-dates array identity changes |
 
 ### Confirm / clear actions
 
@@ -443,28 +455,182 @@ const myCalendar: CalendarSystem<MyDate> = {
 The two reference adapters in `src/systems/gregorian.ts` and
 `src/systems/hijri.ts` are good starting templates.
 
-## Headless: bring your own primitives
+## Selection modes
+
+`<Calendar.Root mode>` chooses how taps on day cells are interpreted.
 
 ```tsx
-import { Calendar } from 'react-native-fast-calendar';
-import { Text as MyText, Pressable as MyPressable } from 'my-design-system';
-
-<Calendar.Root
-  primitives={{
-    Text: MyText,
-    Pressable: MyPressable,
-  }}
-  systems={[gregorianSystem]}
->
-  ...
-</Calendar.Root>;
+<Calendar.Root mode="single"   /* default */> ... </Calendar.Root>
+<Calendar.Root mode="range">                    ... </Calendar.Root>
+<Calendar.Root mode="multiple">                 ... </Calendar.Root>
 ```
 
-`primitives` only needs `View`, `Text`, and `Pressable` — those are the
-only things the day grid renders. Header arrows, month / year pickers,
-system switcher pills, and action buttons are entirely your code now,
-so they don't need a primitives override; they use whatever components
-you already use elsewhere.
+| Mode | Store reads | Confirm payload |
+| ---- | ----------- | --------------- |
+| `'single'`   | `selectedDate`              | `{ date, nativeDate, systemId }` |
+| `'range'`    | `selectedStart`, `selectedEnd` | `{ start, end, nativeStart, nativeEnd, systemId }` |
+| `'multiple'` | `useCalendarSelectedDates()` (or `selectedDates` selector) | `{ dates, systemId }` |
+
+### Range constraints
+
+`minRangeDays` / `maxRangeDays` reject ranges shorter / longer than the
+specified day count *at the moment the second tap completes the range* —
+mid-pick (only the start is set) is always allowed, so the user can
+walk forward through dates and have the constraint kick in only when
+they try to anchor an invalid end.
+
+```tsx
+<Calendar.Root mode="range" minRangeDays={2} maxRangeDays={14}>
+  ...
+</Calendar.Root>
+```
+
+### Multi-select
+
+```tsx
+import {
+  Calendar,
+  useCalendarSelectedDates,
+} from 'react-native-fast-calendar';
+
+function MultiSelection() {
+  const dates = useCalendarSelectedDates<Date>();
+  return <Text>{dates.length} day(s) selected</Text>;
+}
+
+<Calendar.Root
+  initialDates={[new Date()]}
+  maxSelected={5}
+  mode="multiple"
+  onConfirm={({ dates }) => console.log(dates)}
+>
+  <Calendar.DayGrid />
+  <MultiSelection />
+</Calendar.Root>
+```
+
+`maxSelected` silently no-ops further taps once the cap is reached.
+Tapping an already-selected date toggles it off.
+
+### Disabling dates dynamically
+
+The `disabled` prop accepts a predicate `(nativeDate: Date) => boolean`.
+Disabled cells render with `info.isDisabled === true` and refuse selection
+(the store skips `selectDate` for them, even if your custom day cell
+forwards a tap by mistake):
+
+```tsx
+<Calendar.Root
+  disabled={(d) => d.getTime() < Date.now() /* no past days */}
+  mode="single"
+>
+  <Calendar.DayGrid />
+</Calendar.Root>
+```
+
+The predicate is stabilised internally with `useStableCallback`, so it can
+close over fresh React state without forcing the entire grid to re-render.
+
+## Layout options
+
+Pass any of these to `<Calendar.Root>` (where they affect every grid in
+the tree) or to `<Calendar.DayGrid>` (where they're per-grid).
+
+| Prop | On | Default | Effect |
+| ---- | -- | ------- | ------ |
+| `firstDayOfWeek` | `<Calendar.Root>` | `0` (Sun) | Column the week starts on. |
+| `showOutsideDays` | `<Calendar.Root>` | `true` | When `false`, leading/trailing cells from the previous / next month render as invisible spacers. |
+| `fixedWeeks` | `<Calendar.Root>` | `true` | When `false`, trailing all-outside rows are dropped (months collapse to 4-6 rows). |
+| `showWeekNumbers` | `<Calendar.DayGrid>` | `false` | Renders an extra leading column with ISO 8601 week numbers. |
+| `numberOfMonths` | `<Calendar.DayGrid>` | `1` | Renders N consecutive months side-by-side (mutually exclusive with `swipeable`). |
+
+```tsx
+<Calendar.Root fixedWeeks={false} firstDayOfWeek={1} showOutsideDays={false}>
+  <Calendar.DayGrid numberOfMonths={2} showWeekNumbers />
+</Calendar.Root>
+```
+
+## Modifiers — tag dates with custom flags
+
+Modifiers are named matchers that flip booleans on each `DayCellInfo`.
+Attach them once on `<Calendar.Root>`; read them per-cell from
+`info.modifiers.<name>` inside `renderDay` or a custom `DayCell` slot.
+
+```tsx
+const BOOKED = [new Date(2024, 4, 7), new Date(2024, 4, 8)];
+
+<Calendar.Root
+  modifiers={{
+    booked: BOOKED,
+    weekend: (d) => d.getDay() === 0 || d.getDay() === 6,
+    summer: { from: new Date(2024, 5, 1), to: new Date(2024, 7, 31) },
+  }}
+>
+  <Calendar.DayGrid
+    renderDay={(info) => (
+      <View style={info.modifiers.booked && { backgroundColor: '#FECACA' }}>
+        <Text>{info.label}</Text>
+      </View>
+    )}
+  />
+</Calendar.Root>
+```
+
+A `CalendarMatcher` is one of:
+- An array of native `Date`s (exact-day match).
+- An array of `{ from, to }` ranges (inclusive at both ends).
+- A predicate `(nativeDate: Date) => boolean`.
+
+Modifiers never affect selection — combine them with `disabled` if you
+want a "booked" day to also be unselectable.
+
+## Component slots — replace pieces, not the whole tree
+
+Instead of overriding the entire `<Calendar.DayGrid>`, swap individual
+sub-components via the `components` prop on `<Calendar.Root>`:
+
+```tsx
+import type { CalendarComponents } from 'react-native-fast-calendar';
+
+const components: CalendarComponents = {
+  WeekdayHeader: ({ labels }) => (
+    <View style={{ flexDirection: 'row' }}>
+      {labels.map((l) => (
+        <Text key={l} style={{ flex: 1, textAlign: 'center' }}>{l}</Text>
+      ))}
+    </View>
+  ),
+  DayCell: ({ info, onSelect }) => (
+    <Pressable
+      disabled={info.isDisabled}
+      onPress={() => onSelect(info.date)}
+    >
+      <Text>{info.label}</Text>
+    </Pressable>
+  ),
+  WeekNumberCell: ({ weekNumber }) => (
+    <Text style={{ opacity: 0.4 }}>w{weekNumber}</Text>
+  ),
+  MonthCaption: ({ label }) => <Text>{label}</Text>,
+};
+
+<Calendar.Root components={components}>
+  <Calendar.DayGrid showWeekNumbers />
+</Calendar.Root>
+```
+
+Available slots:
+
+| Slot | Props | When it renders |
+| ---- | ----- | --------------- |
+| `WeekdayHeader` | `{ labels, showWeekNumbers }` | Replaces the entire weekday row. |
+| `WeekdayCell`   | `{ label, index }`            | Replaces each cell inside the default `WeekdayHeader`. |
+| `DayCell`       | `{ info, onSelect }`          | Falls back to `<Calendar.DayGrid renderDay>` if also provided. |
+| `WeekNumberCell`| `{ weekNumber, rowIndex }`    | Only when `showWeekNumbers` is on. |
+| `MonthCaption`  | `{ label, monthDate, monthIndex }` | Renders above each month, useful with `numberOfMonths > 1`. |
+
+`renderDay` on `<Calendar.DayGrid>` still wins over `components.DayCell`
+when both are passed — a per-grid renderer overrides the global slot.
 
 ## Custom theme
 
@@ -550,9 +716,9 @@ grid, inside a different dialog — and stay in sync.
 
 ```
 ┌─────────────────────────────────────────┐
-│  <Calendar.Root systems primitives ...> │  ◄── only required parent
+│  <Calendar.Root systems components ...> │  ◄── only required parent
 │  ┌───────────────────────────────────┐  │
-│  │  CalendarConfigContext            │  │  ◄── primitives, theme, labels
+│  │  CalendarConfigContext            │  │  ◄── theme, labels, modifiers, components, …
 │  │  (memoised; rarely changes)       │  │
 │  └───────────────────────────────────┘  │
 │  ┌───────────────────────────────────┐  │
@@ -576,6 +742,9 @@ grid, inside a different dialog — and stay in sync.
 | `useCalendarMonthPicker()`            | active month / system change      |
 | `useCalendarYearPicker()`             | active year change (incl. paging) |
 | `useCalendarActions()`                | only when `canConfirm` flips      |
+| `useCalendarSelectedDates()`          | only when `selectedDates` array identity changes |
+| `useCalendarComponents()`             | only when slot identities change  |
+| `useCalendarWeekNumbers()`            | only when displayed month / system / `firstDayOfWeek` changes |
 | `<Calendar.DayGrid />` cells          | only the affected 2-4 cells       |
 
 ## Contributing

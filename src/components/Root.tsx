@@ -30,8 +30,10 @@ import {
 import { defaultLabels, defaultTheme } from '../defaults';
 import { CalendarStore } from '../store';
 import type {
+  CalendarComponents,
   CalendarLabels,
   CalendarMode,
+  CalendarModifiers,
   CalendarSelectionPayload,
   CalendarSystem,
   CalendarTheme,
@@ -44,7 +46,12 @@ import type {
   Weekday,
 } from '../types';
 import { DEFAULT_FIRST_DAY_OF_WEEK } from '../utils/grid';
-import { useStableArray, useStableCallback } from '../utils/stableProps';
+import {
+  useStableArray,
+  useStableCallback,
+  useStablePredicate,
+  useStableRecord,
+} from '../utils/stableProps';
 
 export interface CalendarRootProps {
   /**
@@ -64,6 +71,11 @@ export interface CalendarRootProps {
   initialStart?: unknown;
   /** Initial end date in range mode. */
   initialEnd?: unknown;
+  /**
+   * Initial selection in `'multiple'` mode. Order is preserved; later
+   * `selectedDates.length > 0`.
+   */
+  initialDates?: readonly unknown[];
 
   /** Inclusive lower bound for selectable dates. */
   minDate?: unknown;
@@ -74,9 +86,67 @@ export interface CalendarRootProps {
   disabledDates?: readonly DisabledDateInput[];
   /** Inclusive disabled date ranges. */
   disabledRanges?: readonly DisabledDateRangeInput[];
+  /**
+   * Optional dynamic-disabled predicate. Receives the native JS Date for
+   * each candidate cell — return `true` to mark it as disabled. Composes
+   * (OR) with `disabledDates`, `disabledRanges`, and `min/max` bounds.
+   *
+   * Example:
+   *
+   *   disabled={(d) => d.getDay() === 0 || d.getDay() === 6}
+   */
+  disabled?: (nativeDate: Date) => boolean;
 
   /** Allow selecting the same day for both range endpoints. */
   allowSameDay?: boolean;
+  /**
+   * Inclusive minimum length, in days, of a confirmable range selection.
+   * Picks that would produce a shorter range are silently ignored.
+   * Range mode only.
+   */
+  minRangeDays?: number;
+  /**
+   * Inclusive maximum length, in days, of a confirmable range selection.
+   * Picks that would produce a longer range are silently ignored.
+   * Range mode only.
+   */
+  maxRangeDays?: number;
+  /**
+   * Inclusive cap on the number of dates that can be selected in
+   * `'multiple'` mode. Picks beyond the cap are silently ignored —
+   * consumers wanting LRU eviction should clear-then-select.
+   */
+  maxSelected?: number;
+
+  /**
+   * Named modifiers — each value is a list of dates / inclusive date
+   * ranges, or a `(nativeDate) => boolean` predicate. The DayGrid
+   * evaluates them per cell and exposes the boolean flags via
+   * `DayCellInfo.modifiers` so consumers can style them however they
+   * like (booked / holiday / available / …).
+   */
+  modifiers?: CalendarModifiers;
+
+  /**
+   * Show days from the previous / next month in the grid's leading and
+   * trailing rows. When `false`, those slots render an invisible
+   * placeholder so the grid stays a 7-column matrix. Defaults to `true`.
+   */
+  showOutsideDays?: boolean;
+  /**
+   * Always render 6 rows in the grid, even when the displayed month fits
+   * in 4 or 5 weeks. When `false`, trailing all-outside rows are
+   * collapsed so the calendar is shorter on those months. Defaults to
+   * `true` for layout-stable parents.
+   */
+  fixedWeeks?: boolean;
+
+  /**
+   * Replaceable component slots — pass any subset to override the
+   * built-in atoms. The render-prop on `<Calendar.DayGrid renderDay>`
+   * still wins per call; otherwise this slot is used for every cell.
+   */
+  components?: CalendarComponents;
 
   /** Override theme tokens — see CalendarTheme. */
   theme?: CalendarThemeOverride;
@@ -128,11 +198,20 @@ export const Root: React.FC<CalendarRootProps> = ({
   initialDate,
   initialStart,
   initialEnd,
+  initialDates,
   minDate,
   maxDate,
   disabledDates,
   disabledRanges,
+  disabled,
   allowSameDay,
+  minRangeDays,
+  maxRangeDays,
+  maxSelected,
+  modifiers,
+  showOutsideDays = true,
+  fixedWeeks = true,
+  components,
   theme,
   labels,
   firstDayOfWeek = DEFAULT_FIRST_DAY_OF_WEEK,
@@ -155,6 +234,9 @@ export const Root: React.FC<CalendarRootProps> = ({
   const stableOnSystemChange: OnSystemChange | undefined =
     useStableCallback<[string]>(onSystemChange);
   const stableOnSelectHaptic = useStableCallback<[]>(onSelectHaptic);
+  const stableDisabled = useStablePredicate<[Date], boolean>(disabled);
+  const stableModifiers = useStableRecord(modifiers);
+  const stableComponents = useStableRecord(components);
 
   // Store — created once, kept in a ref so identity is stable.
   const storeRef = useRef<CalendarStore | null>(null);
@@ -166,11 +248,16 @@ export const Root: React.FC<CalendarRootProps> = ({
       initialDate,
       initialStart,
       initialEnd,
+      initialDates,
       minDate,
       maxDate,
       disabledDates,
       disabledRanges,
+      disabled: stableDisabled,
       allowSameDay,
+      minRangeDays,
+      maxRangeDays,
+      maxSelected,
     });
   }
   const store = storeRef.current;
@@ -185,11 +272,26 @@ export const Root: React.FC<CalendarRootProps> = ({
       maxDate,
       disabledDates,
       disabledRanges,
+      disabled: stableDisabled,
       allowSameDay,
+      minRangeDays,
+      maxRangeDays,
+      maxSelected,
     });
     // Selection inputs are intentionally not synced — they're "initial".
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, minDate, maxDate, disabledDates, disabledRanges, allowSameDay]);
+  }, [
+    mode,
+    minDate,
+    maxDate,
+    disabledDates,
+    disabledRanges,
+    stableDisabled,
+    allowSameDay,
+    minRangeDays,
+    maxRangeDays,
+    maxSelected,
+  ]);
 
   // If the systems prop array changes identity (and therefore content),
   // swap the active system. `stableSystems` only changes when an element
@@ -222,6 +324,10 @@ export const Root: React.FC<CalendarRootProps> = ({
       labels: mergeLabels(labels),
       systems: stableSystems,
       firstDayOfWeek,
+      showOutsideDays,
+      fixedWeeks,
+      modifiers: stableModifiers,
+      components: stableComponents,
       onConfirm: stableOnConfirm,
       onClear: stableOnClear,
       onSystemChange: stableOnSystemChange,
@@ -233,6 +339,10 @@ export const Root: React.FC<CalendarRootProps> = ({
       labels,
       stableSystems,
       firstDayOfWeek,
+      showOutsideDays,
+      fixedWeeks,
+      stableModifiers,
+      stableComponents,
       stableOnConfirm,
       stableOnClear,
       stableOnSystemChange,

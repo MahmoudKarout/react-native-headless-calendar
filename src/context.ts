@@ -26,7 +26,9 @@ import { I18nManager } from 'react-native';
 
 import type { CalendarStore, CalendarSnapshot } from './store';
 import type {
+  CalendarComponents,
   CalendarLabels,
+  CalendarModifiers,
   CalendarSystem,
   CalendarTheme,
   OnConfirm,
@@ -34,7 +36,15 @@ import type {
   OnSystemChange,
   Weekday,
 } from './types';
-import { YEAR_PAGE_SIZE, getYearPage, rotateWeekdayLabels } from './utils/grid';
+import {
+  COLS,
+  ROWS,
+  YEAR_PAGE_SIZE,
+  buildMonthGrid,
+  getYearPage,
+  isoWeekNumber,
+  rotateWeekdayLabels,
+} from './utils/grid';
 
 // ---------------------------------------------------------------------------
 // Store context
@@ -82,6 +92,24 @@ export interface CalendarConfig {
    * (common in MENA), etc. Defaults to `0`.
    */
   firstDayOfWeek: Weekday;
+  /**
+   * Render days from the previous / next month in the leading and
+   * trailing rows of the grid. When `false`, the cells are kept as
+   * invisible placeholders so the column layout is preserved.
+   */
+  showOutsideDays: boolean;
+  /**
+   * Always render 6 rows in the day grid. When `false`, trailing
+   * all-outside rows are collapsed.
+   */
+  fixedWeeks: boolean;
+  /** Named modifiers — see CalendarRootProps.modifiers. */
+  modifiers?: CalendarModifiers;
+  /**
+   * Replaceable component slots. Each slot has a typed prop contract;
+   * the built-in implementation is used for any slot left unset.
+   */
+  components?: CalendarComponents;
   onConfirm?: OnConfirm;
   onClear?: OnClear;
   onSystemChange?: OnSystemChange;
@@ -137,6 +165,71 @@ export function useCalendarWeekdayLabels(): readonly string[] {
   );
 }
 
+/**
+ * Component slots passed to `<Calendar.Root components={...}>`.
+ *
+ * Returns an empty object when no slots are configured. Use this hook
+ * inside a custom day grid (or any consumer-built sub-component) when
+ * you want to honour the same slot overrides the built-in
+ * `<Calendar.DayGrid>` does.
+ */
+export function useCalendarComponents(): NonNullable<
+  CalendarConfig['components']
+> {
+  return useCalendarConfig().components ?? {};
+}
+
+/**
+ * Multiple-mode selection slice. Returns `selectedDates` from the store
+ * directly — order matches tap order, identity changes only when the
+ * underlying array changes (after a tap or `store.clear()`).
+ *
+ * In single / range mode this returns `[]`.
+ */
+export function useCalendarSelectedDates<T = unknown>(): readonly T[] {
+  return useCalendarSelector((s) => s.selectedDates as readonly T[]);
+}
+
+/**
+ * Per-row ISO 8601 week numbers for the displayed month, lined up with
+ * the rows produced by `buildMonthGrid`.
+ *
+ * Implementation prefers the active system's own `weekNumber()` when
+ * available (Gregorian implements it natively); otherwise falls back to
+ * deriving an ISO week from `system.toNativeDate(d)` so the result still
+ * works for Gregorian-aligned visual layouts.
+ *
+ *   const weekNumbers = useCalendarWeekNumbers();
+ *   //  -> [18, 19, 20, 21, 22, 23] for May 2024
+ *
+ * Re-renders only when the displayed month or active system change.
+ */
+export function useCalendarWeekNumbers(): readonly number[] {
+  const system = useCalendarSelector((s) => s.system);
+  const displayed = useCalendarSelector((s) => s.displayed);
+  const firstDayOfWeek = useCalendarFirstDayOfWeek();
+  return useMemo(() => {
+    const cells = buildMonthGrid(system, displayed, firstDayOfWeek);
+    const out = new Array<number>(ROWS);
+    const compute = (d: unknown): number =>
+      system.weekNumber
+        ? system.weekNumber(d as never)
+        : isoWeekNumber(system.toNativeDate(d as never));
+    // ISO weeks are Mon-based with Thursday as the canonical day-in-the-week.
+    // Picking the Thursday cell of each row gives the correct ISO week
+    // regardless of the column the row starts on (Sun / Mon / Sat / …).
+    const thursdayCol = (4 - firstDayOfWeek + 7) % 7;
+    for (let r = 0; r < ROWS; r += 1) {
+      const idx = r * COLS + thursdayCol;
+      const cell = cells[idx];
+      /* istanbul ignore next — buildMonthGrid always returns ROWS*COLS
+       * cells, so `cell` is defined for every row. */
+      out[r] = cell ? compute(cell.date) : 0;
+    }
+    return out;
+  }, [system, displayed, firstDayOfWeek]);
+}
+
 // ---------------------------------------------------------------------------
 // useCalendarActions — confirm + clear exposed as plain functions so the
 // consumer can wire them to whatever button (or shortcut, or gesture, …)
@@ -183,6 +276,7 @@ export function useCalendarActions(): CalendarActions {
 
   const canConfirm = useCalendarSelector((s) => {
     if (s.mode === 'single') return !!s.selectedDate;
+    if (s.mode === 'multiple') return s.selectedDates.length > 0;
     return !!(s.rangeStart && s.rangeEnd);
   });
 
@@ -193,6 +287,9 @@ export function useCalendarActions(): CalendarActions {
       date: s.selectedDate ? s.system.toNativeDate(s.selectedDate) : undefined,
       startDate: s.rangeStart ? s.system.toNativeDate(s.rangeStart) : undefined,
       endDate: s.rangeEnd ? s.system.toNativeDate(s.rangeEnd) : undefined,
+      dates: s.selectedDates.length
+        ? s.selectedDates.map((d) => s.system.toNativeDate(d))
+        : undefined,
       systemId: s.system.id,
     });
   }, [onConfirm, store]);

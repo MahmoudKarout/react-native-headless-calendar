@@ -5,22 +5,25 @@ import { Root } from '../components/Root';
 import {
   CalendarConfigContext,
   useCalendarActions,
+  useCalendarComponents,
   useCalendarConfig,
   useCalendarFirstDayOfWeek,
   useCalendarLabels,
   useCalendarMonthLabel,
   useCalendarMonthPicker,
   useCalendarNavigation,
+  useCalendarSelectedDates,
   useCalendarSelector,
   useCalendarStore,
   useCalendarSystemSwitcher,
   useCalendarTheme,
+  useCalendarWeekNumbers,
   useCalendarWeekdayLabels,
   useCalendarYearLabel,
   useCalendarYearPicker,
 } from '../context';
 import { createGregorianSystem, gregorianSystem } from '../systems/gregorian';
-import type { CalendarSystem } from '../types';
+import type { CalendarComponents, CalendarSystem } from '../types';
 
 const Capture = <T,>({ run }: { run: () => T }) => {
   run();
@@ -883,5 +886,204 @@ describe('useCalendarYearPicker', () => {
     const s = storeRef!.getSnapshot();
     expect(s.view).toBe('day');
     expect(s.displayed).toEqual(expect.objectContaining({ y: 2026 }));
+  });
+});
+
+// ===========================================================================
+// useCalendarSelectedDates (multi-mode selection slice)
+// ===========================================================================
+
+describe('useCalendarSelectedDates', () => {
+  it('returns the empty array in single mode', () => {
+    let captured: readonly unknown[] = ['sentinel'];
+    const Probe = () => {
+      captured = useCalendarSelectedDates();
+      return null;
+    };
+    render(
+      <Root systems={[gregorianSystem]}>
+        <Probe />
+      </Root>
+    );
+    expect(captured).toEqual([]);
+  });
+
+  it('reflects the latest selectedDates after each tap in multiple mode', () => {
+    let storeRef: ReturnType<typeof useCalendarStore> | null = null;
+    let captured: readonly unknown[] = [];
+    const Probe = () => {
+      storeRef = useCalendarStore();
+      captured = useCalendarSelectedDates();
+      return null;
+    };
+    render(
+      <Root mode="multiple" systems={[gregorianSystem]}>
+        <Probe />
+      </Root>
+    );
+    act(() => {
+      storeRef!.selectDate(
+        gregorianSystem.fromNativeDate(new Date(2024, 4, 1))
+      );
+      storeRef!.selectDate(
+        gregorianSystem.fromNativeDate(new Date(2024, 4, 5))
+      );
+    });
+    expect(captured).toHaveLength(2);
+    act(() => {
+      storeRef!.clear();
+    });
+    expect(captured).toEqual([]);
+  });
+});
+
+// ===========================================================================
+// useCalendarWeekNumbers
+// ===========================================================================
+
+describe('useCalendarWeekNumbers', () => {
+  it('returns 6 ISO week numbers for the displayed month (May 2024 → 18-22)', () => {
+    let captured: readonly number[] = [];
+    const Probe = () => {
+      captured = useCalendarWeekNumbers();
+      return null;
+    };
+    render(
+      <Root initialDate={new Date(2024, 4, 15)} systems={[gregorianSystem]}>
+        <Probe />
+      </Root>
+    );
+    expect(captured).toHaveLength(6);
+    expect(captured[0]).toBe(18);
+    expect(captured[4]).toBe(22);
+  });
+
+  it('falls back to deriving an ISO week from native Date when system.weekNumber is absent', () => {
+    const sysNoWeek = createGregorianSystem();
+    // Strip the bundled implementation to exercise the fallback path.
+    delete (sysNoWeek as { weekNumber?: unknown }).weekNumber;
+    let captured: readonly number[] = [];
+    const Probe = () => {
+      captured = useCalendarWeekNumbers();
+      return null;
+    };
+    render(
+      <Root initialDate={new Date(2024, 4, 15)} systems={[sysNoWeek]}>
+        <Probe />
+      </Root>
+    );
+    expect(captured[0]).toBe(18);
+  });
+});
+
+// ===========================================================================
+// useCalendarComponents
+// ===========================================================================
+
+describe('useCalendarComponents', () => {
+  it('returns an empty object when no components are configured', () => {
+    let captured: CalendarComponents | undefined;
+    const Probe = () => {
+      captured = useCalendarComponents();
+      return null;
+    };
+    render(
+      <Root systems={[gregorianSystem]}>
+        <Probe />
+      </Root>
+    );
+    expect(captured).toEqual({});
+  });
+
+  it('returns the configured slot map identity-stable across renders', () => {
+    const slot: NonNullable<CalendarComponents['DayCell']> = () => null;
+    const seen: CalendarComponents[] = [];
+    const Probe = () => {
+      seen.push(useCalendarComponents());
+      return null;
+    };
+    const { rerender } = render(
+      <Root components={{ DayCell: slot }} systems={[gregorianSystem]}>
+        <Probe />
+      </Root>
+    );
+    rerender(
+      <Root components={{ DayCell: slot }} systems={[gregorianSystem]}>
+        <Probe />
+      </Root>
+    );
+    // Same DayCell identity → useStableRecord returns the same reference.
+    expect(seen.length).toBeGreaterThanOrEqual(2);
+    expect(seen[0]).toBe(seen[seen.length - 1]);
+  });
+});
+
+// ===========================================================================
+// useCalendarActions.canConfirm — multiple mode
+// ===========================================================================
+
+describe('useCalendarActions — multiple mode', () => {
+  it('canConfirm follows selectedDates.length', () => {
+    let storeRef: ReturnType<typeof useCalendarStore> | null = null;
+    const Probe = () => {
+      storeRef = useCalendarStore();
+      return null;
+    };
+    const Harness = () => {
+      const { canConfirm } = useCalendarActions();
+      return <Text testID="canConfirm">{canConfirm ? 'yes' : 'no'}</Text>;
+    };
+    const { getByTestId } = render(
+      <Root mode="multiple" systems={[gregorianSystem]}>
+        <Probe />
+        <Harness />
+      </Root>
+    );
+    expect(getByTestId('canConfirm').props.children).toBe('no');
+    act(() => {
+      storeRef!.selectDate(
+        gregorianSystem.fromNativeDate(new Date(2024, 4, 1))
+      );
+    });
+    expect(getByTestId('canConfirm').props.children).toBe('yes');
+  });
+
+  it('confirm forwards `dates` in the payload', () => {
+    let storeRef: ReturnType<typeof useCalendarStore> | null = null;
+    const Probe = () => {
+      storeRef = useCalendarStore();
+      return null;
+    };
+    const onConfirm = jest.fn();
+    const Harness = () => {
+      const { confirm } = useCalendarActions();
+      return (
+        <Pressable onPress={confirm} testID="confirm">
+          <Text>confirm</Text>
+        </Pressable>
+      );
+    };
+    const { getByTestId } = render(
+      <Root mode="multiple" onConfirm={onConfirm} systems={[gregorianSystem]}>
+        <Probe />
+        <Harness />
+      </Root>
+    );
+    act(() => {
+      storeRef!.selectDate(
+        gregorianSystem.fromNativeDate(new Date(2024, 4, 1))
+      );
+      storeRef!.selectDate(
+        gregorianSystem.fromNativeDate(new Date(2024, 4, 5))
+      );
+    });
+    fireEvent.press(getByTestId('confirm'));
+    expect(onConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dates: expect.arrayContaining([expect.any(Date)]),
+        systemId: 'gregorian',
+      })
+    );
+    expect(onConfirm.mock.calls[0]?.[0].dates).toHaveLength(2);
   });
 });

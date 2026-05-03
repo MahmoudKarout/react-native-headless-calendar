@@ -39,6 +39,8 @@ export interface CalendarSnapshot<T = CalendarDateValue> {
   rangeStart: T | undefined;
   /** Range-mode end. */
   rangeEnd: T | undefined;
+  /** Multiple-mode selection — append-only set semantics, ordered by tap. */
+  selectedDates: readonly T[];
   /** Inclusive lower bound, normalised to the active system. */
   minDate: T | undefined;
   /** Inclusive upper bound, normalised to the active system. */
@@ -49,6 +51,27 @@ export interface CalendarSnapshot<T = CalendarDateValue> {
   disabledRanges: readonly { start: T; end: T }[] | undefined;
   /** Whether tapping the same day twice in range mode picks a single-day range. */
   allowSameDay: boolean;
+  /**
+   * Inclusive minimum length, in days, of a confirmable range (range mode).
+   * `undefined` means no lower bound.
+   */
+  minRangeDays: number | undefined;
+  /**
+   * Inclusive maximum length, in days, of a confirmable range (range mode).
+   * `undefined` means no upper bound.
+   */
+  maxRangeDays: number | undefined;
+  /**
+   * Inclusive cap on the number of dates that can be selected in
+   * `'multiple'` mode. `undefined` means no cap.
+   */
+  maxSelected: number | undefined;
+  /**
+   * Optional dynamic-disabled predicate evaluated against the native JS
+   * Date for each candidate. Composes (OR) with `disabledDates`,
+   * `disabledRanges`, and the `min/max` bounds.
+   */
+  disabled: ((nativeDate: Date) => boolean) | undefined;
 }
 
 export interface CalendarStoreOptions<T = CalendarDateValue> {
@@ -58,11 +81,16 @@ export interface CalendarStoreOptions<T = CalendarDateValue> {
   initialDate?: unknown;
   initialStart?: unknown;
   initialEnd?: unknown;
+  initialDates?: readonly unknown[];
   minDate?: unknown;
   maxDate?: unknown;
   disabledDates?: readonly unknown[];
   disabledRanges?: readonly { start: unknown; end: unknown }[];
   allowSameDay?: boolean;
+  minRangeDays?: number;
+  maxRangeDays?: number;
+  maxSelected?: number;
+  disabled?: (nativeDate: Date) => boolean;
 }
 
 type Listener = () => void;
@@ -95,11 +123,20 @@ export class CalendarStore<T = CalendarDateValue> {
       throw new Error('[Calendar] Could not resolve initial CalendarSystem.');
     }
 
+    // Pick a sensible initial `displayed` for each mode so the grid opens
+    // on a month with state in it, regardless of which inputs are provided.
     const seedDate =
       opts.mode === 'single'
         ? opts.initialDate
-        : (opts.initialStart ?? opts.initialEnd);
+        : opts.mode === 'range'
+          ? (opts.initialStart ?? opts.initialEnd)
+          : opts.initialDates?.[0];
     const displayed = seedDate ? system.from(seedDate) : system.today();
+
+    const initialDates =
+      opts.mode === 'multiple' && opts.initialDates?.length
+        ? opts.initialDates.map((d) => system.from(d))
+        : [];
 
     this.snapshot = {
       system,
@@ -114,6 +151,7 @@ export class CalendarStore<T = CalendarDateValue> {
         ? system.from(opts.initialStart)
         : undefined,
       rangeEnd: opts.initialEnd ? system.from(opts.initialEnd) : undefined,
+      selectedDates: initialDates,
       minDate: opts.minDate ? system.from(opts.minDate) : undefined,
       maxDate: opts.maxDate ? system.from(opts.maxDate) : undefined,
       disabledDates: opts.disabledDates?.map((d) => system.from(d)),
@@ -122,6 +160,10 @@ export class CalendarStore<T = CalendarDateValue> {
         end: system.from(r.end),
       })),
       allowSameDay: opts.allowSameDay ?? false,
+      minRangeDays: opts.minRangeDays,
+      maxRangeDays: opts.maxRangeDays,
+      maxSelected: opts.maxSelected,
+      disabled: opts.disabled,
     };
   }
 
@@ -180,6 +222,18 @@ export class CalendarStore<T = CalendarDateValue> {
     }
     if ((opts.allowSameDay ?? false) !== s.allowSameDay) {
       next = { ...next, allowSameDay: opts.allowSameDay ?? false };
+    }
+    if (opts.minRangeDays !== s.minRangeDays) {
+      next = { ...next, minRangeDays: opts.minRangeDays };
+    }
+    if (opts.maxRangeDays !== s.maxRangeDays) {
+      next = { ...next, maxRangeDays: opts.maxRangeDays };
+    }
+    if (opts.maxSelected !== s.maxSelected) {
+      next = { ...next, maxSelected: opts.maxSelected };
+    }
+    if (opts.disabled !== s.disabled) {
+      next = { ...next, disabled: opts.disabled };
     }
     // Re-normalise bounds and disable lists against the active system —
     // cheap (handful of objects), avoids subtle staleness when consumers
@@ -245,6 +299,9 @@ export class CalendarStore<T = CalendarDateValue> {
       selectedDate: carry(s.selectedDate),
       rangeStart: carry(s.rangeStart),
       rangeEnd: carry(s.rangeEnd),
+      selectedDates: s.selectedDates.map((d) =>
+        system.fromNativeDate(s.system.toNativeDate(d))
+      ),
       minDate: carry(s.minDate),
       maxDate: carry(s.maxDate),
       disabledDates: s.disabledDates?.map((d) =>
@@ -304,23 +361,40 @@ export class CalendarStore<T = CalendarDateValue> {
     const s = this.snapshot;
     const system = s.system;
 
-    // Out-of-bounds guard.
-    if (s.minDate && system.isBefore(date, s.minDate)) return;
-    if (s.maxDate && system.isAfter(date, s.maxDate)) return;
-    // Explicit disable guard.
-    if (s.disabledDates?.some((d) => system.isSame(d, date))) return;
-    if (
-      s.disabledRanges?.some(
-        (r) => !system.isBefore(date, r.start) && !system.isAfter(date, r.end)
-      )
-    ) {
-      return;
-    }
+    if (this.isDateDisabled(date)) return;
 
     if (s.mode === 'single') {
       this.commit({
         ...s,
         selectedDate: date,
+        displayed: date,
+      });
+      return;
+    }
+
+    if (s.mode === 'multiple') {
+      const idx = s.selectedDates.findIndex((d) => system.isSame(d, date));
+      let nextDates: readonly T[];
+      if (idx >= 0) {
+        nextDates = [
+          ...s.selectedDates.slice(0, idx),
+          ...s.selectedDates.slice(idx + 1),
+        ];
+      } else {
+        if (
+          s.maxSelected !== undefined &&
+          s.selectedDates.length >= s.maxSelected
+        ) {
+          // At cap — silently ignore the new pick. Consumers wanting LRU
+          // eviction can subscribe to `onSelectHaptic` and dispatch their
+          // own clear-then-select sequence.
+          return;
+        }
+        nextDates = [...s.selectedDates, date];
+      }
+      this.commit({
+        ...s,
+        selectedDates: nextDates,
         displayed: date,
       });
       return;
@@ -363,12 +437,33 @@ export class CalendarStore<T = CalendarDateValue> {
       nextEnd = undefined;
     }
 
+    // Enforce min/max range-length constraints. Only validated when the
+    // pick produced two endpoints; the partial-range state is always
+    // allowed so consumers can see their selection grow.
+    if (
+      nextStart &&
+      nextEnd &&
+      !this.isRangeLengthAllowed(nextStart, nextEnd)
+    ) {
+      return;
+    }
+
     this.commit({
       ...s,
       rangeStart: nextStart,
       rangeEnd: nextEnd,
       displayed: date,
     });
+  };
+
+  /**
+   * Toggle a date in `'multiple'` mode. Convenience wrapper around
+   * `selectDate` with explicit naming so consumers reading their own
+   * code can see the intent. No-op in single / range mode.
+   */
+  toggleDate = (date: T): void => {
+    if (this.snapshot.mode !== 'multiple') return;
+    this.selectDate(date);
   };
 
   /** Clear all selection state. */
@@ -379,6 +474,70 @@ export class CalendarStore<T = CalendarDateValue> {
       selectedDate: undefined,
       rangeStart: undefined,
       rangeEnd: undefined,
+      selectedDates: [],
     });
   };
+
+  // -- internal helpers --------------------------------------------------
+
+  /**
+   * Single source of truth for whether a date is disabled. Composed from
+   * min/max bounds, the explicit lists, and the optional `disabled`
+   * predicate (which receives the native JS Date).
+   */
+  private isDateDisabled(date: T): boolean {
+    const s = this.snapshot;
+    const system = s.system;
+    if (s.minDate && system.isBefore(date, s.minDate)) return true;
+    if (s.maxDate && system.isAfter(date, s.maxDate)) return true;
+    if (s.disabledDates?.some((d) => system.isSame(d, date))) return true;
+    if (
+      s.disabledRanges?.some(
+        (r) => !system.isBefore(date, r.start) && !system.isAfter(date, r.end)
+      )
+    ) {
+      return true;
+    }
+    if (s.disabled) {
+      try {
+        if (s.disabled(system.toNativeDate(date))) return true;
+      } catch {
+        // Be permissive — a buggy predicate must not crash the calendar.
+        // The fallback is "not disabled" rather than "always disabled" so
+        // a thrown predicate doesn't lock out every date.
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check whether a [start, end] range satisfies the configured
+   * `minRangeDays` / `maxRangeDays` bounds. Inclusive on both sides
+   * (a one-day range has length 1).
+   */
+  private isRangeLengthAllowed(start: T, end: T): boolean {
+    const { minRangeDays, maxRangeDays } = this.snapshot;
+    if (minRangeDays === undefined && maxRangeDays === undefined) return true;
+    const len = this.rangeLengthDays(start, end);
+    if (minRangeDays !== undefined && len < minRangeDays) return false;
+    if (maxRangeDays !== undefined && len > maxRangeDays) return false;
+    return true;
+  }
+
+  /**
+   * Inclusive day-count between two dates in the active system. Computed
+   * via native Date round-trip — accurate across DST, month boundaries,
+   * and arbitrary calendar systems (Hijri / Persian / …).
+   */
+  private rangeLengthDays(start: T, end: T): number {
+    const system = this.snapshot.system;
+    const a = system.toNativeDate(start);
+    const b = system.toNativeDate(end);
+    // Normalise to midnight UTC to avoid DST off-by-one when `toNativeDate`
+    // returns local-midnight Dates.
+    const aUtc = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+    const bUtc = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+    const ms = Math.abs(bUtc - aUtc);
+    return Math.round(ms / 86_400_000) + 1;
+  }
 }

@@ -6,7 +6,13 @@
  * Gregorian, Hijri, Chinese, anything that satisfies the CalendarSystem
  * contract.
  */
-import type { CalendarSystem, Weekday } from '../types';
+import type {
+  CalendarMatcher,
+  CalendarSystem,
+  DisabledDateInput,
+  DisabledDateRangeInput,
+  Weekday,
+} from '../types';
 
 export const ROWS = 6;
 export const COLS = 7;
@@ -149,6 +155,93 @@ export function isExplicitlyDisabled<T>(
     for (const r of disabledRanges) {
       if (isBetween(system, date, r.start, r.end)) return true;
     }
+  }
+  return false;
+}
+
+/**
+ * Number of fully filled rows in a 6-row month grid produced by
+ * {@link buildMonthGrid}. Used by `<Calendar.DayGrid fixedWeeks={false}>`
+ * to slice the trailing empty rows when a month is short enough to fit
+ * in 4 or 5 weeks.
+ *
+ * A row is "used" when at least one of its 7 cells belongs to the
+ * displayed month. Returns a number in `[1, ROWS]`.
+ */
+export function usedRows<T>(cells: readonly GridCell<T>[]): number {
+  let last = 0;
+  for (let i = 0; i < cells.length; i += 1) {
+    if (cells[i]?.isCurrentMonth) {
+      last = Math.floor(i / COLS) + 1;
+    }
+  }
+  return Math.max(1, last);
+}
+
+/**
+ * ISO 8601 week number for a Gregorian-aligned native Date.
+ *
+ * Used as the fallback `weekNumber` implementation when a CalendarSystem
+ * doesn't provide its own. Algorithm: shift the input to the Thursday of
+ * the same ISO week, then count weeks since the year's first Thursday.
+ */
+export function isoWeekNumber(date: Date): number {
+  const utc = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  );
+  const dayNum = utc.getUTCDay() || 7; // Sunday -> 7
+  utc.setUTCDate(utc.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
+  const diffMs = utc.getTime() - yearStart.getTime();
+  return Math.ceil((diffMs / 86_400_000 + 1) / 7);
+}
+
+/**
+ * Resolve a {@link CalendarMatcher} against a single date.
+ *
+ * Three matcher shapes are supported uniformly:
+ *
+ *   - `(nativeDate) => boolean` — predicate function
+ *   - `readonly DisabledDateRangeInput[]` — array whose first element has
+ *     a `start` field; treated as inclusive ranges
+ *   - `readonly DisabledDateInput[]` — anything else; treated as a list of
+ *     individual days
+ *
+ * Empty arrays match nothing. The matcher payload is normalised through
+ * the calendar system, so consumers can pass Dates / Moments / ISO
+ * strings interchangeably.
+ */
+export function matchDate<T>(
+  system: CalendarSystem<T>,
+  date: T,
+  matcher: CalendarMatcher
+): boolean {
+  if (typeof matcher === 'function') {
+    try {
+      return matcher(system.toNativeDate(date));
+    } catch {
+      // Be permissive — never crash the grid for a buggy consumer matcher.
+      return false;
+    }
+  }
+  if (!matcher.length) return false;
+  // Discriminate ranges vs. individual dates by inspecting the first entry.
+  const first = matcher[0] as unknown;
+  if (
+    first !== null &&
+    typeof first === 'object' &&
+    'start' in (first as object) &&
+    'end' in (first as object)
+  ) {
+    for (const r of matcher as readonly DisabledDateRangeInput[]) {
+      if (isBetween(system, date, system.from(r.start), system.from(r.end))) {
+        return true;
+      }
+    }
+    return false;
+  }
+  for (const d of matcher as readonly DisabledDateInput[]) {
+    if (system.isSame(date, system.from(d))) return true;
   }
   return false;
 }

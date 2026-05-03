@@ -5,9 +5,12 @@ import {
   getYearPage,
   isBetween,
   isExplicitlyDisabled,
+  isoWeekNumber,
+  matchDate,
   rotateWeekdayLabels,
   ROWS,
   TOTAL_CELLS,
+  usedRows,
   YEAR_PAGE_SIZE,
 } from '../../utils/grid';
 import {
@@ -300,5 +303,96 @@ describe('isExplicitlyDisabled()', () => {
       },
     ];
     expect(isExplicitlyDisabled(sys, target, list, ranges)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// usedRows() — fixedWeeks={false} support
+// ---------------------------------------------------------------------------
+
+describe('usedRows()', () => {
+  it('returns 6 for a month that fills all rows (May 2026 — Sun 1st row)', () => {
+    const grid = buildMonthGrid(sys, sys.fromNativeDate(new Date(2026, 4, 15)));
+    // May 2026 starts on a Friday and ends on Sunday — covers 6 rows.
+    expect(usedRows(grid)).toBe(6);
+  });
+
+  it('returns 5 for a typical month (May 2024 — Wed 1st)', () => {
+    const grid = buildMonthGrid(sys, sys.fromNativeDate(new Date(2024, 4, 15)));
+    expect(usedRows(grid)).toBe(5);
+  });
+
+  it('returns 4 for a 28-day February that starts on the first column', () => {
+    // Feb 2026 starts on a Sunday — exactly 4 rows of current-month cells.
+    const grid = buildMonthGrid(sys, sys.fromNativeDate(new Date(2026, 1, 15)));
+    expect(usedRows(grid)).toBe(4);
+  });
+
+  it('always returns at least 1 (defensive)', () => {
+    expect(
+      usedRows([{ date: sys.today(), isCurrentMonth: false, index: 0 }])
+    ).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isoWeekNumber()
+// ---------------------------------------------------------------------------
+
+describe('isoWeekNumber()', () => {
+  it('returns the ISO 8601 week for known dates', () => {
+    expect(isoWeekNumber(new Date(2024, 0, 1))).toBe(1); // Mon Jan 1 2024
+    expect(isoWeekNumber(new Date(2024, 4, 15))).toBe(20); // Wed May 15 2024
+    expect(isoWeekNumber(new Date(2024, 11, 30))).toBe(1); // Mon Dec 30 2024 → ISO week 1 of 2025
+  });
+
+  it('puts Jan 1 2023 (a Sunday) in week 52 of 2022', () => {
+    expect(isoWeekNumber(new Date(2023, 0, 1))).toBe(52);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// matchDate()
+// ---------------------------------------------------------------------------
+
+describe('matchDate()', () => {
+  const target = sys.fromNativeDate(new Date(2024, 5, 15));
+
+  it('matches against an explicit list of dates', () => {
+    expect(
+      matchDate(sys, target, [new Date(2024, 5, 14), new Date(2024, 5, 15)])
+    ).toBe(true);
+    expect(matchDate(sys, target, [new Date(2024, 5, 14)])).toBe(false);
+  });
+
+  it('matches against an inclusive range list', () => {
+    expect(
+      matchDate(sys, target, [
+        { start: new Date(2024, 5, 10), end: new Date(2024, 5, 20) },
+      ])
+    ).toBe(true);
+    expect(
+      matchDate(sys, target, [
+        { start: new Date(2024, 6, 1), end: new Date(2024, 6, 5) },
+      ])
+    ).toBe(false);
+  });
+
+  it('matches against a function predicate (receives a native Date)', () => {
+    const predicate = jest.fn((d: Date) => d.getMonth() === 5);
+    expect(matchDate(sys, target, predicate)).toBe(true);
+    expect(predicate.mock.calls[0]?.[0]).toBeInstanceOf(Date);
+  });
+
+  it('returns false (instead of crashing) when the predicate throws', () => {
+    expect(
+      matchDate(sys, target, () => {
+        throw new Error('boom');
+      })
+    ).toBe(false);
+  });
+
+  it('returns false on an empty matcher array', () => {
+    expect(matchDate(sys, target, [])).toBe(false);
   });
 });

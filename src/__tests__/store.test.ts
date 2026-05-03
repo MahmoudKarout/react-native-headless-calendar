@@ -495,5 +495,162 @@ describe('CalendarStore — actions', () => {
       });
       expect(store.getSnapshot()).not.toBe(before);
     });
+
+    it('syncs minRangeDays / maxRangeDays / maxSelected / disabled', () => {
+      const store = makeStore({ mode: 'range' });
+      const fn = (d: Date) => d.getDay() === 0;
+      store.syncProps({
+        systems: [sys],
+        mode: 'range',
+        minRangeDays: 2,
+        maxRangeDays: 14,
+        maxSelected: 5,
+        disabled: fn,
+      });
+      const s = store.getSnapshot();
+      expect(s.minRangeDays).toBe(2);
+      expect(s.maxRangeDays).toBe(14);
+      expect(s.maxSelected).toBe(5);
+      expect(s.disabled).toBe(fn);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Multiple-mode selection
+// ---------------------------------------------------------------------------
+
+describe('CalendarStore — multiple mode', () => {
+  it('starts with an empty selectedDates array', () => {
+    const store = makeStore({ mode: 'multiple' });
+    expect(store.getSnapshot().selectedDates).toEqual([]);
+  });
+
+  it('seeds initialDates when provided', () => {
+    const store = makeStore({
+      mode: 'multiple',
+      initialDates: [new Date(2024, 0, 1), new Date(2024, 0, 5)],
+    });
+    expect(store.getSnapshot().selectedDates).toHaveLength(2);
+  });
+
+  it('toggles dates on repeated taps', () => {
+    const store = makeStore({ mode: 'multiple' });
+    const a = date(2024, 0, 1);
+    const b = date(2024, 0, 5);
+    store.selectDate(a);
+    store.selectDate(b);
+    expect(store.getSnapshot().selectedDates).toHaveLength(2);
+    store.selectDate(a);
+    const remaining = store.getSnapshot().selectedDates;
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]).toEqual(b);
+  });
+
+  it('honours maxSelected — extra picks are silently ignored', () => {
+    const store = makeStore({ mode: 'multiple', maxSelected: 2 });
+    store.selectDate(date(2024, 0, 1));
+    store.selectDate(date(2024, 0, 2));
+    store.selectDate(date(2024, 0, 3));
+    expect(store.getSnapshot().selectedDates).toHaveLength(2);
+  });
+
+  it('toggleDate is a no-op outside multiple mode', () => {
+    const store = makeStore({ mode: 'single' });
+    store.toggleDate(date(2024, 0, 1));
+    expect(store.getSnapshot().selectedDates).toEqual([]);
+    expect(store.getSnapshot().selectedDate).toBeUndefined();
+  });
+
+  it('toggleDate forwards to selectDate when in multiple mode', () => {
+    const store = makeStore({ mode: 'multiple' });
+    store.toggleDate(date(2024, 0, 1));
+    expect(store.getSnapshot().selectedDates).toHaveLength(1);
+    // Second toggle on the same date removes it — round-trips through
+    // selectDate's multiple-mode branch.
+    store.toggleDate(date(2024, 0, 1));
+    expect(store.getSnapshot().selectedDates).toEqual([]);
+  });
+
+  it('clear() wipes selectedDates', () => {
+    const store = makeStore({ mode: 'multiple' });
+    store.selectDate(date(2024, 0, 1));
+    store.selectDate(date(2024, 0, 2));
+    store.clear();
+    expect(store.getSnapshot().selectedDates).toEqual([]);
+  });
+
+  it('replaceSystem carries selectedDates across the swap', () => {
+    const altSysWithId = createGregorianSystem({ label: 'Alt' });
+    Object.defineProperty(altSysWithId, 'id', { value: 'alt-greg' });
+    const store = new CalendarStore<GregorianDate>({
+      systems: [sys, altSysWithId],
+      mode: 'multiple',
+      initialDates: [new Date(2024, 0, 1), new Date(2024, 0, 5)],
+    });
+    store.replaceSystem(altSysWithId, 1);
+    expect(store.getSnapshot().selectedDates).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Range length constraints
+// ---------------------------------------------------------------------------
+
+describe('CalendarStore — range length constraints', () => {
+  it('rejects a second pick that is shorter than minRangeDays', () => {
+    const store = makeStore({ mode: 'range', minRangeDays: 3 });
+    store.selectDate(date(2024, 0, 1));
+    store.selectDate(date(2024, 0, 2)); // would produce a 2-day range
+    expect(store.getSnapshot().rangeEnd).toBeUndefined();
+    // A long-enough pick goes through.
+    store.selectDate(date(2024, 0, 5));
+    expect(store.getSnapshot().rangeEnd).toEqual(date(2024, 0, 5));
+  });
+
+  it('rejects a second pick that exceeds maxRangeDays', () => {
+    const store = makeStore({ mode: 'range', maxRangeDays: 4 });
+    store.selectDate(date(2024, 0, 1));
+    store.selectDate(date(2024, 0, 10)); // 10-day range
+    expect(store.getSnapshot().rangeEnd).toBeUndefined();
+    // A short-enough pick goes through.
+    store.selectDate(date(2024, 0, 3));
+    expect(store.getSnapshot().rangeEnd).toEqual(date(2024, 0, 3));
+  });
+
+  it('allows the partial-range state regardless of constraints', () => {
+    const store = makeStore({ mode: 'range', minRangeDays: 5 });
+    store.selectDate(date(2024, 0, 1));
+    expect(store.getSnapshot().rangeStart).toEqual(date(2024, 0, 1));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dynamic disabled predicate
+// ---------------------------------------------------------------------------
+
+describe('CalendarStore — dynamic disabled predicate', () => {
+  it('blocks selectDate when the predicate returns true', () => {
+    const isWeekend = (d: Date) => {
+      const day = d.getDay();
+      return day === 0 || day === 6;
+    };
+    const store = makeStore({ disabled: isWeekend });
+    // 2024-01-06 is a Saturday.
+    store.selectDate(date(2024, 0, 6));
+    expect(store.getSnapshot().selectedDate).toBeUndefined();
+    // 2024-01-08 is a Monday.
+    store.selectDate(date(2024, 0, 8));
+    expect(store.getSnapshot().selectedDate).toEqual(date(2024, 0, 8));
+  });
+
+  it('does not crash when the predicate throws — falls back to "not disabled"', () => {
+    const store = makeStore({
+      disabled: () => {
+        throw new Error('boom');
+      },
+    });
+    expect(() => store.selectDate(date(2024, 0, 1))).not.toThrow();
+    expect(store.getSnapshot().selectedDate).toEqual(date(2024, 0, 1));
   });
 });

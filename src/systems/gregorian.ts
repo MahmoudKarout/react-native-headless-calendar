@@ -213,6 +213,21 @@ export const createGregorianSystem = (
     formatDay,
     formatMonthYear,
 
+    /**
+     * ISO 8601 week number — Mon-first weeks, week 1 is the one containing
+     * the first Thursday of the year. Implementation does the
+     * shift-to-Thursday + count-weeks-from-Jan-1st dance using UTC dates so
+     * we don't pay a DST off-by-one in any timezone.
+     */
+    weekNumber(d) {
+      const utc = new Date(Date.UTC(d.y, d.m, d.d));
+      const dayNum = utc.getUTCDay() || 7;
+      utc.setUTCDate(utc.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
+      const diffMs = utc.getTime() - yearStart.getTime();
+      return Math.ceil((diffMs / 86_400_000 + 1) / 7);
+    },
+
     toNativeDate: (d) => new Date(d.y, d.m, d.d),
   };
 };

@@ -1,56 +1,11 @@
 /**
- * Default primitives, theme tokens, and labels.
+ * Default theme tokens and labels.
  *
- * Everything here is overridable via <Calendar.Root>'s props. The defaults
- * use raw RN primitives so the package has no design-system dependencies.
+ * Everything here is overridable via <Calendar.Root>'s props. The
+ * defaults are pure data so the package ships zero opinions about
+ * design-system primitives.
  */
-import { forwardRef, type ComponentRef } from 'react';
-import {
-  Pressable as RNPressable,
-  Text as RNText,
-  View as RNView,
-  type PressableProps,
-  type TextProps,
-  type ViewProps,
-} from 'react-native';
-
-import type {
-  CalendarLabels,
-  CalendarPrimitives,
-  CalendarTheme,
-} from './types';
-
-// ---------------------------------------------------------------------------
-// Default primitives — paper-thin wrappers around RN. Forward refs so that
-// consumers replacing them with animated/measured variants don't lose the
-// ref API.
-//
-// We use `ComponentRef<typeof X>` rather than `X` itself because the
-// `react-native-strict-api` types expose ref instances as
-// `ReactNativeElement`, not the legacy class component type.
-// ---------------------------------------------------------------------------
-
-const DefaultView = forwardRef<ComponentRef<typeof RNView>, ViewProps>(
-  (props, ref) => <RNView ref={ref} {...props} />
-);
-DefaultView.displayName = 'Calendar.DefaultView';
-
-const DefaultText = forwardRef<ComponentRef<typeof RNText>, TextProps>(
-  (props, ref) => <RNText ref={ref} {...props} />
-);
-DefaultText.displayName = 'Calendar.DefaultText';
-
-const DefaultPressable = forwardRef<
-  ComponentRef<typeof RNPressable>,
-  PressableProps
->((props, ref) => <RNPressable ref={ref} {...props} />);
-DefaultPressable.displayName = 'Calendar.DefaultPressable';
-
-export const defaultPrimitives: CalendarPrimitives = {
-  View: DefaultView as CalendarPrimitives['View'],
-  Text: DefaultText as CalendarPrimitives['Text'],
-  Pressable: DefaultPressable as CalendarPrimitives['Pressable'],
-};
+import type { CalendarLabels, CalendarTheme } from './types';
 
 // ---------------------------------------------------------------------------
 // Default theme — neutral, light. Override via <Calendar.Root theme={...}>.

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.10",
+    "@legendapp/list": "^2.0.19",
     "@tabby_ai/hijri-converter": "^1.0.5",
     "expo": "~55.0.19",
     "expo-status-bar": "~55.0.5",

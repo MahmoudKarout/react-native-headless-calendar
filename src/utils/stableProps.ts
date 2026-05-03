@@ -48,6 +48,25 @@ export function useStableCallback<TArgs extends unknown[]>(
 }
 
 /**
+ * Same contract as {@link useStableCallback} but for predicates / mappers
+ * that return a value. Used for `disabled?: (date) => boolean` and
+ * similarly typed props on `<Calendar.Root>`.
+ */
+export function useStablePredicate<TArgs extends unknown[], TReturn>(
+  cb: ((...args: TArgs) => TReturn) | undefined
+): ((...args: TArgs) => TReturn) | undefined {
+  const ref = useRef(cb);
+  useLayoutEffect(() => {
+    ref.current = cb;
+  });
+  const wrapper = useCallback(
+    (...args: TArgs) => ref.current!(...args),
+    []
+  ) as (...args: TArgs) => TReturn;
+  return cb ? wrapper : undefined;
+}
+
+/**
  * Returns the previous array reference when the new array's elements are
  * each strictly equal (===) to the previous one's, so inline literals
  * like `[gregorianSystem]` don't churn the consumer.
@@ -63,6 +82,46 @@ export function useStableArray<T>(arr: readonly T[]): readonly T[] {
   if (prev !== arr) {
     if (prev.length !== arr.length || prev.some((item, i) => item !== arr[i])) {
       ref.current = arr;
+    }
+  }
+  return ref.current;
+}
+
+/**
+ * Identity-stable cache for shallow-equal record values. Returns the
+ * previous reference when the new object has the same set of keys with
+ * each value strictly-equal (===) to the previous one. Lets consumers
+ * write inline `modifiers={{ booked }}` / `components={{ DayCell }}`
+ * without churning context.
+ *
+ * Accepts any object-typed value (including typed interfaces with
+ * optional fields like `CalendarComponents`); the caller's static type
+ * is preserved.
+ */
+export function useStableRecord<T extends object>(
+  rec: T | undefined
+): T | undefined {
+  const ref = useRef(rec);
+  const prev = ref.current;
+  if (prev !== rec) {
+    if (prev === undefined || rec === undefined) {
+      ref.current = rec;
+    } else {
+      const prevKeys = Object.keys(prev);
+      const nextKeys = Object.keys(rec);
+      let same = prevKeys.length === nextKeys.length;
+      if (same) {
+        for (const k of nextKeys) {
+          if (
+            (prev as Record<string, unknown>)[k] !==
+            (rec as Record<string, unknown>)[k]
+          ) {
+            same = false;
+            break;
+          }
+        }
+      }
+      if (!same) ref.current = rec;
     }
   }
   return ref.current;

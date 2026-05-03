@@ -328,6 +328,16 @@ describe('createGregorianSystem()', () => {
       ).toBe('<1>');
     });
 
+    it('weekNumber treats Sunday as the 7th day of the ISO week', () => {
+      // 2024-01-07 is a Sunday → `getUTCDay()` returns 0; the `|| 7`
+      // branch forces it into the ISO week-end slot. Without that
+      // short-circuit weekNumber would land on the wrong week.
+      const wn = sys.weekNumber!;
+      expect(wn(sys.fromNativeDate(new Date(2024, 0, 7)))).toBe(1);
+      // Sanity: a non-Sunday in the same ISO week resolves identically.
+      expect(wn(sys.fromNativeDate(new Date(2024, 0, 4)))).toBe(1);
+    });
+
     it('formatMonthYear defaults to "<Month> <Year>"', () => {
       expect(
         sys.formatMonthYear(sys.fromNativeDate(new Date(2024, 4, 1)))

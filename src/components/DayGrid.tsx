@@ -31,18 +31,21 @@ import React, {
   useState,
 } from 'react';
 import {
-  FlatList,
   Pressable,
   StyleSheet,
   Text,
   View,
   type GestureResponderEvent,
-  type ListRenderItem,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from 'react-native';
+import type {
+  LegendList as LegendListType,
+  LegendListRef,
+  LegendListRenderItemProps,
+  ViewToken,
+} from '@legendapp/list';
 
 import {
+  useCalendarComponents,
   useCalendarConfig,
   useCalendarSelector,
   useCalendarStore,
@@ -50,12 +53,23 @@ import {
   useCalendarWeekdayLabels,
 } from '../context';
 import {
+  COLS,
+  ROWS,
   TOTAL_CELLS,
   buildMonthGrid,
   isBetween,
   isExplicitlyDisabled,
+  isoWeekNumber,
+  matchDate,
+  usedRows,
 } from '../utils/grid';
-import type { CalendarDateValue, DayCellInfo, DayRenderer } from '../types';
+import type {
+  CalendarDateValue,
+  CalendarSystem,
+  DayCellInfo,
+  DayRenderer,
+  WeekdayCellProps,
+} from '../types';
 
 // ---------------------------------------------------------------------------
 // WeekdayHeader — static row of weekday names. Memoised so it never
@@ -74,28 +88,54 @@ const weekdayHeaderStyle = StyleSheet.create({
   },
 });
 
-const WeekdayHeaderComponent: React.FC = () => {
+const DefaultWeekdayCell: React.FC<WeekdayCellProps> = ({ label }) => {
+  const theme = useCalendarTheme();
+  return (
+    <Text
+      style={[
+        {
+          color: theme.colors.textMuted,
+          fontSize: theme.fontSize.weekday,
+          width: theme.cellSize,
+        },
+        weekdayHeaderStyle.item,
+      ]}
+    >
+      {label}
+    </Text>
+  );
+};
+
+interface WeekdayHeaderComponentProps {
+  /**
+   * When true, prepend an empty corner-cell so the header lines up with
+   * the week-number column rendered by `<Calendar.DayGrid showWeekNumbers />`.
+   */
+  showWeekNumbers?: boolean;
+}
+
+const WeekdayHeaderComponent: React.FC<WeekdayHeaderComponentProps> = ({
+  showWeekNumbers,
+}) => {
   const theme = useCalendarTheme();
   // Already rotated to match the active `firstDayOfWeek`, so the header
   // columns line up with the day cells without extra work here.
   const labels = useCalendarWeekdayLabels();
+  const components = useCalendarComponents();
+
+  // Full-row override wins over per-cell override.
+  if (components.WeekdayHeader) {
+    const Slot = components.WeekdayHeader;
+    return <Slot labels={labels} />;
+  }
+
+  const Cell = components.WeekdayCell ?? DefaultWeekdayCell;
 
   return (
     <View style={weekdayHeaderStyle.container}>
+      {showWeekNumbers && <View style={{ width: theme.cellSize }} />}
       {labels.map((label, idx) => (
-        <Text
-          key={`${label}-${idx}`}
-          style={[
-            {
-              color: theme.colors.textMuted,
-              fontSize: theme.fontSize.weekday,
-              width: theme.cellSize,
-            },
-            weekdayHeaderStyle.item,
-          ]}
-        >
-          {label}
-        </Text>
+        <Cell key={`${label}-${idx}`} label={label} index={idx} />
       ))}
     </View>
   );
@@ -238,6 +278,11 @@ DayCell.displayName = 'Calendar.DayCell';
 // reuses two of the three Layer-1 caches.
 // ---------------------------------------------------------------------------
 
+// Local helper — mirrors `useCalendarComponents()` but pulled inline so
+// MonthGridComponent's hook list stays compact and ordered. Re-evaluating
+// the modifiers is cheap (typically 0-2 entries), and Layer 2 already
+// short-circuits the per-cell loop when none are set.
+
 interface MonthGridProps {
   /** Any date inside the month to render — only year+month are read. */
   month: CalendarDateValue;
@@ -247,27 +292,50 @@ interface MonthGridProps {
    * 100% of the parent (the static, non-swipeable case).
    */
   pageWidth?: number;
+  /**
+   * Render an extra leading column of week numbers, one per row. Lined up
+   * with the corner spacer added by `WeekdayHeader` so columns stay
+   * pixel-aligned.
+   */
+  showWeekNumbers?: boolean;
 }
+
+const computeWeekNumber = <T,>(system: CalendarSystem<T>, date: T): number =>
+  system.weekNumber
+    ? system.weekNumber(date)
+    : isoWeekNumber(system.toNativeDate(date));
 
 const MonthGridComponent: React.FC<MonthGridProps> = ({
   month,
   renderDay,
   pageWidth,
+  // Always supplied by DayGrid (which itself defaults to `false`), so
+  // there's no internal default to apply here.
+  showWeekNumbers,
 }) => {
   const store = useCalendarStore();
-  const { onSelectHaptic, firstDayOfWeek } = useCalendarConfig();
+  const {
+    onSelectHaptic,
+    firstDayOfWeek,
+    modifiers,
+    showOutsideDays,
+    fixedWeeks,
+  } = useCalendarConfig();
+  const components = useCalendarComponents();
 
   // --- subscriptions (granular slices) ---------------------------------
 
   const system = useCalendarSelector((s) => s.system);
   const mode = useCalendarSelector((s) => s.mode);
   const selectedDate = useCalendarSelector((s) => s.selectedDate);
+  const selectedDates = useCalendarSelector((s) => s.selectedDates);
   const rangeStart = useCalendarSelector((s) => s.rangeStart);
   const rangeEnd = useCalendarSelector((s) => s.rangeEnd);
   const minDate = useCalendarSelector((s) => s.minDate);
   const maxDate = useCalendarSelector((s) => s.maxDate);
   const disabledDates = useCalendarSelector((s) => s.disabledDates);
   const disabledRanges = useCalendarSelector((s) => s.disabledRanges);
+  const disabledPredicate = useCalendarSelector((s) => s.disabled);
 
   // --- Layer 1: build the cell skeletons. ---
 
@@ -280,6 +348,7 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
 
   const cellInfos = useMemo<DayCellInfo[]>(() => {
     const today = system.today();
+    const modifierEntries = modifiers ? Object.entries(modifiers) : null;
     return cells.map<DayCellInfo>((c) => {
       const isStart = !!rangeStart && system.isSame(c.date, rangeStart);
       const isEnd = !!rangeEnd && system.isSame(c.date, rangeEnd);
@@ -287,24 +356,42 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
         mode === 'single' &&
         !!selectedDate &&
         system.isSame(c.date, selectedDate);
+      const isMulti =
+        mode === 'multiple' &&
+        selectedDates.some((d) => system.isSame(d, c.date));
       const inRange =
         mode === 'range' && isBetween(system, c.date, rangeStart, rangeEnd);
-      const isDisabled =
+      const nativeDate = system.toNativeDate(c.date);
+      let isDisabled =
         (!!minDate && system.isBefore(c.date, minDate)) ||
         (!!maxDate && system.isAfter(c.date, maxDate)) ||
         isExplicitlyDisabled(system, c.date, disabledDates, disabledRanges);
+      if (!isDisabled && disabledPredicate) {
+        try {
+          if (disabledPredicate(nativeDate)) isDisabled = true;
+        } catch {
+          // Be permissive — never crash the grid for a buggy consumer.
+        }
+      }
+      const cellModifiers: Record<string, boolean> = {};
+      if (modifierEntries) {
+        for (const [name, matcher] of modifierEntries) {
+          if (matchDate(system, c.date, matcher)) cellModifiers[name] = true;
+        }
+      }
 
       return {
         date: c.date,
-        nativeDate: system.toNativeDate(c.date),
+        nativeDate,
         label: system.formatDay(c.date),
         isCurrentMonth: c.isCurrentMonth,
         isToday: system.isSame(c.date, today),
-        isSelected: isSingle || isStart || isEnd,
+        isSelected: isSingle || isMulti || isStart || isEnd,
         inRange: inRange && !isStart && !isEnd,
         isRangeStart: isStart,
         isRangeEnd: isEnd,
         isDisabled,
+        modifiers: cellModifiers,
       };
     });
   }, [
@@ -312,12 +399,15 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
     system,
     mode,
     selectedDate,
+    selectedDates,
     rangeStart,
     rangeEnd,
     minDate,
     maxDate,
     disabledDates,
     disabledRanges,
+    disabledPredicate,
+    modifiers,
   ]);
 
   const onSelect = useCallback(
@@ -328,72 +418,329 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
     [store, onSelectHaptic]
   );
 
+  // Trim trailing all-outside rows when `fixedWeeks={false}`.
+  const visibleRows = fixedWeeks ? ROWS : usedRows(cells);
+  const visibleCellCount = visibleRows * COLS;
+
+  // Optional week-number column. Pick the Thursday cell of each row as
+  // the representative date — ISO weeks are Mon-based with Thursday as
+  // the canonical day-in-the-week, so this works regardless of the
+  // column the row starts on (Sun / Mon / Sat / …).
+  const weekNumbers = useMemo<readonly number[] | null>(() => {
+    if (!showWeekNumbers) return null;
+    const thursdayCol = (4 - firstDayOfWeek + 7) % 7;
+    const out = new Array<number>(visibleRows);
+    for (let r = 0; r < visibleRows; r += 1) {
+      const cell = cells[r * COLS + thursdayCol];
+      /* istanbul ignore next — buildMonthGrid always returns ROWS*COLS
+       * cells, so `cell` is defined for every visible row. */
+      out[r] = cell ? computeWeekNumber(system, cell.date) : 0;
+    }
+    return out;
+  }, [showWeekNumbers, visibleRows, cells, system, firstDayOfWeek]);
+
+  const theme = useCalendarTheme();
+  const SlotDayCell = components.DayCell;
+  const SlotWeekNumberCell = components.WeekNumberCell;
+
+  // No week-number column → simple flat layout (preserves the original
+  // wrapping behaviour, including renderDay back-compat).
+  if (!weekNumbers) {
+    return (
+      <View
+        // eslint-disable-next-line react-native/no-inline-styles
+        style={{
+          width: pageWidth ?? '100%',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+        }}
+      >
+        {cellInfos.slice(0, visibleCellCount).map((info, idx) => {
+          // showOutsideDays={false} → keep the cell slot but render an
+          // invisible spacer so the column grid stays aligned.
+          if (!showOutsideDays && !info.isCurrentMonth) {
+            return (
+              <View
+                key={idx}
+                style={{ width: theme.cellSize, height: theme.cellSize }}
+              />
+            );
+          }
+          if (renderDay) {
+            return <Fragment key={idx}>{renderDay(info)}</Fragment>;
+          }
+          if (SlotDayCell) {
+            return <SlotDayCell info={info} key={idx} onSelect={onSelect} />;
+          }
+          /* istanbul ignore next — defensive guard; cellInfos is always
+           * exactly TOTAL_CELLS entries long. */
+          if (idx >= TOTAL_CELLS) return null;
+          return <DayCell info={info} key={idx} onSelect={onSelect} />;
+        })}
+      </View>
+    );
+  }
+
+  // With a week-number column, lay out rows explicitly so the leading
+  // cell is the week number and the remaining 7 are the day cells.
   return (
-    <View
-      // eslint-disable-next-line react-native/no-inline-styles
-      style={{
-        width: pageWidth ?? '100%',
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-      }}
-    >
-      {cellInfos.map((info, idx) => {
-        if (renderDay) {
-          return <Fragment key={idx}>{renderDay(info)}</Fragment>;
-        }
-        /* istanbul ignore next — defensive guard; cellInfos is always
-         * exactly TOTAL_CELLS entries long. */
-        if (idx >= TOTAL_CELLS) return null;
-        return <DayCell info={info} key={idx} onSelect={onSelect} />;
-      })}
+    <View style={{ width: pageWidth ?? '100%' }}>
+      {weekNumbers.map((wn, rowIdx) => (
+        <View key={rowIdx} style={weekNumberRowStyle.row}>
+          {SlotWeekNumberCell ? (
+            <SlotWeekNumberCell weekNumber={wn} />
+          ) : (
+            <View
+              style={[
+                weekNumberRowStyle.weekCell,
+                { width: theme.cellSize, height: theme.cellSize },
+              ]}
+            >
+              <Text
+                style={{
+                  color: theme.colors.textMuted,
+                  fontSize: theme.fontSize.weekday,
+                  fontVariant: ['tabular-nums'],
+                }}
+              >
+                {wn}
+              </Text>
+            </View>
+          )}
+          {cellInfos
+            .slice(rowIdx * COLS, rowIdx * COLS + COLS)
+            .map((info, colIdx) => {
+              const idx = rowIdx * COLS + colIdx;
+              if (!showOutsideDays && !info.isCurrentMonth) {
+                return (
+                  <View
+                    key={idx}
+                    style={{ width: theme.cellSize, height: theme.cellSize }}
+                  />
+                );
+              }
+              if (renderDay) {
+                return <Fragment key={idx}>{renderDay(info)}</Fragment>;
+              }
+              if (SlotDayCell) {
+                return (
+                  <SlotDayCell info={info} key={idx} onSelect={onSelect} />
+                );
+              }
+              return <DayCell info={info} key={idx} onSelect={onSelect} />;
+            })}
+        </View>
+      ))}
     </View>
   );
 };
+
+const weekNumberRowStyle = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+  },
+  weekCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 const MonthGrid = memo(MonthGridComponent);
 MonthGrid.displayName = 'Calendar.MonthGrid';
 
 // ---------------------------------------------------------------------------
-// SwipeableMonthList — internal: horizontal FlatList of three MonthGrids.
+// SwipeableMonthList — internal: an infinite, virtualised, horizontal
+// month list backed by `@legendapp/list`.
 //
-// Sliding-window pagination:
-//   1. `data = [prev, displayed, next]` — derived from the store snapshot.
-//   2. `initialScrollIndex = 1` so the user always starts on the active month.
-//   3. After a swipe, `onMomentumScrollEnd` dispatches `store.changeMonth(±1)`.
-//      That updates `displayed`, which:
-//        - rebuilds `data` so the just-revealed month is at index 1, AND
-//        - fires the `useEffect` below which re-centres the scroll silently.
-//   4. External navigation (arrow buttons, year picker, system swap) goes
-//      through the same path because they all update `displayed`.
+// Why LegendList over FlatList here:
+//   - `recycleItems` reuses MonthGrid instances across months, so
+//     swiping through 24+ months doesn't pay 24× the mount cost.
+//   - Per-month virtualisation through `drawDistance` instead of a
+//     hand-rolled `[prev, current, next]` window — only the month(s)
+//     within `pageWidth` of the viewport are mounted; the rest of the
+//     window is just data.
+//   - `maintainVisibleContentPosition` keeps the active month visually
+//     anchored when we prepend / append months at the edges.
+//   - `scrollToIndex` ref API gives us a clean way to react to external
+//     `displayed` changes (arrow buttons, year picker, system switch).
 //
-// `keyExtractor` is `<systemId>:<year>-<month>` so React reuses the
-// component instance for the two pages that overlap with the previous
-// frame, preserving the Layer-1/Layer-2 caches inside MonthGrid.
+// `@legendapp/list` is an OPTIONAL peer dependency — it's only required
+// when the consumer renders `<Calendar.DayGrid swipeable />`. If the
+// package isn't installed we throw a clear, README-pointing error from
+// the first render rather than letting the bundler emit "Cannot find
+// module" deep in our internals.
 // ---------------------------------------------------------------------------
+
+const WINDOW_RADIUS = 12; // initial: ±12 months around displayed → 25 items
+const WINDOW_GROWTH = 6; // months to prepend / append on edge-reach
 
 interface SwipeableMonthListProps {
   renderDay?: DayRenderer;
+  showWeekNumbers?: boolean;
 }
+
+/** Build [center − radius … center + radius], inclusive. */
+const buildMonthsAround = (
+  system: CalendarSystem,
+  center: CalendarDateValue,
+  radius: number
+): CalendarDateValue[] => {
+  const out = new Array<CalendarDateValue>(radius * 2 + 1);
+  for (let i = -radius; i <= radius; i += 1) {
+    out[i + radius] = system.addMonths(center, i);
+  }
+  return out;
+};
+
+const monthsBetween = (
+  system: CalendarSystem,
+  from: CalendarDateValue,
+  to: CalendarDateValue
+): number =>
+  (system.year(to) - system.year(from)) * 12 +
+  (system.month(to) - system.month(from));
+
+// Lazy require so the optional peer dep only blows up in `swipeable`
+// mode. Surfaced as a render-time throw so the stack trace points at
+// the consumer's `<Calendar.DayGrid swipeable />`.
+let cachedLegendList: typeof LegendListType | null = null;
+const loadLegendList = (): typeof LegendListType => {
+  if (cachedLegendList) return cachedLegendList;
+  try {
+    const mod = require('@legendapp/list');
+    cachedLegendList = mod.LegendList as typeof LegendListType;
+    return cachedLegendList;
+  } catch {
+    throw new Error(
+      '[react-native-fast-calendar] <Calendar.DayGrid swipeable /> ' +
+        'requires `@legendapp/list` to be installed. Add it with:\n\n' +
+        '    yarn add @legendapp/list\n\n' +
+        'See the README for the full swipeable-mode setup.'
+    );
+  }
+};
 
 const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
   renderDay,
+  showWeekNumbers,
 }) => {
+  const LegendList = loadLegendList();
+
   const store = useCalendarStore();
   const { testID } = useCalendarConfig();
   const system = useCalendarSelector((s) => s.system);
   const displayed = useCalendarSelector((s) => s.displayed);
+  const theme = useCalendarTheme();
 
-  const flatListRef = useRef<FlatList<CalendarDateValue>>(null);
+  const listRef = useRef<LegendListRef>(null);
   const [pageWidth, setPageWidth] = useState(0);
 
-  const months = useMemo<readonly CalendarDateValue[]>(
-    () => [
-      system.addMonths(displayed, -1),
-      displayed,
-      system.addMonths(displayed, 1),
-    ],
-    [system, displayed]
+  // Horizontal lists in React Native take their cross-axis (height)
+  // from the parent — items don't push the list taller. Without an
+  // explicit height the wrapper collapses to 0 and no day cells render.
+  // Reserve a full 6-row grid (`ROWS`) so every page has the same
+  // vertical footprint regardless of whether a particular month uses 4,
+  // 5, or 6 weeks.
+  const pageHeight = theme.cellSize * ROWS;
+
+  // The visible window of months. Grows from both ends via
+  // `onStartReached` / `onEndReached`. Always includes `displayed`; the
+  // re-centring effect below rebuilds the window when `displayed` jumps
+  // out of it (year picker, system switch, programmatic navigation).
+  const [months, setMonths] = useState<readonly CalendarDateValue[]>(() =>
+    buildMonthsAround(system, displayed, WINDOW_RADIUS)
   );
+
+  // `displayed` ↔ `months` reconciliation. Two cases:
+  //   (1) displayed is inside the current window → no-op (active index
+  //       is recomputed below; scroll-sync effect handles positioning).
+  //   (2) displayed jumped outside the window → rebuild the window
+  //       around it. The new array is a brand-new identity so LegendList
+  //       resets its containers and `initialScrollIndex` re-anchors at
+  //       `WINDOW_RADIUS`.
+  useEffect(() => {
+    const idx = months.findIndex((m) => system.isSame(m, displayed));
+    if (idx === -1) {
+      setMonths(buildMonthsAround(system, displayed, WINDOW_RADIUS));
+    }
+  }, [displayed, months, system]);
+
+  // System change wipes the entire window — month identities differ
+  // between calendar systems, so reusing them would corrupt the keys.
+  // Captured via ref so this effect runs once per system change rather
+  // than on every render.
+  const lastSystemId = useRef(system.id);
+  useEffect(() => {
+    if (lastSystemId.current === system.id) return;
+    lastSystemId.current = system.id;
+    setMonths(buildMonthsAround(system, displayed, WINDOW_RADIUS));
+  }, [system, displayed]);
+
+  const activeIndex = useMemo(() => {
+    const idx = months.findIndex((m) => system.isSame(m, displayed));
+    return idx === -1 ? WINDOW_RADIUS : idx;
+  }, [months, system, displayed]);
+
+  // Sync external navigation → scroll. Runs whenever `displayed` (or
+  // the resolved index) changes; LegendList's scroll position usually
+  // already matches when the change came from a swipe so this is a
+  // cheap no-op in that case.
+  useEffect(() => {
+    if (pageWidth === 0) return;
+    listRef.current?.scrollToIndex({ index: activeIndex, animated: false });
+  }, [activeIndex, pageWidth]);
+
+  // Sync swipe → store. Fires when the user lands on a new page;
+  // computes the month delta and dispatches `changeMonth` so every
+  // hook reading `displayed` stays in lockstep.
+  const onViewableItemsChanged = useCallback(
+    ({
+      viewableItems,
+    }: {
+      viewableItems: ReadonlyArray<ViewToken<CalendarDateValue>>;
+    }) => {
+      const visible = viewableItems[0];
+      if (!visible) return;
+      const next = visible.item;
+      const current = store.getSnapshot().displayed;
+      const delta = monthsBetween(system, current, next);
+      if (delta !== 0) store.changeMonth(delta);
+    },
+    [store, system]
+  );
+
+  // Single-active-page semantics: the >=60% rule means at most one
+  // month is "viewable" at any time, so `viewableItems[0]` above is
+  // unambiguous.
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 60,
+  }).current;
+
+  // Initial window is 25 months and only ever grows, so `prev[0]` /
+  // `prev[prev.length - 1]` are guaranteed to be defined — the
+  // non-null assertion is safe under `noUncheckedIndexedAccess` and
+  // saves us a defensive branch we couldn't reach in tests.
+  const onStartReached = useCallback(() => {
+    setMonths((prev) => {
+      const first = prev[0]!;
+      const before = new Array<CalendarDateValue>(WINDOW_GROWTH);
+      for (let i = 0; i < WINDOW_GROWTH; i += 1) {
+        before[i] = system.addMonths(first, i - WINDOW_GROWTH);
+      }
+      return [...before, ...prev];
+    });
+  }, [system]);
+
+  const onEndReached = useCallback(() => {
+    setMonths((prev) => {
+      const last = prev[prev.length - 1]!;
+      const after = new Array<CalendarDateValue>(WINDOW_GROWTH);
+      for (let i = 0; i < WINDOW_GROWTH; i += 1) {
+        after[i] = system.addMonths(last, i + 1);
+      }
+      return [...prev, ...after];
+    });
+  }, [system]);
 
   const keyExtractor = useCallback(
     (item: CalendarDateValue) =>
@@ -401,54 +748,22 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
     [system]
   );
 
-  const getItemLayout = useCallback(
-    (
-      _data: ArrayLike<CalendarDateValue> | null | undefined,
-      index: number
-    ) => ({
-      length: pageWidth,
-      offset: pageWidth * index,
-      index,
-    }),
-    [pageWidth]
-  );
-
-  // Re-centre the FlatList on the active month after every `displayed` change.
-  // Runs both for swipe-driven changes (where the scroll is at index 0 or 2
-  // when this fires) and for external-navigation-driven changes (where it's
-  // typically already at index 1 and this is a no-op).
-  useEffect(() => {
-    if (pageWidth === 0) return;
-    flatListRef.current?.scrollToOffset({
-      offset: pageWidth,
-      animated: false,
-    });
-  }, [displayed, pageWidth]);
-
-  const onMomentumScrollEnd = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (pageWidth === 0) return;
-      const offset = e.nativeEvent.contentOffset.x;
-      const index = Math.round(offset / pageWidth);
-      if (index === 1) return;
-      // -1 (prev) or +1 (next). The store updates `displayed`; the effect
-      // above then snaps the FlatList back to the centre.
-      store.changeMonth(index - 1);
-    },
-    [store, pageWidth]
-  );
-
-  const renderItem: ListRenderItem<CalendarDateValue> = useCallback(
-    ({ item }) => (
-      <MonthGrid month={item} pageWidth={pageWidth} renderDay={renderDay} />
+  const renderItem = useCallback(
+    ({ item }: LegendListRenderItemProps<CalendarDateValue>) => (
+      <MonthGrid
+        month={item}
+        pageWidth={pageWidth}
+        renderDay={renderDay}
+        showWeekNumbers={showWeekNumbers}
+      />
     ),
-    [pageWidth, renderDay]
+    [pageWidth, renderDay, showWeekNumbers]
   );
 
   return (
     <View
       // eslint-disable-next-line react-native/no-inline-styles
-      style={{ width: '100%' }}
+      style={{ width: '100%', height: pageHeight }}
       onLayout={({ nativeEvent }) => {
         const w = Math.round(nativeEvent.layout.width);
         if (w !== pageWidth) setPageWidth(w);
@@ -456,19 +771,36 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
       testID={testID ? `${testID}.calendar.swipeable` : undefined}
     >
       {pageWidth > 0 && (
-        <FlatList<CalendarDateValue>
-          ref={flatListRef}
+        <LegendList<CalendarDateValue>
           data={months}
-          decelerationRate="fast"
-          getItemLayout={getItemLayout}
+          // One page on each side of the viewport stays mounted — keeps
+          // swipes flash-free while still bounding mounted MonthGrids
+          // to 3, regardless of how long the data window grows.
+          drawDistance={pageWidth}
+          estimatedItemSize={pageWidth}
           horizontal
-          initialScrollIndex={1}
+          initialScrollIndex={activeIndex}
           keyExtractor={keyExtractor}
-          onMomentumScrollEnd={onMomentumScrollEnd}
+          // Stable scroll anchor when `onStartReached` prepends — without
+          // this the active month would visually jump every time the
+          // window grows backwards.
+          maintainVisibleContentPosition
+          onEndReached={onEndReached}
+          onStartReached={onStartReached}
+          onViewableItemsChanged={onViewableItemsChanged}
           pagingEnabled
+          recycleItems
+          // Cast: under `react-native-strict-api`, ScrollView's `ref` is
+          // typed as `PublicScrollViewInstance` and the LegendList type
+          // intersects that with `RefAttributes<LegendListRef>` into an
+          // un-satisfiable type. The runtime contract is fine — we only
+          // call methods from the `LegendListRef` surface — so we
+          // narrow the prop with a single contained `as never` here.
+          ref={listRef as never}
           renderItem={renderItem}
           showsHorizontalScrollIndicator={false}
           testID={testID ? `${testID}.calendar.swipeable.list` : undefined}
+          viewabilityConfig={viewabilityConfig}
         />
       )}
     </View>
@@ -477,6 +809,50 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
 
 const SwipeableMonthList = memo(SwipeableMonthListComponent);
 SwipeableMonthList.displayName = 'Calendar.SwipeableMonthList';
+
+// ---------------------------------------------------------------------------
+// MonthSlot — single (caption + grid) pair, used both by the static day
+// view and as a sibling repeater in `numberOfMonths > 1`.
+// ---------------------------------------------------------------------------
+
+interface MonthSlotProps {
+  month: CalendarDateValue;
+  renderDay?: DayRenderer;
+  showWeekNumbers?: boolean;
+}
+
+const MonthSlotComponent: React.FC<MonthSlotProps> = ({
+  month,
+  renderDay,
+  showWeekNumbers,
+}) => {
+  const components = useCalendarComponents();
+  const system = useCalendarSelector((s) => s.system);
+
+  const Caption = components.MonthCaption;
+  const captionProps = Caption
+    ? {
+        date: month,
+        monthIndex: system.month(month),
+        year: system.year(month),
+        label: system.formatMonthYear(month),
+      }
+    : null;
+
+  return (
+    <View>
+      {Caption && captionProps && <Caption {...captionProps} />}
+      <MonthGrid
+        month={month}
+        renderDay={renderDay}
+        showWeekNumbers={showWeekNumbers}
+      />
+    </View>
+  );
+};
+
+const MonthSlot = memo(MonthSlotComponent);
+MonthSlot.displayName = 'Calendar.MonthSlot';
 
 // ---------------------------------------------------------------------------
 // DayGrid — main exported component.
@@ -504,26 +880,105 @@ export interface DayGridProps {
    * the scroll always re-centres on the active month after any update.
    *
    * Defaults to `false` to preserve the existing static layout.
+   *
+   * Mutually exclusive with `numberOfMonths > 1` — the swipeable list
+   * always shows a single page.
    */
   swipeable?: boolean;
+  /**
+   * Render `numberOfMonths` consecutive months side-by-side, starting at
+   * the currently displayed month. Each month is captioned via the
+   * `components.MonthCaption` slot (no caption is rendered when the slot
+   * is omitted, preserving the single-month layout's headerless look).
+   *
+   * Defaults to `1`. Values >= 2 disable `swipeable` automatically.
+   */
+  numberOfMonths?: number;
+  /**
+   * Show a leading column of ISO 8601 week numbers, computed via
+   * `system.weekNumber()` when available (the bundled Gregorian system
+   * implements it natively), or derived from `toNativeDate(d)` as a
+   * fallback. Defaults to `false`.
+   */
+  showWeekNumbers?: boolean;
 }
 
 const DayGridComponent: React.FC<DayGridProps> = ({
   renderDay,
   swipeable = false,
+  numberOfMonths = 1,
+  showWeekNumbers = false,
 }) => {
   const displayed = useCalendarSelector((s) => s.displayed);
+  const system = useCalendarSelector((s) => s.system);
   const theme = useCalendarTheme();
 
+  const safeMonths = Math.max(1, Math.floor(numberOfMonths));
+  const isMultiMonth = safeMonths > 1;
+  // Multi-month overrides swipeable — supporting both at once would
+  // require a per-page numberOfMonths slice, which adds complexity for
+  // little practical gain. Document the precedence.
+  const useSwipeable = swipeable && !isMultiMonth;
+
+  const monthsToRender = useMemo<readonly CalendarDateValue[]>(() => {
+    if (!isMultiMonth) return [displayed];
+    return Array.from({ length: safeMonths }, (_, i) =>
+      i === 0 ? displayed : system.addMonths(displayed, i)
+    );
+  }, [isMultiMonth, safeMonths, displayed, system]);
+
+  // Single-month static layout: keep the original gap-8 stacking so
+  // existing layouts don't shift visually.
+  if (!isMultiMonth) {
+    return (
+      <View
+        // eslint-disable-next-line react-native/no-inline-styles
+        style={{
+          gap: 8,
+          width: theme.cellSize * (showWeekNumbers ? 8 : 7),
+        }}
+      >
+        <WeekdayHeader showWeekNumbers={showWeekNumbers} />
+        {useSwipeable ? (
+          <SwipeableMonthList
+            renderDay={renderDay}
+            showWeekNumbers={showWeekNumbers}
+          />
+        ) : (
+          <MonthSlot
+            month={displayed}
+            renderDay={renderDay}
+            showWeekNumbers={showWeekNumbers}
+          />
+        )}
+      </View>
+    );
+  }
+
+  // Multi-month layout: each month is its own column with its own
+  // weekday header (so the captions and weekday rows line up per month).
   return (
-    // eslint-disable-next-line react-native/no-inline-styles
-    <View style={{ gap: 8, width: theme.cellSize * 7 }}>
-      <WeekdayHeader />
-      {swipeable ? (
-        <SwipeableMonthList renderDay={renderDay} />
-      ) : (
-        <MonthGrid month={displayed} renderDay={renderDay} />
-      )}
+    <View
+      // eslint-disable-next-line react-native/no-inline-styles
+      style={{ flexDirection: 'row', gap: theme.spacing.lg }}
+    >
+      {monthsToRender.map((m, i) => (
+        <View
+          key={i}
+          // eslint-disable-next-line react-native/no-inline-styles
+          style={{
+            gap: 8,
+            width: theme.cellSize * (showWeekNumbers ? 8 : 7),
+          }}
+        >
+          <WeekdayHeader showWeekNumbers={showWeekNumbers} />
+          <MonthSlot
+            month={m}
+            renderDay={renderDay}
+            showWeekNumbers={showWeekNumbers}
+          />
+        </View>
+      ))}
     </View>
   );
 };

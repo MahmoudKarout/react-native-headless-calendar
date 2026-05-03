@@ -9,7 +9,7 @@
  * Everything is injected through the <Calendar.Root> provider.
  */
 
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
 // CalendarDateValue — opaque per-system date value.
@@ -96,6 +96,17 @@ export interface CalendarSystem<T = CalendarDateValue> {
   /** Full label for the header, e.g. "May 2024" or "Ramadan 1446". */
   formatMonthYear(d: T): string;
 
+  /**
+   * Optional ISO-8601-style week number for `d`. Used by
+   * `<Calendar.DayGrid showWeekNumbers />` and `useCalendarWeekNumbers()`.
+   *
+   * Implementors that don't have a meaningful week-number concept can omit
+   * this; the day grid will fall back to deriving an ISO week from
+   * `toNativeDate(d)` so the column still works for the Gregorian-aligned
+   * common case.
+   */
+  weekNumber?(d: T): number;
+
   // -- conversion ---------------------------------------------------------
 
   /** Convert to a native JS Date for external callbacks. */
@@ -108,7 +119,7 @@ export interface CalendarSystem<T = CalendarDateValue> {
 
 export type CalendarView = 'day' | 'month' | 'year';
 
-export type CalendarMode = 'single' | 'range';
+export type CalendarMode = 'single' | 'range' | 'multiple';
 
 /**
  * Day-of-week index, matching `CalendarSystem.weekday()`:
@@ -196,6 +207,8 @@ export interface CalendarSelectionPayload {
   startDate?: Date;
   /** Native JS Date for the end of the selected range. */
   endDate?: Date;
+  /** Native JS Dates for every selected day in multiple mode. */
+  dates?: Date[];
   /** Identifier of the active calendar system at the time of selection. */
   systemId: string;
 }
@@ -215,6 +228,31 @@ export interface DisabledDateRangeInput {
   end: DisabledDateInput;
 }
 
+/**
+ * Predicate or list of dates that selects a subset of the calendar's days.
+ *
+ * Used by the `disabled` prop on `<Calendar.Root>` and by every entry in
+ * the `modifiers` map. Three shapes are supported uniformly:
+ *
+ *   - `readonly DisabledDateInput[]`        — match if any element is the same day
+ *   - `readonly DisabledDateRangeInput[]`   — match if any inclusive range covers it
+ *   - `(nativeDate: Date) => boolean`       — fully dynamic predicate
+ *
+ * Mixed arrays (dates + ranges in one array) are not supported — pick one
+ * shape per matcher. Use multiple modifier keys to compose.
+ */
+export type CalendarMatcher =
+  | readonly DisabledDateInput[]
+  | readonly DisabledDateRangeInput[]
+  | ((nativeDate: Date) => boolean);
+
+/**
+ * Map of named modifiers, e.g. `{ booked: [...], holiday: (d) => ... }`.
+ * The DayGrid evaluates each matcher per cell and exposes the resulting
+ * boolean flags on `DayCellInfo.modifiers` so consumers can style them.
+ */
+export type CalendarModifiers = Readonly<Record<string, CalendarMatcher>>;
+
 // ---------------------------------------------------------------------------
 // Day cell metadata exposed to custom renderers via render props.
 // ---------------------------------------------------------------------------
@@ -230,7 +268,10 @@ export interface DayCellInfo<T = CalendarDateValue> {
   isCurrentMonth: boolean;
   /** True if the cell represents today. */
   isToday: boolean;
-  /** True if the cell is selected (single mode or one of range endpoints). */
+  /**
+   * True if the cell is selected — single mode (current pick), range mode
+   * (one of the endpoints), or multiple mode (member of `selectedDates`).
+   */
   isSelected: boolean;
   /** True if the cell is between range endpoints (range mode only). */
   inRange: boolean;
@@ -240,8 +281,81 @@ export interface DayCellInfo<T = CalendarDateValue> {
   isRangeEnd: boolean;
   /** True if the cell is disabled (min/max bound or explicit disable list). */
   isDisabled: boolean;
+  /**
+   * Per-modifier flags. Key matches the `modifiers` map passed to
+   * `<Calendar.Root>`; value is `true` when the matcher matched this cell.
+   * Always present, but the object is empty `{}` when no modifiers are set.
+   */
+  modifiers: Readonly<Record<string, boolean>>;
+  /**
+   * Optional ISO week number for the row this cell sits in. Populated by
+   * `useCalendarWeekNumbers()` and `<Calendar.DayGrid showWeekNumbers />`;
+   * `undefined` otherwise to avoid the per-cell cost when unused.
+   */
+  weekNumber?: number;
 }
 
 export type DayRenderer<T = CalendarDateValue> = (
   info: DayCellInfo<T>
 ) => ReactNode;
+
+// ---------------------------------------------------------------------------
+// Component slots — shadcn-style replaceable atoms passed to
+// <Calendar.Root components={{ ... }}>.
+//
+// Each slot has a stable, well-typed prop contract, so consumers can swap
+// the visual implementation without touching the layout, selection, or
+// memoisation logic that lives inside <Calendar.DayGrid>. Built-in
+// implementations are used when a slot is omitted.
+// ---------------------------------------------------------------------------
+
+export interface WeekdayHeaderProps {
+  /** Already rotated to the active `firstDayOfWeek`. */
+  labels: readonly string[];
+}
+
+export interface WeekdayCellProps {
+  /** Label text for this column (e.g. `"Mon"`). */
+  label: string;
+  /** Column index (0..6) — useful for highlighting weekends. */
+  index: number;
+}
+
+export interface WeekNumberCellProps {
+  /** ISO 8601 (or system-defined) week number. */
+  weekNumber: number;
+}
+
+export interface MonthCaptionProps<T = CalendarDateValue> {
+  /** Date object pinned to the first of the displayed month. */
+  date: T;
+  /** 0-based month index for `system.monthLabels()`. */
+  monthIndex: number;
+  /** Year of the displayed month. */
+  year: number;
+  /** Pre-formatted `system.formatMonthYear(date)` output. */
+  label: string;
+}
+
+/**
+ * Replaceable atoms. Pass any subset to `<Calendar.Root components>`; the
+ * built-in implementation is used for the rest.
+ */
+export interface CalendarComponents<T = CalendarDateValue> {
+  /** Replaces the entire weekday header row (incl. layout). */
+  WeekdayHeader?: ComponentType<WeekdayHeaderProps>;
+  /**
+   * Replaces a single weekday cell — used by the default `WeekdayHeader`.
+   * Ignored when `components.WeekdayHeader` is also provided.
+   */
+  WeekdayCell?: ComponentType<WeekdayCellProps>;
+  /** Replaces a single day cell. Receives the same `DayCellInfo` as `renderDay`. */
+  DayCell?: ComponentType<{
+    info: DayCellInfo<T>;
+    onSelect: (date: T) => void;
+  }>;
+  /** Replaces the per-row week-number cell. */
+  WeekNumberCell?: ComponentType<WeekNumberCellProps>;
+  /** Renders the per-month caption above each `MonthGrid`. Defaults to nothing. */
+  MonthCaption?: ComponentType<MonthCaptionProps<T>>;
+}

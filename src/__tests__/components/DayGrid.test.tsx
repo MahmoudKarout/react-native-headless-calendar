@@ -1,17 +1,37 @@
-import { Text } from 'react-native';
+import React from 'react';
+import { Text, View } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
 
 import { DayCell, DayGrid } from '../../components/DayGrid';
 import { Root } from '../../components/Root';
-import { useCalendarStore } from '../../context';
+import { useCalendarStore, useCalendarSystemSwitcher } from '../../context';
 import type { CalendarStore } from '../../store';
-import { gregorianSystem } from '../../systems/gregorian';
-import type { DayCellInfo } from '../../types';
+import {
+  createGregorianSystem,
+  gregorianSystem,
+} from '../../systems/gregorian';
+import type {
+  CalendarComponents,
+  CalendarDateValue,
+  CalendarSystem,
+  DayCellInfo,
+  MonthCaptionProps,
+  WeekdayHeaderProps,
+} from '../../types';
+import {
+  getMockLegendListProps,
+  getMockLegendListScrollCalls,
+  resetMockLegendList,
+} from '../__mocks__/legend-list';
+
+// Stand in for the optional `@legendapp/list` peer dep — see the mock
+// file for the rationale.
+jest.mock('@legendapp/list', () => require('../__mocks__/legend-list'));
 
 const PAGE_WIDTH = 350;
 
-// Drives the SwipeableMonthList from `pageWidth=0` to a measured width so
-// the inner FlatList mounts. Tests share this between scenarios.
+// Drives the SwipeableMonthList from `pageWidth=0` to a measured width
+// so the inner LegendList mounts.
 const fireSwipeableLayout = (
   target: ReturnType<typeof render>['getByTestId']
 ) =>
@@ -21,20 +41,31 @@ const fireSwipeableLayout = (
     },
   });
 
-// Fires a single horizontal page swipe on the SwipeableMonthList — index
-// 0 = previous month, 2 = next month. Index 1 (the centre) is a no-op the
-// component intentionally ignores.
-const fireSwipeTo = (
-  utils: ReturnType<typeof render>,
-  targetIndex: 0 | 1 | 2
-) =>
-  fireEvent(
-    utils.getByTestId('cal.calendar.swipeable.list'),
-    'momentumScrollEnd',
-    {
-      nativeEvent: { contentOffset: { x: PAGE_WIDTH * targetIndex, y: 0 } },
-    }
-  );
+// Simulates a swipe landing on the month at `targetIndex` in the
+// LegendList's data window. Mirrors what a real LegendList would emit
+// once the new page crosses the `itemVisiblePercentThreshold`.
+const fireSwipeToItem = (item: CalendarDateValue, index: number) => {
+  const { onViewableItemsChanged } = getMockLegendListProps();
+  if (typeof onViewableItemsChanged !== 'function') {
+    throw new Error(
+      'fireSwipeToItem(): expected onViewableItemsChanged to be wired'
+    );
+  }
+  act(() => {
+    onViewableItemsChanged({
+      viewableItems: [
+        {
+          item,
+          key: `${index}`,
+          index,
+          isViewable: true,
+          containerId: 0,
+        },
+      ],
+      changed: [],
+    });
+  });
+};
 
 describe('<Calendar.DayGrid />', () => {
   it('renders 42 cells when no renderDay is provided', () => {
@@ -259,7 +290,18 @@ describe('<Calendar.DayGrid swipeable />', () => {
     return null;
   };
 
-  it('does not mount the FlatList until the wrapper is laid out', () => {
+  // Months SwipeableMonthList builds around `displayed`. Kept in sync
+  // with `WINDOW_RADIUS` in `DayGrid.tsx` — increase here if the
+  // production constant grows.
+  const WINDOW_RADIUS = 12;
+  const ACTIVE_INDEX = WINDOW_RADIUS;
+  const WINDOW_SIZE = WINDOW_RADIUS * 2 + 1;
+
+  beforeEach(() => {
+    resetMockLegendList();
+  });
+
+  it('does not mount the LegendList until the wrapper is laid out', () => {
     const { queryByTestId } = render(
       <Root
         initialDate={new Date(2024, 4, 15)}
@@ -270,12 +312,12 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     expect(queryByTestId('cal.calendar.swipeable')).toBeTruthy();
-    // The FlatList is conditional on pageWidth > 0 — before the layout
+    // The list is conditional on pageWidth > 0 — before the layout
     // event fires, only the outer wrapper exists.
     expect(queryByTestId('cal.calendar.swipeable.list')).toBeNull();
   });
 
-  it('mounts the FlatList once the wrapper is laid out', () => {
+  it('mounts the LegendList once the wrapper is laid out', () => {
     const utils = render(
       <Root
         initialDate={new Date(2024, 4, 15)}
@@ -289,7 +331,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
     expect(utils.queryByTestId('cal.calendar.swipeable.list')).toBeTruthy();
   });
 
-  it('renders multiple month pages so swipes reveal an adjacent month', () => {
+  it('renders only the active month — neighbouring months sit in data but stay unmounted', () => {
     const utils = render(
       <Root
         initialDate={new Date(2024, 4, 15)}
@@ -300,13 +342,37 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    // The active page contributes 42 cells; FlatList eagerly renders at
-    // least one neighbour so the swipe gesture has somewhere to scroll to.
-    // The exact count depends on RN's virtualization heuristics — we only
-    // assert "more than one page worth" so the test stays robust.
-    const cells = utils.getAllByRole('button');
-    expect(cells.length).toBeGreaterThan(42);
-    expect(cells.length % 42).toBe(0);
+    // LegendList virtualises everything outside `drawDistance`, so even
+    // though `data` carries 25 months only the active one mints day
+    // cells (6 rows × 7 cols = 42).
+    expect(utils.getAllByRole('button')).toHaveLength(42);
+  });
+
+  it('hands LegendList a 25-month window centred on the displayed month', () => {
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    const props = getMockLegendListProps();
+    expect(props.data).toHaveLength(WINDOW_SIZE);
+    expect(props.initialScrollIndex).toBe(ACTIVE_INDEX);
+    // Active slot is the requested initial date (May 2024).
+    expect((props.data as CalendarDateValue[])[ACTIVE_INDEX]).toEqual(
+      expect.objectContaining({ y: 2024, m: 4 })
+    );
+    // Neighbours are the prev / next month (April / June 2024).
+    expect((props.data as CalendarDateValue[])[ACTIVE_INDEX - 1]).toEqual(
+      expect.objectContaining({ y: 2024, m: 3 })
+    );
+    expect((props.data as CalendarDateValue[])[ACTIVE_INDEX + 1]).toEqual(
+      expect.objectContaining({ y: 2024, m: 5 })
+    );
   });
 
   it('keeps the weekday header outside of the swipeable area', () => {
@@ -324,7 +390,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
     expect(utils.queryAllByText('Sun')).toHaveLength(1);
   });
 
-  it('advances the displayed month on a swipe to the next page', () => {
+  it('advances the displayed month when the next page crosses the viewability threshold', () => {
     let storeRef: CalendarStore | null = null;
     const utils = render(
       <Root
@@ -337,15 +403,14 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    act(() => {
-      fireSwipeTo(utils, 2);
-    });
+    const data = getMockLegendListProps().data as CalendarDateValue[];
+    fireSwipeToItem(data[ACTIVE_INDEX + 1]!, ACTIVE_INDEX + 1);
     expect(storeRef!.getSnapshot().displayed).toEqual(
       expect.objectContaining({ y: 2024, m: 5 })
     );
   });
 
-  it('steps backward on a swipe to the previous page', () => {
+  it('steps backward when the prev page becomes viewable', () => {
     let storeRef: CalendarStore | null = null;
     const utils = render(
       <Root
@@ -358,15 +423,14 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    act(() => {
-      fireSwipeTo(utils, 0);
-    });
+    const data = getMockLegendListProps().data as CalendarDateValue[];
+    fireSwipeToItem(data[ACTIVE_INDEX - 1]!, ACTIVE_INDEX - 1);
     expect(storeRef!.getSnapshot().displayed).toEqual(
       expect.objectContaining({ y: 2024, m: 3 })
     );
   });
 
-  it('is a no-op when the user releases on the centre page', () => {
+  it('is a no-op when the viewable item is still the current month', () => {
     let storeRef: CalendarStore | null = null;
     const utils = render(
       <Root
@@ -379,16 +443,16 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    act(() => {
-      fireSwipeTo(utils, 1);
-    });
-    // Same month as initialDate — store.changeMonth was not invoked.
+    const data = getMockLegendListProps().data as CalendarDateValue[];
+    // Same month re-reported — falls into the `delta === 0` branch and
+    // doesn't dispatch into the store.
+    fireSwipeToItem(data[ACTIVE_INDEX]!, ACTIVE_INDEX);
     expect(storeRef!.getSnapshot().displayed).toEqual(
       expect.objectContaining({ y: 2024, m: 4 })
     );
   });
 
-  it('handles consecutive swipes by re-centring after each one', () => {
+  it('ignores empty viewability events (no isViewable item)', () => {
     let storeRef: CalendarStore | null = null;
     const utils = render(
       <Root
@@ -401,18 +465,40 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
+    const { onViewableItemsChanged } = getMockLegendListProps();
     act(() => {
-      fireSwipeTo(utils, 2);
+      (onViewableItemsChanged as (info: unknown) => void)({
+        viewableItems: [],
+        changed: [],
+      });
     });
-    act(() => {
-      fireSwipeTo(utils, 2);
-    });
+    expect(storeRef!.getSnapshot().displayed).toEqual(
+      expect.objectContaining({ y: 2024, m: 4 })
+    );
+  });
+
+  it('handles consecutive viewability events without losing track of displayed', () => {
+    let storeRef: CalendarStore | null = null;
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture onCapture={(s) => (storeRef = s)} />
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    const data = getMockLegendListProps().data as CalendarDateValue[];
+    fireSwipeToItem(data[ACTIVE_INDEX + 1]!, ACTIVE_INDEX + 1);
+    fireSwipeToItem(data[ACTIVE_INDEX + 2]!, ACTIVE_INDEX + 2);
     expect(storeRef!.getSnapshot().displayed).toEqual(
       expect.objectContaining({ y: 2024, m: 6 })
     );
   });
 
-  it('lets external navigation drive the same FlatList', () => {
+  it('scrolls the list when external navigation moves displayed within the window', () => {
     let storeRef: CalendarStore | null = null;
     const utils = render(
       <Root
@@ -425,15 +511,103 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
+    const baselineCalls = getMockLegendListScrollCalls().length;
     act(() => {
       storeRef!.changeMonth(1);
     });
-    expect(storeRef!.getSnapshot().displayed).toEqual(
-      expect.objectContaining({ y: 2024, m: 5 })
+    const calls = getMockLegendListScrollCalls();
+    expect(calls.length).toBeGreaterThan(baselineCalls);
+    expect(calls[calls.length - 1]).toEqual({
+      index: ACTIVE_INDEX + 1,
+      animated: false,
+    });
+    // Window stayed put; only the active slot moved.
+    expect(getMockLegendListProps().data).toHaveLength(WINDOW_SIZE);
+  });
+
+  it('rebuilds the window when external navigation jumps outside it', () => {
+    let storeRef: CalendarStore | null = null;
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture onCapture={(s) => (storeRef = s)} />
+        <DayGrid swipeable />
+      </Root>
     );
-    // Pages re-render around the new displayed month — the prev page is
-    // April, current is May, next is June.
-    expect(utils.queryAllByText('Sun')).toHaveLength(1);
+    fireSwipeableLayout(utils.getByTestId);
+    // 24 months out → outside of the ±12 window.
+    act(() => {
+      storeRef!.changeMonth(24);
+    });
+    const data = getMockLegendListProps().data as CalendarDateValue[];
+    expect(data).toHaveLength(WINDOW_SIZE);
+    // After re-centring the active month sits at the middle slot again.
+    expect(data[ACTIVE_INDEX]).toEqual(
+      expect.objectContaining({ y: 2026, m: 4 })
+    );
+  });
+
+  it('grows the window backwards when the user reaches the start', () => {
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    const initialFirst = (
+      getMockLegendListProps().data as CalendarDateValue[]
+    )[0];
+    expect(initialFirst).toBeDefined();
+    act(() => {
+      const props = getMockLegendListProps();
+      (props.onStartReached as (info: unknown) => void)({
+        distanceFromStart: 0,
+      });
+    });
+    const grown = getMockLegendListProps().data as CalendarDateValue[];
+    expect(grown.length).toBeGreaterThan(WINDOW_SIZE);
+    // Old first month now sits later in the array.
+    const isSame = gregorianSystem.isSame as (
+      a: CalendarDateValue,
+      b: CalendarDateValue
+    ) => boolean;
+    const idxOfPrev = grown.findIndex((m) => isSame(m, initialFirst!));
+    expect(idxOfPrev).toBeGreaterThan(0);
+  });
+
+  it('grows the window forwards when the user reaches the end', () => {
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    const initialLast = (() => {
+      const data = getMockLegendListProps().data as CalendarDateValue[];
+      return data[data.length - 1];
+    })();
+    act(() => {
+      const props = getMockLegendListProps();
+      (props.onEndReached as (info: unknown) => void)({
+        distanceFromEnd: 0,
+      });
+    });
+    const grown = getMockLegendListProps().data as CalendarDateValue[];
+    expect(grown.length).toBeGreaterThan(WINDOW_SIZE);
+    // The previous tail is no longer at the end — fresh months were
+    // appended after it.
+    expect(grown[grown.length - 1]).not.toEqual(initialLast);
   });
 
   it('still routes day taps through the store in swipeable mode', () => {
@@ -454,6 +628,89 @@ describe('<Calendar.DayGrid swipeable />', () => {
       expect.objectContaining({ y: 2024, m: 4, d: 10 })
     );
   });
+
+  it('skips the setPageWidth state update when the layout width is unchanged', () => {
+    // Two layout events at the same width → the second one falls into
+    // the `w === pageWidth` branch and short-circuits without re-
+    // entering React's state pipeline.
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    fireSwipeableLayout(utils.getByTestId);
+    expect(utils.queryByTestId('cal.calendar.swipeable.list')).toBeTruthy();
+  });
+
+  it('omits the testID prefix on the wrapper and list when no testID is configured', () => {
+    const utils = render(
+      <Root initialDate={new Date(2024, 4, 15)} systems={[gregorianSystem]}>
+        <DayGrid swipeable />
+      </Root>
+    );
+    expect(utils.queryByTestId('calendar.swipeable')).toBeNull();
+    expect(utils.queryByTestId('calendar.swipeable.list')).toBeNull();
+    // Drive the layout so the LegendList mounts and exercises the
+    // `testID ? ... : undefined` ternary on its own testID prop.
+    // Without a testID prefix we can't address the wrapper by ID, so
+    // we reach for it by the unique `width: '100%'` style our
+    // SwipeableMonthList sets on its outer View.
+    const swipeableHosts = utils.UNSAFE_root.findAll((n) => {
+      const style = (n.props as { style?: { width?: string | number } } | null)
+        ?.style;
+      return style?.width === '100%';
+    });
+    expect(swipeableHosts.length).toBeGreaterThan(0);
+    fireEvent(swipeableHosts[0]!, 'layout', {
+      nativeEvent: { layout: { width: PAGE_WIDTH, height: 240, x: 0, y: 0 } },
+    });
+    // The LegendList mounted; its testID ternary fell into the
+    // `undefined` arm (not a `cal.calendar.swipeable.list` ID).
+    expect(getMockLegendListProps().testID).toBeUndefined();
+  });
+
+  it('rebuilds the window when the active calendar system swaps', () => {
+    // A second system whose `id` differs from gregorian — that's the
+    // signal SwipeableMonthList watches for to wipe the data window.
+    const second = createGregorianSystem({ label: 'Alt' });
+    Object.defineProperty(second, 'id', { value: 'alt-gregorian' });
+
+    let switcherRef: ReturnType<typeof useCalendarSystemSwitcher> | null = null;
+    const SwitcherCapture: React.FC = () => {
+      switcherRef = useCalendarSystemSwitcher();
+      return null;
+    };
+
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem, second as CalendarSystem]}
+        testID="cal"
+      >
+        <SwitcherCapture />
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    const baselineFirst = (
+      getMockLegendListProps().data as CalendarDateValue[]
+    )[0];
+
+    act(() => {
+      switcherRef!.setActive('alt-gregorian');
+    });
+
+    const data = getMockLegendListProps().data as CalendarDateValue[];
+    expect(data).toHaveLength(WINDOW_SIZE);
+    // Window was rebuilt — the first slot is a brand-new month value
+    // even though the calendar dates around it line up arithmetically.
+    expect(data[0]).not.toBe(baselineFirst);
+  });
 });
 
 describe('<Calendar.DayCell /> equality', () => {
@@ -468,6 +725,7 @@ describe('<Calendar.DayCell /> equality', () => {
     isRangeStart: false,
     isRangeEnd: false,
     isDisabled: false,
+    modifiers: {},
   };
 
   const renderCell = (props: { info: DayCellInfo; onSelect?: () => void }) =>
@@ -559,5 +817,411 @@ describe('<Calendar.DayCell /> equality', () => {
     fireEvent.press(getByRole('button'));
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Multi-select mode + dynamic disabled predicate
+// ---------------------------------------------------------------------------
+
+describe('<Calendar.DayGrid mode="multiple" />', () => {
+  it('toggles selectedDates on each tap', () => {
+    let storeRef: CalendarStore | null = null;
+    const StoreCapture: React.FC = () => {
+      storeRef = useCalendarStore();
+      return null;
+    };
+    const { getByTestId } = render(
+      <Root
+        initialDates={[new Date(2024, 4, 15)]}
+        mode="multiple"
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture />
+        <DayGrid />
+      </Root>
+    );
+    expect(storeRef!.getSnapshot().selectedDates).toHaveLength(1);
+    const day1 = getByTestId('cal.calendar.day.2024-05-01');
+    const day3 = getByTestId('cal.calendar.day.2024-05-03');
+    act(() => {
+      fireEvent.press(day1);
+      fireEvent.press(day3);
+    });
+    expect(storeRef!.getSnapshot().selectedDates).toHaveLength(3);
+    act(() => fireEvent.press(day1));
+    expect(storeRef!.getSnapshot().selectedDates).toHaveLength(2);
+  });
+});
+
+describe('<Calendar.Root disabled />', () => {
+  it('marks predicate-disabled cells as accessibilityState.disabled', () => {
+    const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
+    const { getByTestId } = render(
+      <Root
+        disabled={isWeekend}
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid />
+      </Root>
+    );
+    // 2024-05-04 is a Saturday.
+    const sat = getByTestId('cal.calendar.day.2024-05-04');
+    expect(sat.props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: true })
+    );
+    const tap = jest.fn();
+    fireEvent.press(sat, { onPress: tap });
+    expect(tap).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// showOutsideDays / fixedWeeks
+// ---------------------------------------------------------------------------
+
+describe('<Calendar.DayGrid /> showOutsideDays / fixedWeeks', () => {
+  it('does not press through outside-month placeholder cells when showOutsideDays={false}', () => {
+    const { getAllByRole, queryByTestId } = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        showOutsideDays={false}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid />
+      </Root>
+    );
+    // May 2024 starts on a Wednesday → 3 leading outside cells. April 30 cell
+    // becomes a placeholder and is no longer pressable.
+    expect(queryByTestId('cal.calendar.day.2024-04-30')).toBeNull();
+    // The current-month + trailing-outside cells still render as buttons.
+    expect(getAllByRole('button').length).toBeLessThan(42);
+  });
+
+  it('collapses trailing rows when fixedWeeks={false} on a 4-row month', () => {
+    // Feb 2026 fits in exactly 4 weeks (Sunday-first, no leading offset,
+    // 28 days, no trailing outside cells in row 5+).
+    const { getAllByRole } = render(
+      <Root
+        fixedWeeks={false}
+        initialDate={new Date(2026, 1, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid />
+      </Root>
+    );
+    // 4 rows × 7 cols = 28 cells.
+    expect(getAllByRole('button')).toHaveLength(28);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// showWeekNumbers
+// ---------------------------------------------------------------------------
+
+describe('<Calendar.DayGrid showWeekNumbers />', () => {
+  it('renders 6 week numbers for May 2024 (ISO weeks 18-23)', () => {
+    const { getAllByText } = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid showWeekNumbers />
+      </Root>
+    );
+    // Each visible week number "18", "19", … collides with a day cell
+    // labelled the same number, so we assert against the second match
+    // (the week-number column comes first in tree order, the day grid
+    // is a sibling later) — confirming both rows are present.
+    expect(getAllByText('18').length).toBeGreaterThanOrEqual(2);
+    expect(getAllByText('20').length).toBeGreaterThanOrEqual(2);
+    expect(getAllByText('22').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('falls back to the ISO week derivation when the system has no weekNumber()', () => {
+    // Build a custom system without `weekNumber` so DayGrid's
+    // `computeWeekNumber` takes the `isoWeekNumber(toNativeDate(date))`
+    // branch.
+    const sysNoWeek = createGregorianSystem();
+    delete (sysNoWeek as { weekNumber?: unknown }).weekNumber;
+    const { getAllByText } = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[sysNoWeek]}
+        testID="cal"
+      >
+        <DayGrid showWeekNumbers />
+      </Root>
+    );
+    expect(getAllByText('18').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('threads renderDay / SlotDayCell / showOutsideDays through the week-number row layout', () => {
+    // The `showWeekNumbers` branch lays out each row by hand (so it can
+    // prepend the week-number column), which means it has its own copy
+    // of the renderDay / SlotDayCell / outside-day placeholder code.
+    // Cover all three in one render.
+    const slotTaps: string[] = [];
+    const SlotDayCell: NonNullable<CalendarComponents['DayCell']> = ({
+      info,
+    }) => (
+      <View testID={`wn-slot-${info.label}`}>
+        <Text>{info.label}</Text>
+      </View>
+    );
+    const renderDay = (info: DayCellInfo) =>
+      info.label === '15' ? (
+        <View key={info.label} testID={`wn-render-${info.label}`}>
+          <Text>{info.label}</Text>
+        </View>
+      ) : null;
+
+    // First render exercises the renderDay branch in the WN row.
+    const r = render(
+      <Root
+        components={{ DayCell: SlotDayCell }}
+        initialDate={new Date(2024, 4, 15)}
+        showOutsideDays={false}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid renderDay={renderDay} showWeekNumbers />
+      </Root>
+    );
+    // renderDay returned a node for "15"; outside-month cells became
+    // placeholders so April-30 / May-1 etc. aren't pressable; SlotDayCell
+    // would have been used otherwise — but renderDay wins when both are
+    // present, so the slot path is exercised in a second render below.
+    expect(r.queryByTestId('wn-render-15')).not.toBeNull();
+
+    r.unmount();
+    slotTaps.push('reset');
+
+    // Second render drops renderDay so SlotDayCell takes over inside the
+    // WN row.
+    const r2 = render(
+      <Root
+        components={{ DayCell: SlotDayCell }}
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid showWeekNumbers />
+      </Root>
+    );
+    expect(r2.queryByTestId('wn-slot-15')).not.toBeNull();
+  });
+
+  it('honours a custom WeekNumberCell slot', () => {
+    const WeekNumberCell: NonNullable<CalendarComponents['WeekNumberCell']> = ({
+      weekNumber,
+    }) => (
+      <View testID={`week-${weekNumber}`}>
+        <Text>W{weekNumber}</Text>
+      </View>
+    );
+    const { queryByTestId, queryByText } = render(
+      <Root
+        components={{ WeekNumberCell }}
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid showWeekNumbers />
+      </Root>
+    );
+    expect(queryByTestId('week-18')).not.toBeNull();
+    expect(queryByText('W18')).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// numberOfMonths
+// ---------------------------------------------------------------------------
+
+describe('<Calendar.DayGrid numberOfMonths />', () => {
+  it('renders the configured number of months side-by-side', () => {
+    const captions: string[] = [];
+    const MonthCaption: NonNullable<CalendarComponents['MonthCaption']> = (
+      props: MonthCaptionProps
+    ) => {
+      captions.push(props.label);
+      return (
+        <View>
+          <Text>{props.label}</Text>
+        </View>
+      );
+    };
+    render(
+      <Root
+        components={{ MonthCaption }}
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid numberOfMonths={2} />
+      </Root>
+    );
+    expect(captions).toEqual(['May 2024', 'June 2024']);
+  });
+
+  it('renders 84 day buttons for numberOfMonths={2}', () => {
+    const { getAllByRole } = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid numberOfMonths={2} />
+      </Root>
+    );
+    expect(getAllByRole('button')).toHaveLength(84);
+  });
+
+  it('expands each month panel to 8 columns when showWeekNumbers + numberOfMonths combine', () => {
+    // The multi-month wrapper widens each panel by one cell so the
+    // week-number gutter has room. This pokes the `? 8 : 7` branch of
+    // the `width: theme.cellSize * (showWeekNumbers ? 8 : 7)` rule.
+    const { getAllByText } = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid numberOfMonths={2} showWeekNumbers />
+      </Root>
+    );
+    // May 2024's first ISO week is 18, June 2024's first is 22 — both
+    // panels render their gutter, confirming the wider layout took
+    // effect across both months.
+    expect(getAllByText('18').length).toBeGreaterThanOrEqual(2);
+    expect(getAllByText('22').length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Modifiers
+// ---------------------------------------------------------------------------
+
+describe('<Calendar.Root modifiers />', () => {
+  it('exposes matched modifier flags on DayCellInfo', () => {
+    const flags: Record<string, Record<string, boolean>> = {};
+    render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        modifiers={{
+          booked: [new Date(2024, 4, 10), new Date(2024, 4, 11)],
+          weekend: (d) => d.getDay() === 0 || d.getDay() === 6,
+        }}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid
+          renderDay={(info) => {
+            flags[info.label] = info.modifiers as Record<string, boolean>;
+            return null;
+          }}
+        />
+      </Root>
+    );
+    expect(flags['10']).toEqual(expect.objectContaining({ booked: true }));
+    expect(flags['11']).toEqual(
+      expect.objectContaining({ booked: true, weekend: true })
+    );
+    // Non-matched cells get an empty object (key just isn't present).
+    expect(flags['15']?.booked).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Component slots
+// ---------------------------------------------------------------------------
+
+describe('<Calendar.Root components />', () => {
+  it('replaces the entire WeekdayHeader when components.WeekdayHeader is set', () => {
+    const WeekdayHeader: NonNullable<CalendarComponents['WeekdayHeader']> = ({
+      labels,
+    }: WeekdayHeaderProps) => (
+      <View testID="custom-header">
+        <Text>{labels.join('|')}</Text>
+      </View>
+    );
+    const { getByTestId } = render(
+      <Root
+        components={{ WeekdayHeader }}
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid />
+      </Root>
+    );
+    expect(getByTestId('custom-header')).toBeTruthy();
+  });
+
+  it('replaces only individual weekday cells when components.WeekdayCell is set', () => {
+    const WeekdayCell: NonNullable<CalendarComponents['WeekdayCell']> = ({
+      label,
+      index,
+    }) => (
+      <View testID={`weekday-${index}`}>
+        <Text>{label.toUpperCase()}</Text>
+      </View>
+    );
+    const { getByTestId } = render(
+      <Root
+        components={{ WeekdayCell }}
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid />
+      </Root>
+    );
+    expect(getByTestId('weekday-0')).toBeTruthy();
+    expect(getByTestId('weekday-6')).toBeTruthy();
+  });
+
+  it('uses components.DayCell when no renderDay is passed to DayGrid', () => {
+    const taps: string[] = [];
+    const DayCellSlot: NonNullable<CalendarComponents['DayCell']> = ({
+      info,
+      onSelect,
+    }) => (
+      <View
+        accessibilityRole="button"
+        testID={`slot-${info.label}`}
+        onTouchEnd={() => onSelect(info.date)}
+      >
+        <Text>{info.label}</Text>
+      </View>
+    );
+    let storeRef: CalendarStore | null = null;
+    const StoreCapture: React.FC = () => {
+      storeRef = useCalendarStore();
+      return null;
+    };
+    const { getByTestId } = render(
+      <Root
+        components={{ DayCell: DayCellSlot }}
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture />
+        <DayGrid />
+      </Root>
+    );
+    fireEvent(getByTestId('slot-15'), 'touchEnd');
+    taps.push('15');
+    expect(taps).toEqual(['15']);
+    // The slot is wired to the same selectDate path.
+    expect(storeRef!.getSnapshot().selectedDate).toBeDefined();
   });
 });

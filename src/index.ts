@@ -23,22 +23,26 @@ export { DayCell, DayGrid } from './components/DayGrid';
 // Hooks — the headless surface. Compose into whatever UI you ship.
 export {
   useCalendarActions,
+  useCalendarComponents,
   useCalendarConfig,
   useCalendarFirstDayOfWeek,
   useCalendarLabels,
   useCalendarMonthLabel,
   useCalendarMonthPicker,
   useCalendarNavigation,
+  useCalendarSelectedDates,
   useCalendarSelector,
   useCalendarStore,
   useCalendarSystemSwitcher,
   useCalendarTheme,
+  useCalendarWeekNumbers,
   useCalendarWeekdayLabels,
   useCalendarYearLabel,
   useCalendarYearPicker,
 } from './context';
 export type {
   CalendarActions,
+  CalendarConfig,
   CalendarMonthLabel,
   CalendarMonthPicker,
   CalendarMonthPickerEntry,
@@ -52,7 +56,7 @@ export type {
 export type { CalendarSnapshot, CalendarStore } from './store';
 
 // Defaults — re-exported so consumers can extend rather than reinvent.
-export { defaultLabels, defaultPrimitives, defaultTheme } from './defaults';
+export { defaultLabels, defaultTheme } from './defaults';
 
 // Grid utilities for consumers building custom views.
 export {
@@ -65,15 +69,20 @@ export {
   getYearPage,
   isBetween,
   isExplicitlyDisabled,
+  isoWeekNumber,
+  matchDate,
   rotateWeekdayLabels,
+  usedRows,
 } from './utils/grid';
 
 // Public types.
 export type {
+  CalendarComponents,
   CalendarDateValue,
   CalendarLabels,
+  CalendarMatcher,
   CalendarMode,
-  CalendarPrimitives,
+  CalendarModifiers,
   CalendarSelectionPayload,
   CalendarSystem,
   CalendarTheme,
@@ -84,13 +93,14 @@ export type {
   DayRenderer,
   DisabledDateInput,
   DisabledDateRangeInput,
+  MonthCaptionProps,
   OnClear,
   OnConfirm,
   OnSystemChange,
-  PressablePrimitive,
-  TextPrimitive,
-  ViewPrimitive,
   Weekday,
+  WeekdayCellProps,
+  WeekdayHeaderProps,
+  WeekNumberCellProps,
 } from './types';
 
 // Root prop type — useful when wrapping <Calendar.Root> in a project preset.
