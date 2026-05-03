@@ -4,11 +4,14 @@ import { render } from '@testing-library/react-native';
 import { defaultLabels, defaultPrimitives, defaultTheme } from '../defaults';
 
 describe('defaultPrimitives', () => {
-  it('exposes View / Text / Pressable / Icon', () => {
+  it('exposes View / Text / Pressable', () => {
     expect(defaultPrimitives.View).toBeDefined();
     expect(defaultPrimitives.Text).toBeDefined();
     expect(defaultPrimitives.Pressable).toBeDefined();
-    expect(defaultPrimitives.Icon).toBeDefined();
+  });
+
+  it('no longer ships an Icon primitive (consumers bring their own)', () => {
+    expect(defaultPrimitives).not.toHaveProperty('Icon');
   });
 
   it('forwards refs through View', () => {
@@ -47,27 +50,6 @@ describe('defaultPrimitives', () => {
     }>;
     render(<Pressable ref={ref} testID="p" />);
     expect(ref).toBeDefined();
-  });
-
-  it('renders the prev icon', () => {
-    const Icon = defaultPrimitives.Icon;
-    const tree = render(<Icon name="prev" />);
-    // The icon is two arms inside an outer View — confirm something rendered.
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('renders the next icon with overrides', () => {
-    const Icon = defaultPrimitives.Icon;
-    const tree = render(
-      <Icon color="#FF0000" name="next" size={32} style={{ marginTop: 4 }} />
-    );
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('falls back to defaults when size and color are omitted', () => {
-    const Icon = defaultPrimitives.Icon;
-    const tree = render(<Icon name="prev" />);
-    expect(tree.toJSON()).toBeTruthy();
   });
 });
 

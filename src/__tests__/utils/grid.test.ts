@@ -1,9 +1,11 @@
 import {
   buildMonthGrid,
   COLS,
+  DEFAULT_FIRST_DAY_OF_WEEK,
   getYearPage,
   isBetween,
   isExplicitlyDisabled,
+  rotateWeekdayLabels,
   ROWS,
   TOTAL_CELLS,
   YEAR_PAGE_SIZE,
@@ -99,6 +101,87 @@ describe('buildMonthGrid()', () => {
     expect(grid).toHaveLength(TOTAL_CELLS);
     // Last cell is still in the current month — never overflows to next.
     grid.forEach((c) => expect(c.isCurrentMonth).toBe(true));
+  });
+
+  // -- firstDayOfWeek -----------------------------------------------------
+
+  it('defaults to Sunday — matches calling without firstDayOfWeek', () => {
+    const may2024 = sys.fromNativeDate(new Date(2024, 4, 15));
+    const a = buildMonthGrid(sys, may2024);
+    const b = buildMonthGrid(sys, may2024, DEFAULT_FIRST_DAY_OF_WEEK);
+    expect(a).toEqual(b);
+  });
+
+  it('shifts the previous-month tail when firstDayOfWeek=1 (Monday)', () => {
+    // May 1, 2024 is a Wednesday (weekday=3).
+    //   Sunday-first  → 3 leading cells from April (28, 29, 30).
+    //   Monday-first  → 2 leading cells from April (29, 30).
+    const may2024 = sys.fromNativeDate(new Date(2024, 4, 1));
+    const grid = buildMonthGrid(sys, may2024, 1);
+    const prevTail = grid.filter(
+      (c) => !c.isCurrentMonth && (c.date as GregorianDate).m === 3
+    );
+    expect(prevTail).toHaveLength(2);
+    expect((grid[0]?.date as GregorianDate).d).toBe(29);
+    expect((grid[1]?.date as GregorianDate).d).toBe(30);
+    expect((grid[2]?.date as GregorianDate).d).toBe(1);
+  });
+
+  it('produces zero leading cells when the month starts on firstDayOfWeek', () => {
+    // April 1, 2024 is a Monday (weekday=1). With firstDayOfWeek=1, the
+    // grid starts directly on day 1 and there is no previous-month tail.
+    const apr2024 = sys.fromNativeDate(new Date(2024, 3, 1));
+    const grid = buildMonthGrid(sys, apr2024, 1);
+    expect(grid[0]?.isCurrentMonth).toBe(true);
+    expect((grid[0]?.date as GregorianDate).d).toBe(1);
+  });
+
+  it('handles firstDayOfWeek=6 (Saturday) by wrapping the offset', () => {
+    // May 1, 2024 is Wednesday (weekday=3). With Saturday as the first column,
+    // the offset should wrap to (3 - 6 + 7) % 7 = 4 leading cells.
+    const may2024 = sys.fromNativeDate(new Date(2024, 4, 1));
+    const grid = buildMonthGrid(sys, may2024, 6);
+    const prevTail = grid.filter(
+      (c) => !c.isCurrentMonth && (c.date as GregorianDate).m === 3
+    );
+    expect(prevTail).toHaveLength(4);
+    expect((grid[4]?.date as GregorianDate).d).toBe(1);
+  });
+});
+
+describe('rotateWeekdayLabels()', () => {
+  const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+
+  it('returns the input array unchanged for firstDayOfWeek=0', () => {
+    expect(rotateWeekdayLabels(labels, 0)).toBe(labels);
+  });
+
+  it('defaults to Sunday-first when no offset is provided', () => {
+    expect(rotateWeekdayLabels(labels)).toBe(labels);
+  });
+
+  it('rotates to Monday-first', () => {
+    expect(rotateWeekdayLabels(labels, 1)).toEqual([
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ]);
+  });
+
+  it('rotates to Saturday-first', () => {
+    expect(rotateWeekdayLabels(labels, 6)).toEqual([
+      'Sat',
+      'Sun',
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+    ]);
   });
 });
 

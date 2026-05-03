@@ -1,10 +1,40 @@
 import { Text } from 'react-native';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 import { DayCell, DayGrid } from '../../components/DayGrid';
 import { Root } from '../../components/Root';
+import { useCalendarStore } from '../../context';
+import type { CalendarStore } from '../../store';
 import { gregorianSystem } from '../../systems/gregorian';
 import type { DayCellInfo } from '../../types';
+
+const PAGE_WIDTH = 350;
+
+// Drives the SwipeableMonthList from `pageWidth=0` to a measured width so
+// the inner FlatList mounts. Tests share this between scenarios.
+const fireSwipeableLayout = (
+  target: ReturnType<typeof render>['getByTestId']
+) =>
+  fireEvent(target('cal.calendar.swipeable'), 'layout', {
+    nativeEvent: {
+      layout: { width: PAGE_WIDTH, height: 240, x: 0, y: 0 },
+    },
+  });
+
+// Fires a single horizontal page swipe on the SwipeableMonthList — index
+// 0 = previous month, 2 = next month. Index 1 (the centre) is a no-op the
+// component intentionally ignores.
+const fireSwipeTo = (
+  utils: ReturnType<typeof render>,
+  targetIndex: 0 | 1 | 2
+) =>
+  fireEvent(
+    utils.getByTestId('cal.calendar.swipeable.list'),
+    'momentumScrollEnd',
+    {
+      nativeEvent: { contentOffset: { x: PAGE_WIDTH * targetIndex, y: 0 } },
+    }
+  );
 
 describe('<Calendar.DayGrid />', () => {
   it('renders 42 cells when no renderDay is provided', () => {
@@ -160,6 +190,269 @@ describe('<Calendar.DayGrid />', () => {
     const cell = getByTestId('cal.calendar.day.2024-05-10');
     fireEvent.press(cell);
     expect(onSelectHaptic).not.toHaveBeenCalled();
+  });
+
+  // -- firstDayOfWeek -----------------------------------------------------
+
+  it('renders the weekday header in Sunday-first order by default', () => {
+    const { getByText } = render(
+      <Root systems={[gregorianSystem]}>
+        <DayGrid />
+      </Root>
+    );
+    // Default order — useful as a smoke check before asserting rotation.
+    expect(getByText('Sun')).toBeTruthy();
+    expect(getByText('Sat')).toBeTruthy();
+  });
+
+  it('rotates the weekday header when firstDayOfWeek=1 (Monday)', () => {
+    const { getByText, queryAllByText } = render(
+      <Root firstDayOfWeek={1} systems={[gregorianSystem]}>
+        <DayGrid />
+      </Root>
+    );
+    expect(getByText('Mon')).toBeTruthy();
+    expect(getByText('Sun')).toBeTruthy();
+    // Each label appears exactly once in the header (no duplicates from rotation).
+    expect(queryAllByText('Mon')).toHaveLength(1);
+    expect(queryAllByText('Sun')).toHaveLength(1);
+  });
+
+  it('shifts the leading cells when firstDayOfWeek=1 so the grid starts on Monday', () => {
+    // May 1 2024 is a Wednesday → with Monday as the first column, the
+    // grid leads with April 29, April 30, then May 1.
+    const captured: DayCellInfo[] = [];
+    render(
+      <Root
+        firstDayOfWeek={1}
+        initialDate={new Date(2024, 4, 1)}
+        systems={[gregorianSystem]}
+      >
+        <DayGrid
+          renderDay={(info) => {
+            captured.push(info);
+            return <Text key={String(captured.length)}>x</Text>;
+          }}
+        />
+      </Root>
+    );
+    expect(captured[0]?.label).toBe('29');
+    expect(captured[1]?.label).toBe('30');
+    expect(captured[2]?.label).toBe('1');
+    expect(captured[2]?.isCurrentMonth).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// <Calendar.DayGrid swipeable />
+// ---------------------------------------------------------------------------
+
+describe('<Calendar.DayGrid swipeable />', () => {
+  // Captures the live store inside any <Calendar.Root> the test renders so
+  // assertions can read the `displayed` snapshot after a swipe.
+  const StoreCapture = ({
+    onCapture,
+  }: {
+    onCapture: (store: CalendarStore) => void;
+  }) => {
+    onCapture(useCalendarStore());
+    return null;
+  };
+
+  it('does not mount the FlatList until the wrapper is laid out', () => {
+    const { queryByTestId } = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid swipeable />
+      </Root>
+    );
+    expect(queryByTestId('cal.calendar.swipeable')).toBeTruthy();
+    // The FlatList is conditional on pageWidth > 0 — before the layout
+    // event fires, only the outer wrapper exists.
+    expect(queryByTestId('cal.calendar.swipeable.list')).toBeNull();
+  });
+
+  it('mounts the FlatList once the wrapper is laid out', () => {
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    expect(utils.queryByTestId('cal.calendar.swipeable.list')).toBeTruthy();
+  });
+
+  it('renders multiple month pages so swipes reveal an adjacent month', () => {
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    // The active page contributes 42 cells; FlatList eagerly renders at
+    // least one neighbour so the swipe gesture has somewhere to scroll to.
+    // The exact count depends on RN's virtualization heuristics — we only
+    // assert "more than one page worth" so the test stays robust.
+    const cells = utils.getAllByRole('button');
+    expect(cells.length).toBeGreaterThan(42);
+    expect(cells.length % 42).toBe(0);
+  });
+
+  it('keeps the weekday header outside of the swipeable area', () => {
+    // Sun appears once in the fixed header — not duplicated per page.
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    expect(utils.queryAllByText('Sun')).toHaveLength(1);
+  });
+
+  it('advances the displayed month on a swipe to the next page', () => {
+    let storeRef: CalendarStore | null = null;
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture onCapture={(s) => (storeRef = s)} />
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    act(() => {
+      fireSwipeTo(utils, 2);
+    });
+    expect(storeRef!.getSnapshot().displayed).toEqual(
+      expect.objectContaining({ y: 2024, m: 5 })
+    );
+  });
+
+  it('steps backward on a swipe to the previous page', () => {
+    let storeRef: CalendarStore | null = null;
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture onCapture={(s) => (storeRef = s)} />
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    act(() => {
+      fireSwipeTo(utils, 0);
+    });
+    expect(storeRef!.getSnapshot().displayed).toEqual(
+      expect.objectContaining({ y: 2024, m: 3 })
+    );
+  });
+
+  it('is a no-op when the user releases on the centre page', () => {
+    let storeRef: CalendarStore | null = null;
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture onCapture={(s) => (storeRef = s)} />
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    act(() => {
+      fireSwipeTo(utils, 1);
+    });
+    // Same month as initialDate — store.changeMonth was not invoked.
+    expect(storeRef!.getSnapshot().displayed).toEqual(
+      expect.objectContaining({ y: 2024, m: 4 })
+    );
+  });
+
+  it('handles consecutive swipes by re-centring after each one', () => {
+    let storeRef: CalendarStore | null = null;
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture onCapture={(s) => (storeRef = s)} />
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    act(() => {
+      fireSwipeTo(utils, 2);
+    });
+    act(() => {
+      fireSwipeTo(utils, 2);
+    });
+    expect(storeRef!.getSnapshot().displayed).toEqual(
+      expect.objectContaining({ y: 2024, m: 6 })
+    );
+  });
+
+  it('lets external navigation drive the same FlatList', () => {
+    let storeRef: CalendarStore | null = null;
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture onCapture={(s) => (storeRef = s)} />
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    act(() => {
+      storeRef!.changeMonth(1);
+    });
+    expect(storeRef!.getSnapshot().displayed).toEqual(
+      expect.objectContaining({ y: 2024, m: 5 })
+    );
+    // Pages re-render around the new displayed month — the prev page is
+    // April, current is May, next is June.
+    expect(utils.queryAllByText('Sun')).toHaveLength(1);
+  });
+
+  it('still routes day taps through the store in swipeable mode', () => {
+    let storeRef: CalendarStore | null = null;
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture onCapture={(s) => (storeRef = s)} />
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    fireEvent.press(utils.getByTestId('cal.calendar.day.2024-05-10'));
+    expect(storeRef!.getSnapshot().selectedDate).toEqual(
+      expect.objectContaining({ y: 2024, m: 4, d: 10 })
+    );
   });
 });
 

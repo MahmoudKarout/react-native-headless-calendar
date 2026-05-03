@@ -113,9 +113,10 @@
 <a name='L48'></a><a href='#L48'>48</a>
 <a name='L49'></a><a href='#L49'>49</a>
 <a name='L50'></a><a href='#L50'>50</a>
-<a name='L51'></a><a href='#L51'>51</a>
-<a name='L52'></a><a href='#L52'>52</a>
-<a name='L53'></a><a href='#L53'>53</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L51'></a><a href='#L51'>51</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -162,60 +163,53 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
  * Namespaced compound API.
  *
+ * The library is **headless** beyond two pieces:
+ *
+ *   - `&lt;Calendar.Root&gt;`    — the provider every other piece needs.
+ *   - `&lt;Calendar.DayGrid&gt;` — the only stable rendered component, because
+ *                            laying out and memoising a 6×7 grid of day
+ *                            cells is the one thing that genuinely
+ *                            benefits from a built-in implementation.
+ *                            (Per-cell visuals are still overridable via
+ *                            its `renderDay` prop and via the `Pressable`
+ *                            / `Text` primitives on `&lt;Calendar.Root&gt;`.)
+ *
+ * Everything else — system switcher, prev/next buttons, month/year
+ * header labels, month picker grid, year picker grid, confirm/clear
+ * buttons — is exposed as a hook so the consumer brings their own UI
+ * and wires it to the same store:
+ *
+ *   useCalendarActions       — confirm / clear / canConfirm
+ *   useCalendarNavigation    — goPrev / goNext (view + RTL aware)
+ *   useCalendarMonthLabel    — header "month" affordance
+ *   useCalendarYearLabel     — header "year" affordance
+ *   useCalendarSystemSwitcher— systems list + activeId + setter
+ *   useCalendarMonthPicker   — 12-cell month chooser data + actions
+ *   useCalendarYearPicker    — 12-cell year chooser data + actions
+ *
+ * Typical composition:
+ *
  *   &lt;Calendar.Root systems={[gregorianSystem]} mode="single"&gt;
- *     &lt;Calendar.SystemSwitcher /&gt;
- *     &lt;Calendar.Header /&gt;
- *     &lt;Calendar.View /&gt;
+ *     &lt;MyHeader /&gt;        // built with useCalendarNavigation +
+ *                         //            useCalendarMonthLabel +
+ *                         //            useCalendarYearLabel
+ *     &lt;MyView /&gt;          // calls useCalendarSelector(s =&gt; s.view)
+ *                         // and renders &lt;Calendar.DayGrid /&gt; /
+ *                         //              &lt;MyMonthPicker /&gt; /
+ *                         //              &lt;MyYearPicker /&gt;
+ *     &lt;MyConfirmBar /&gt;    // useCalendarActions()
  *   &lt;/Calendar.Root&gt;
- *
- * Or fully composed:
- *
- *   &lt;Calendar.Root ...&gt;
- *     &lt;Calendar.SystemSwitcher&gt;
- *       {({ systems, activeId, setActive }) =&gt; &lt;MyTabs ... /&gt;}
- *     &lt;/Calendar.SystemSwitcher&gt;
- *     &lt;Calendar.Header.Root&gt;
- *       &lt;Calendar.Header.PrevButton&gt;&lt;MyChevron dir="left" /&gt;&lt;/Calendar.Header.PrevButton&gt;
- *       &lt;Calendar.Header.MonthLabel /&gt;
- *       &lt;Calendar.Header.YearLabel /&gt;
- *       &lt;Calendar.Header.NextButton&gt;&lt;MyChevron dir="right" /&gt;&lt;/Calendar.Header.NextButton&gt;
- *     &lt;/Calendar.Header.Root&gt;
- *     &lt;Calendar.View renderDay={(info) =&gt; &lt;MyCustomCell info={info} /&gt;} /&gt;
- *   &lt;/Calendar.Root&gt;
- *
- * Confirm / clear are intentionally NOT shipped as components — bring your
- * own buttons and wire them via `useCalendarActions()`:
- *
- *   const { confirm, clear, canConfirm } = useCalendarActions();
- *
- *   &lt;MyButton disabled={!canConfirm} onPress={confirm}&gt;Done&lt;/MyButton&gt;
- *   &lt;MyButton onPress={clear}&gt;Reset&lt;/MyButton&gt;
  */
 import { DayCell, DayGrid } from './components/DayGrid';
-import { Header } from './components/Header';
-import { MonthGrid } from './components/MonthGrid';
 import { Root } from './components/Root';
-import { SystemSwitcher } from './components/SystemSwitcher';
-import { View } from './components/View';
-import { YearGrid } from './components/YearGrid';
 &nbsp;
 export const Calendar = {
   Root,
-  Header,
-  View,
   DayGrid,
   DayCell,
-  MonthGrid,
-  YearGrid,
-  SystemSwitcher,
 } as const;
 &nbsp;
 export type CalendarNamespace = typeof Calendar;
@@ -226,7 +220,7 @@ export type CalendarNamespace = typeof Calendar;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-02T19:26:12.132Z
+                at 2026-05-02T19:56:19.309Z
             </div>
         <script src="../prettify.js"></script>
         <script>

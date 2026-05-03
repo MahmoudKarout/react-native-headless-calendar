@@ -74,25 +74,6 @@ describe('<Calendar.Root>', () => {
     expect(captured!.labels.clear).toBeDefined();
   });
 
-  it('merges primitives overrides with defaults', () => {
-    const CustomView = () => null;
-    let captured: CalendarConfig | null = null;
-    render(
-      <Root
-        primitives={{
-          View: CustomView as unknown as CalendarConfig['primitives']['View'],
-        }}
-        systems={[gregorianSystem]}
-      >
-        <Probe capture={(c) => (captured = c.config)} />
-      </Root>
-    );
-    expect(captured!.primitives.View).toBe(CustomView);
-    expect(captured!.primitives.Text).toBeDefined();
-    expect(captured!.primitives.Pressable).toBeDefined();
-    expect(captured!.primitives.Icon).toBeDefined();
-  });
-
   it('forwards onConfirm / onClear / onSystemChange / onSelectHaptic via stable wrappers and exposes testID', () => {
     const onConfirm = jest.fn();
     const onClear = jest.fn();
