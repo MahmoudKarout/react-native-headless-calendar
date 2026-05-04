@@ -1,31 +1,36 @@
 /**
  * Hijri (Umm al-Qura) calendar plugin.
  *
- * **This plugin requires a Hijri ↔ Gregorian converter that you supply.**
- * The `react-native-fast-calendar` package itself has ZERO
- * converter dependency.
- *
- * Recommended converter — `@tabby_ai/hijri-converter` (~2KB, zero deps,
- * Umm al-Qura lookup tables):
+ * Pre-configured. Install the optional peer dependency once and import the
+ * ready-to-use `hijriSystem` directly:
  *
  *   yarn add @tabby_ai/hijri-converter
  *
- *   import * as converter from "@tabby_ai/hijri-converter";
- *   import { createHijriSystem } from "react-native-fast-calendar/systems/hijri";
+ *   import { hijriSystem } from "react-native-fast-calendar/systems/hijri";
+ *   import { gregorianSystem } from "react-native-fast-calendar";
  *
- *   const hijri = createHijriSystem({ converter });
+ *   <SimpleCalendar systems={[gregorianSystem, hijriSystem]} />
  *
- * Any object satisfying the `HijriConverter` interface works — wrap
- * `moment-hijri`, an `Intl.DateTimeFormat`-based implementation, custom
- * Umm al-Qura tables, etc. Calling `createHijriSystem` without a converter
- * throws a clear error pointing at this docstring.
+ * Importing this module without `@tabby_ai/hijri-converter` installed throws
+ * a clear, install-pointing error at access time — the message you see is
+ * the one below in `MISSING_CONVERTER_ERROR`.
  *
- * To write a custom calendar system without using this Hijri plugin,
+ * Need a different converter (`moment-hijri`, `Intl.DateTimeFormat`, custom
+ * Umm al-Qura tables, …)? Wrap it in the `HijriConverter` shape and pass it
+ * to `createHijriSystem({ converter })`. The auto-load only fires when you
+ * omit the option, so a custom converter never triggers the require.
+ *
+ * To write a calendar system without going through this plugin at all,
  * implement the `CalendarSystem<T>` interface from
- * `react-native-fast-calendar` directly. See README
- * ("Add your own calendar") for the recipe.
+ * `react-native-fast-calendar` directly. See README ("Add your own
+ * calendar") for the recipe.
  */
 import type { CalendarSystem } from '../types';
+
+import {
+  gregorianJulianDay,
+  gregorianSunday0Weekday,
+} from './gregorianJulianMath';
 
 // ---------------------------------------------------------------------------
 // Converter contract — what the plugin needs from any Hijri converter.
@@ -99,22 +104,22 @@ const DEFAULT_WEEKDAYS = Object.freeze([
 ] as const);
 
 // ---------------------------------------------------------------------------
-// Factory options — `converter` is required. Everything else is optional.
+// Factory options — every field is optional. Pass `converter` to plug in a
+// custom implementation; omit it to auto-load `@tabby_ai/hijri-converter`.
 // ---------------------------------------------------------------------------
 
 export interface HijriSystemOptions {
   /**
-   * Hijri ↔ Gregorian converter implementation. **Required.**
+   * Hijri ↔ Gregorian converter implementation.
    *
-   * Recommended:
+   * **Optional.** When omitted, the plugin tries to `require(
+   * '@tabby_ai/hijri-converter')` and uses that. Provide your own to wrap
+   * `moment-hijri`, an `Intl.DateTimeFormat`-based implementation, custom
+   * Umm al-Qura tables, etc.
    *
-   *   yarn add @tabby_ai/hijri-converter
-   *
-   *   import * as converter from "@tabby_ai/hijri-converter";
-   *   import { createHijriSystem } from "react-native-fast-calendar/systems/hijri";
-   *   createHijriSystem({ converter });
+   * Any object with `gregorianToHijri` and `hijriToGregorian` methods works.
    */
-  converter: HijriConverter;
+  converter?: HijriConverter;
   label?: string;
   monthLabels?: readonly string[];
   weekdayLabels?: readonly string[];
@@ -123,50 +128,45 @@ export interface HijriSystemOptions {
 }
 
 const MISSING_CONVERTER_ERROR =
-  '[react-native-fast-calendar/systems/hijri] createHijriSystem ' +
-  'requires a `converter` option.\n\n' +
-  'Install a Hijri converter and pass it in:\n\n' +
-  '  yarn add @tabby_ai/hijri-converter\n\n' +
-  '  import * as converter from "@tabby_ai/hijri-converter";\n' +
-  '  import { createHijriSystem } from "react-native-fast-calendar/systems/hijri";\n' +
-  '  const hijri = createHijriSystem({ converter });\n\n' +
-  'Any object with `gregorianToHijri` and `hijriToGregorian` methods works.';
+  '[react-native-fast-calendar/systems/hijri] could not load the default ' +
+  'Hijri converter.\n\n' +
+  'Either install the optional peer dependency:\n\n' +
+  '    yarn add @tabby_ai/hijri-converter\n\n' +
+  '…and use the ready-made instance:\n\n' +
+  '    import { hijriSystem } from "react-native-fast-calendar/systems/hijri";\n\n' +
+  '…or pass your own converter to the factory:\n\n' +
+  '    import { createHijriSystem } from "react-native-fast-calendar/systems/hijri";\n' +
+  '    const hijri = createHijriSystem({ converter: myConverter });\n\n' +
+  'A custom converter only needs `gregorianToHijri` and `hijriToGregorian` ' +
+  'methods (1-based months on both sides).';
 
 // ---------------------------------------------------------------------------
-// Pure-math helpers — only need the cached Gregorian components.
+// Default-converter loader — wraps the optional `require` so a missing
+// peer dep surfaces as our friendly install-pointing error rather than
+// Metro's terse "Unable to resolve module".
+//
+// The resolved value is shape-checked against `HijriConverter` before being
+// returned; a partial / unexpected export throws the same friendly error
+// instead of leaking deep into the system at first use.
 // ---------------------------------------------------------------------------
 
-const DOW_TABLE = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
+const isHijriConverter = (mod: unknown): mod is HijriConverter =>
+  typeof mod === 'object' &&
+  mod !== null &&
+  typeof (mod as HijriConverter).gregorianToHijri === 'function' &&
+  typeof (mod as HijriConverter).hijriToGregorian === 'function';
 
-const dayOfWeek = (y: number, m: number, d: number): number => {
-  const yy = m < 2 ? y - 1 : y;
-  /* istanbul ignore next — `?? 0` is a TS noUncheckedIndexedAccess fallback;
-   * `m` is always 0..11 here. */
-  const t = DOW_TABLE[m] ?? 0;
-  return (
-    (yy +
-      Math.floor(yy / 4) -
-      Math.floor(yy / 100) +
-      Math.floor(yy / 400) +
-      t +
-      d) %
-    7
-  );
-};
-
-const julianDay = (y: number, m: number, d: number): number => {
-  const a = Math.floor((14 - m) / 12);
-  const yr = y + 4800 - a;
-  const mo = m + 12 * a - 3;
-  return (
-    d +
-    Math.floor((153 * mo + 2) / 5) +
-    365 * yr +
-    Math.floor(yr / 4) -
-    Math.floor(yr / 100) +
-    Math.floor(yr / 400) -
-    32045
-  );
+const loadDefaultConverter = (): HijriConverter => {
+  let mod: unknown;
+  try {
+    mod = require('@tabby_ai/hijri-converter');
+  } catch {
+    throw new Error(MISSING_CONVERTER_ERROR);
+  }
+  if (!isHijriConverter(mod)) {
+    throw new Error(MISSING_CONVERTER_ERROR);
+  }
+  return mod;
 };
 
 // ---------------------------------------------------------------------------
@@ -174,21 +174,16 @@ const julianDay = (y: number, m: number, d: number): number => {
 // ---------------------------------------------------------------------------
 
 export const createHijriSystem = (
-  options: HijriSystemOptions
+  options: HijriSystemOptions = {}
 ): CalendarSystem<HijriDate> => {
-  // Loud, helpful error if the consumer forgot to install + inject the
-  // converter. Triggers at construction (module load time in most apps),
-  // never deep inside a render.
-  if (
-    !options ||
-    !options.converter ||
-    typeof options.converter.gregorianToHijri !== 'function' ||
-    typeof options.converter.hijriToGregorian !== 'function'
-  ) {
+  // Resolve the converter: explicit override wins; otherwise auto-load the
+  // optional peer dep. Both paths funnel through the same shape check so
+  // an invalid converter never silently degrades to NaN-laced dates.
+  const converter = options.converter ?? loadDefaultConverter();
+  if (!isHijriConverter(converter)) {
     throw new Error(MISSING_CONVERTER_ERROR);
   }
 
-  const { converter } = options;
   const months = options.monthLabels ?? DEFAULT_HIJRI_MONTHS;
   const weekdays = options.weekdayLabels ?? DEFAULT_WEEKDAYS;
   const formatDay = options.formatDay ?? ((d: HijriDate) => String(d.hd));
@@ -246,8 +241,8 @@ export const createHijriSystem = (
       day: 1,
     });
     return (
-      julianDay(end.year, end.month, end.day) -
-      julianDay(start.year, start.month, start.day)
+      gregorianJulianDay(end.year, end.month, end.day) -
+      gregorianJulianDay(start.year, start.month, start.day)
     );
   };
 
@@ -302,7 +297,7 @@ export const createHijriSystem = (
     year: (d) => d.hy,
     month: (d) => d.hm,
     day: (d) => d.hd,
-    weekday: (d) => dayOfWeek(d.gy, d.gm, d.gd),
+    weekday: (d) => gregorianSunday0Weekday(d.gy, d.gm, d.gd),
     daysInMonth: (d) => hijriMonthLength(d.hy, d.hm),
 
     withYear(d, year) {
@@ -363,3 +358,18 @@ export const createHijriSystem = (
     toNativeDate: (d) => new Date(d.gy, d.gm, d.gd),
   };
 };
+
+// ---------------------------------------------------------------------------
+// Pre-configured instance — convenience export for the 80% case.
+//
+// Eager construction means a missing `@tabby_ai/hijri-converter` install
+// throws with the friendly `MISSING_CONVERTER_ERROR` the moment this
+// subpath is imported, instead of degrading silently or surfacing a
+// terser bundler / runtime error at first use.
+//
+// Need overrides (custom labels, formatters, alternative converter)? Use
+// `createHijriSystem(options)` instead — the eager instance only covers
+// the zero-config path.
+// ---------------------------------------------------------------------------
+
+export const hijriSystem: CalendarSystem<HijriDate> = createHijriSystem();

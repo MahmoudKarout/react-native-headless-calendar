@@ -1,21 +1,22 @@
 import {
-  createHijriSystem,
-  hijriSystem,
-  type HijriConverter,
-  type HijriDate,
-} from '../../systems/hijri';
+  createJalaliSystem,
+  jalaliSystem,
+  type JalaliConverter,
+  type JalaliDate,
+} from '../../systems/jalali';
 
 /**
  * Deterministic stub converter — uses a fixed reference epoch so the entire
  * suite runs without depending on third-party tables.
  *
- * 2024-05-15 (Gregorian) is treated as 1445-11-07 (Hijri); ±1 day in
- * Gregorian corresponds to ±1 day in Hijri. Hijri months are 30 days. This
- * is enough to exercise the system surface deterministically.
+ * 2024-05-15 (Gregorian) is treated as 1403-02-26 (Jalali); ±1 day in
+ * Gregorian corresponds to ±1 day in Jalali. Stub Jalali months are 30
+ * days. This is enough to exercise the system surface deterministically
+ * without coupling the test to the real `moment-jalaali` algorithm.
  */
 const REF_GREG = { year: 2024, month: 5, day: 15 };
-const REF_HIJRI = { year: 1445, month: 11, day: 7 };
-const HIJRI_MONTH_LEN = 30;
+const REF_JALALI = { year: 1403, month: 2, day: 26 };
+const JALALI_MONTH_LEN = 30;
 
 const julianFromGreg = (y: number, m: number, d: number): number => {
   const a = Math.floor((14 - m) / 12);
@@ -48,90 +49,102 @@ const gregFromJulian = (
 };
 
 const refJulian = julianFromGreg(REF_GREG.year, REF_GREG.month, REF_GREG.day);
-const hijriToOrdinal = (y: number, m: number, d: number): number =>
-  ((y - REF_HIJRI.year) * 12 + (m - REF_HIJRI.month)) * HIJRI_MONTH_LEN +
-  (d - REF_HIJRI.day);
+const jalaliToOrdinal = (y: number, m: number, d: number): number =>
+  ((y - REF_JALALI.year) * 12 + (m - REF_JALALI.month)) * JALALI_MONTH_LEN +
+  (d - REF_JALALI.day);
 
-const stubConverter: HijriConverter = {
-  hijriToGregorian({ year, month, day }) {
-    const julian = refJulian + hijriToOrdinal(year, month, day);
+const stubConverter: JalaliConverter = {
+  jalaliToGregorian({ year, month, day }) {
+    const julian = refJulian + jalaliToOrdinal(year, month, day);
     return gregFromJulian(julian);
   },
-  gregorianToHijri({ year, month, day }) {
+  gregorianToJalali({ year, month, day }) {
     const julian = julianFromGreg(year, month, day);
     const ordinal = julian - refJulian;
     let total =
-      (REF_HIJRI.year * 12 + (REF_HIJRI.month - 1)) * HIJRI_MONTH_LEN +
-      (REF_HIJRI.day - 1) +
+      (REF_JALALI.year * 12 + (REF_JALALI.month - 1)) * JALALI_MONTH_LEN +
+      (REF_JALALI.day - 1) +
       ordinal;
-    const hd = (total % HIJRI_MONTH_LEN) + 1;
-    total = Math.floor(total / HIJRI_MONTH_LEN);
-    const hm = (total % 12) + 1;
-    const hy = Math.floor(total / 12);
-    return { year: hy, month: hm, day: hd };
+    const jd = (total % JALALI_MONTH_LEN) + 1;
+    total = Math.floor(total / JALALI_MONTH_LEN);
+    const jm = (total % 12) + 1;
+    const jy = Math.floor(total / 12);
+    return { year: jy, month: jm, day: jd };
   },
 };
 
-describe('createHijriSystem() — guard rails', () => {
-  it('throws when the user-supplied converter is missing gregorianToHijri', () => {
+describe('createJalaliSystem() — guard rails', () => {
+  it('throws when the user-supplied converter is missing gregorianToJalali', () => {
     expect(() =>
-      createHijriSystem({
+      createJalaliSystem({
         converter: {
-          hijriToGregorian: stubConverter.hijriToGregorian,
-        } as unknown as HijriConverter,
+          jalaliToGregorian: stubConverter.jalaliToGregorian,
+        } as unknown as JalaliConverter,
       })
-    ).toThrow(/yarn add @tabby_ai\/hijri-converter/);
+    ).toThrow(/yarn add moment-jalaali/);
   });
 
-  it('throws when the user-supplied converter is missing hijriToGregorian', () => {
+  it('throws when the user-supplied converter is missing jalaliToGregorian', () => {
     expect(() =>
-      createHijriSystem({
+      createJalaliSystem({
         converter: {
-          gregorianToHijri: stubConverter.gregorianToHijri,
-        } as unknown as HijriConverter,
+          gregorianToJalali: stubConverter.gregorianToJalali,
+        } as unknown as JalaliConverter,
       })
-    ).toThrow(/yarn add @tabby_ai\/hijri-converter/);
+    ).toThrow(/yarn add moment-jalaali/);
   });
 });
 
-// `@tabby_ai/hijri-converter` is installed as a (test-only) devDependency,
-// so this suite exercises the zero-config `createHijriSystem()` /
-// `hijriSystem` paths against the real converter module — the same path
-// consumers hit when they install the optional peer dep. The deliberate
-// missing-dep + malformed-dep scenarios live in the standalone
-// `hijri.peer.test.ts` file because they need a top-level `jest.mock`.
-describe('createHijriSystem() — auto-loaded `@tabby_ai/hijri-converter`', () => {
+// `moment-jalaali` is installed as a (test-only) devDependency, so this
+// suite exercises the zero-config `createJalaliSystem()` / `jalaliSystem`
+// paths against the real converter module — the same path consumers hit
+// when they install the optional peer dep. The deliberate missing-dep +
+// malformed-dep scenarios live in the standalone `jalali.peer.test.ts`
+// file because they need a top-level `jest.mock`.
+describe('createJalaliSystem() — auto-loaded `moment-jalaali`', () => {
   it('builds a working system with no arguments', () => {
-    const sys = createHijriSystem();
-    expect(sys.id).toBe('hijri');
-    // Round-tripping through the auto-loaded real converter should agree
-    // with the stub on a known Gregorian → Hijri reference date.
-    const d = sys.fromNativeDate(new Date(2024, 4, 15));
-    expect(sys.year(d)).toBe(REF_HIJRI.year);
-    expect(sys.month(d)).toBe(REF_HIJRI.month - 1);
-    expect(sys.day(d)).toBe(REF_HIJRI.day);
+    const sys = createJalaliSystem();
+    expect(sys.id).toBe('jalali');
+    // 2024-03-20 is the canonical Nowruz of 1403 (Farvardin 1).
+    const nowruz = sys.fromNativeDate(new Date(2024, 2, 20));
+    expect(sys.year(nowruz)).toBe(1403);
+    expect(sys.month(nowruz)).toBe(0);
+    expect(sys.day(nowruz)).toBe(1);
   });
 
-  it('exports a pre-configured `hijriSystem` instance', () => {
-    expect(hijriSystem.id).toBe('hijri');
-    expect(hijriSystem.label).toBe('Hijri');
-    const d = hijriSystem.fromNativeDate(new Date(2024, 4, 15));
-    expect(hijriSystem.year(d)).toBe(REF_HIJRI.year);
+  it('exports a pre-configured `jalaliSystem` instance', () => {
+    expect(jalaliSystem.id).toBe('jalali');
+    expect(jalaliSystem.label).toBe('Jalali');
+    const nowruz = jalaliSystem.fromNativeDate(new Date(2024, 2, 20));
+    expect(jalaliSystem.year(nowruz)).toBe(1403);
+  });
+
+  // Round-tripping a Jalali-shaped date through the auto-loaded converter
+  // exercises the `jalaliToGregorian` half of the `moment-jalaali` adapter
+  // (the `fromNativeDate` test above only hits `gregorianToJalali`).
+  it('round-trips Jalali → Gregorian via the auto-loaded adapter', () => {
+    const sys = createJalaliSystem();
+    // Farvardin 1, 1403 — Nowruz, the Persian new year.
+    const nowruz = sys.from({ jy: 1403, jm: 0, jd: 1 });
+    const native = sys.toNativeDate(nowruz);
+    expect(native.getFullYear()).toBe(2024);
+    expect(native.getMonth()).toBe(2);
+    expect(native.getDate()).toBe(20);
   });
 });
 
-describe('createHijriSystem() — surface', () => {
-  const sys = createHijriSystem({ converter: stubConverter });
+describe('createJalaliSystem() — surface', () => {
+  const sys = createJalaliSystem({ converter: stubConverter });
 
-  it('uses the canonical id "hijri" and the default label', () => {
-    expect(sys.id).toBe('hijri');
-    expect(sys.label).toBe('Hijri');
+  it('uses the canonical id "jalali" and the default label', () => {
+    expect(sys.id).toBe('jalali');
+    expect(sys.label).toBe('Jalali');
   });
 
   it('honours a custom label', () => {
     expect(
-      createHijriSystem({ converter: stubConverter, label: 'هـ' }).label
-    ).toBe('هـ');
+      createJalaliSystem({ converter: stubConverter, label: 'شمسی' }).label
+    ).toBe('شمسی');
   });
 
   it('today() honours the current Date', () => {
@@ -147,9 +160,9 @@ describe('createHijriSystem() — surface', () => {
     const d = sys.fromNativeDate(
       new Date(REF_GREG.year, REF_GREG.month - 1, REF_GREG.day)
     );
-    expect(sys.year(d)).toBe(REF_HIJRI.year);
-    expect(sys.month(d)).toBe(REF_HIJRI.month - 1);
-    expect(sys.day(d)).toBe(REF_HIJRI.day);
+    expect(sys.year(d)).toBe(REF_JALALI.year);
+    expect(sys.month(d)).toBe(REF_JALALI.month - 1);
+    expect(sys.day(d)).toBe(REF_JALALI.day);
   });
 
   it('round-trips a date through toNativeDate / fromNativeDate', () => {
@@ -168,30 +181,30 @@ describe('createHijriSystem() — surface', () => {
 
     it('coerces native Dates', () => {
       const d = sys.from(new Date(2024, 4, 15));
-      expect(sys.year(d)).toBe(REF_HIJRI.year);
+      expect(sys.year(d)).toBe(REF_JALALI.year);
     });
 
-    it('passes Hijri-shaped objects through the converter', () => {
+    it('passes Jalali-shaped objects through the converter', () => {
       const d = sys.from({
-        hy: REF_HIJRI.year,
-        hm: REF_HIJRI.month - 1,
-        hd: REF_HIJRI.day,
+        jy: REF_JALALI.year,
+        jm: REF_JALALI.month - 1,
+        jd: REF_JALALI.day,
       });
-      expect(sys.year(d)).toBe(REF_HIJRI.year);
-      expect(sys.month(d)).toBe(REF_HIJRI.month - 1);
-      expect(sys.day(d)).toBe(REF_HIJRI.day);
+      expect(sys.year(d)).toBe(REF_JALALI.year);
+      expect(sys.month(d)).toBe(REF_JALALI.month - 1);
+      expect(sys.day(d)).toBe(REF_JALALI.day);
     });
 
     it('honours objects with toDate()', () => {
       const d = sys.from({
         toDate: () => new Date(REF_GREG.year, REF_GREG.month - 1, REF_GREG.day),
       });
-      expect(sys.day(d)).toBe(REF_HIJRI.day);
+      expect(sys.day(d)).toBe(REF_JALALI.day);
     });
 
     it('parses ISO strings', () => {
       const d = sys.from('2024-05-15T00:00:00');
-      expect(sys.year(d)).toBe(REF_HIJRI.year);
+      expect(sys.year(d)).toBe(REF_JALALI.year);
     });
 
     it('parses numeric timestamps', () => {
@@ -201,7 +214,7 @@ describe('createHijriSystem() — surface', () => {
         REF_GREG.day
       ).getTime();
       const d = sys.from(ms);
-      expect(sys.day(d)).toBe(REF_HIJRI.day);
+      expect(sys.day(d)).toBe(REF_JALALI.day);
     });
 
     it('falls back to today() for malformed strings', () => {
@@ -238,24 +251,24 @@ describe('createHijriSystem() — surface', () => {
     });
 
     it('daysInMonth() returns 30 with the stub converter', () => {
-      expect(sys.daysInMonth(ref)).toBe(HIJRI_MONTH_LEN);
+      expect(sys.daysInMonth(ref)).toBe(JALALI_MONTH_LEN);
     });
 
     it('withYear preserves month, clamps day', () => {
-      const d = sys.withYear(ref, REF_HIJRI.year + 1);
-      expect(sys.year(d)).toBe(REF_HIJRI.year + 1);
-      expect(sys.month(d)).toBe(REF_HIJRI.month - 1);
+      const d = sys.withYear(ref, REF_JALALI.year + 1);
+      expect(sys.year(d)).toBe(REF_JALALI.year + 1);
+      expect(sys.month(d)).toBe(REF_JALALI.month - 1);
     });
 
     it('withMonth wraps positive month values into the next year', () => {
       const d = sys.withMonth(ref, 14);
-      expect(sys.year(d)).toBe(REF_HIJRI.year + 1);
+      expect(sys.year(d)).toBe(REF_JALALI.year + 1);
       expect(sys.month(d)).toBe(2);
     });
 
     it('withMonth wraps negative month values into the previous year', () => {
       const d = sys.withMonth(ref, -2);
-      expect(sys.year(d)).toBe(REF_HIJRI.year - 1);
+      expect(sys.year(d)).toBe(REF_JALALI.year - 1);
       expect(sys.month(d)).toBe(10);
     });
 
@@ -265,33 +278,34 @@ describe('createHijriSystem() — surface', () => {
     });
 
     it('withDay clamps days greater than month length to max', () => {
-      expect(sys.day(sys.withDay(ref, 99))).toBe(HIJRI_MONTH_LEN);
+      expect(sys.day(sys.withDay(ref, 99))).toBe(JALALI_MONTH_LEN);
     });
 
     it('addMonths walks forward across years', () => {
       const d = sys.addMonths(ref, 14);
-      // ref: hy=1445, hm=10 (Dhul-Qa'dah). +14 months = 1447-Muharram (hm=0).
-      expect(sys.year(d)).toBe(REF_HIJRI.year + 2);
-      expect(sys.month(d)).toBe(0);
+      // ref: jy=1403, jm=1 (0-based Ordibehesht). +14 months = 1404-Tir
+      // (jm=3) under 12-month-per-year arithmetic.
+      expect(sys.year(d)).toBe(REF_JALALI.year + 1);
+      expect(sys.month(d)).toBe(3);
     });
 
     it('addMonths walks backward across years', () => {
-      const d = sys.addMonths(ref, -(REF_HIJRI.month - 1) - 2);
-      expect(sys.year(d)).toBe(REF_HIJRI.year - 1);
+      const d = sys.addMonths(ref, -(REF_JALALI.month - 1) - 2);
+      expect(sys.year(d)).toBe(REF_JALALI.year - 1);
       expect(sys.month(d)).toBe(10);
     });
 
     it('addYears moves the year and clamps the day', () => {
       const d = sys.addYears(ref, 2);
-      expect(sys.year(d)).toBe(REF_HIJRI.year + 2);
-      expect(sys.day(d)).toBe(REF_HIJRI.day);
+      expect(sys.year(d)).toBe(REF_JALALI.year + 2);
+      expect(sys.day(d)).toBe(REF_JALALI.day);
     });
 
     it('daysInMonth() rolls into next year when computing the last month', () => {
-      // Set hm = 11 (Dhul-Hijjah, the 12th month) — exercises the
-      // `if (nextHm >= 12)` branch inside hijriMonthLength().
+      // Set jm = 11 (Esfand, the 12th month) — exercises the
+      // `if (nextJm >= 12)` branch inside jalaliMonthLength().
       const last = sys.withMonth(ref, 11);
-      expect(sys.daysInMonth(last)).toBe(HIJRI_MONTH_LEN);
+      expect(sys.daysInMonth(last)).toBe(JALALI_MONTH_LEN);
     });
   });
 
@@ -327,25 +341,25 @@ describe('createHijriSystem() — surface', () => {
   });
 
   describe('labels & formatters', () => {
-    it('exposes the default Hijri month names', () => {
-      expect(sys.monthLabels()[0]).toBe('Muharram');
-      expect(sys.monthLabels()[8]).toBe('Ramadan');
+    it('exposes the default Jalali month names', () => {
+      expect(sys.monthLabels()[0]).toBe('Farvardin');
+      expect(sys.monthLabels()[8]).toBe('Azar');
     });
 
     it('exposes the default short weekday names', () => {
       expect(sys.weekdayLabels()).toEqual([
-        'Sun',
-        'Mon',
-        'Tue',
-        'Wed',
-        'Thu',
-        'Fri',
-        'Sat',
+        'Yek',
+        'Do',
+        'Se',
+        'Cha',
+        'Pan',
+        'Jom',
+        'Sha',
       ]);
     });
 
     it('honours custom label arrays', () => {
-      const custom = createHijriSystem({
+      const custom = createJalaliSystem({
         converter: stubConverter,
         monthLabels: ['m1', 'm2'],
         weekdayLabels: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
@@ -354,17 +368,17 @@ describe('createHijriSystem() — surface', () => {
       expect(custom.weekdayLabels()[6]).toBe('g');
     });
 
-    it('formatDay defaults to String(hd)', () => {
+    it('formatDay defaults to String(jd)', () => {
       const d = sys.fromNativeDate(
         new Date(REF_GREG.year, REF_GREG.month - 1, REF_GREG.day)
       );
-      expect(sys.formatDay(d)).toBe(String(REF_HIJRI.day));
+      expect(sys.formatDay(d)).toBe(String(REF_JALALI.day));
     });
 
     it('formatDay honours overrides', () => {
-      const custom = createHijriSystem({
+      const custom = createJalaliSystem({
         converter: stubConverter,
-        formatDay: (d: HijriDate) => `${d.hy}-${d.hm}-${d.hd}`,
+        formatDay: (d: JalaliDate) => `${d.jy}-${d.jm}-${d.jd}`,
       });
       const d = custom.fromNativeDate(
         new Date(REF_GREG.year, REF_GREG.month - 1, REF_GREG.day)
@@ -377,12 +391,12 @@ describe('createHijriSystem() — surface', () => {
         new Date(REF_GREG.year, REF_GREG.month - 1, REF_GREG.day)
       );
       expect(sys.formatMonthYear(d)).toMatch(
-        new RegExp(String(REF_HIJRI.year))
+        new RegExp(String(REF_JALALI.year))
       );
     });
 
     it('formatMonthYear handles month indexes outside the array gracefully', () => {
-      const sparse = createHijriSystem({
+      const sparse = createJalaliSystem({
         converter: stubConverter,
         monthLabels: ['only-one'],
       });
@@ -393,15 +407,15 @@ describe('createHijriSystem() — surface', () => {
     });
 
     it('formatMonthYear honours overrides', () => {
-      const custom = createHijriSystem({
+      const custom = createJalaliSystem({
         converter: stubConverter,
-        formatMonthYear: (d: HijriDate) => `${d.hy}/${d.hm + 1}`,
+        formatMonthYear: (d: JalaliDate) => `${d.jy}/${d.jm + 1}`,
       });
       const d = custom.fromNativeDate(
         new Date(REF_GREG.year, REF_GREG.month - 1, REF_GREG.day)
       );
       expect(custom.formatMonthYear(d)).toBe(
-        `${REF_HIJRI.year}/${REF_HIJRI.month}`
+        `${REF_JALALI.year}/${REF_JALALI.month}`
       );
     });
   });

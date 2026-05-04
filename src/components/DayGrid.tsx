@@ -13,9 +13,9 @@
  * Day cells are wrapped in React.memo and receive only stable props, so
  * tapping a date re-renders at most 2-4 cells.
  *
- * When `swipeable` is enabled, the grid is rendered three-up inside a
- * horizontal `FlatList` (`[prev, current, next]`) so the user can swipe
- * sideways to step through months. The weekday header stays fixed.
+ * When `swipeable` is enabled, months are rendered in a horizontal virtualised list
+ * (`@legendapp/list`): one page per calendar month plus growable prepend/append
+ * windows (`SwipeableMonthList`). The weekday header stays fixed outside the pager.
  *
  * Consumers can fully replace the cell rendering with the `renderDay`
  * prop — for completely custom day visuals, see <Calendar.DayCell> below.
@@ -163,8 +163,9 @@ function DayCellComponent({ info, onSelect }: DayCellProps) {
     [onSelect, info.date]
   );
 
-  // Background corner radius — square in the middle of a range, rounded
-  // on the endpoints, fully circular for a single selection.
+  // Background corner radius — `inRange` is *only* the interior of a span
+  // (range start/end exclude `inRange` in Layer 2), so the middle gets a
+  // square slab; endpoints and singles keep `theme.borderRadius`.
   let radius = theme.borderRadius;
   let bg = 'transparent';
   if (info.isSelected) {
@@ -172,13 +173,6 @@ function DayCellComponent({ info, onSelect }: DayCellProps) {
   } else if (info.inRange) {
     bg = theme.colors.rangeBackground;
     radius = 0;
-  }
-  if (info.isRangeStart && info.isRangeEnd) {
-    radius = theme.borderRadius;
-  } else if (info.isRangeStart) {
-    radius = theme.borderRadius;
-  } else if (info.isRangeEnd) {
-    radius = theme.borderRadius;
   }
 
   const textColor = info.isSelected
@@ -196,7 +190,7 @@ function DayCellComponent({ info, onSelect }: DayCellProps) {
         disabled: info.isDisabled,
       }}
       disabled={info.isDisabled}
-      onPress={info.isDisabled ? undefined : onPress}
+      onPress={onPress}
       // eslint-disable-next-line react-native/no-inline-styles
       style={{
         width: theme.cellSize,
@@ -673,6 +667,37 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
     buildMonthsAround(system, displayed, WINDOW_RADIUS)
   );
 
+  // System change wipes the entire window — month identities differ
+  // between calendar systems (e.g. Gregorian's `{y,m,d}` vs Hijri's
+  // `{hy,hm,hd}`), so reusing them would have `MonthGrid` ask the new
+  // system for `.year()` / `.month()` of an old-shape value, propagate
+  // `NaN` into the converter, and crash with a "month = 0" assertion.
+  //
+  // The detection has to be synchronous-during-render (not a post-commit
+  // `useEffect`) — by the time an effect fires, LegendList has already
+  // rendered the stale data through `renderItem` and crashed. Calling
+  // `setMonths` during render is the React-recommended pattern for
+  // deriving state from props (see https://react.dev/reference/react/
+  // useState#storing-information-from-previous-renders): React
+  // discards the in-flight render and re-runs with the new state, but
+  // we still use `activeMonths` immediately so the discarded render
+  // also feeds correctly-shaped dates downstream.
+  //
+  // Crucially, the "previous system" tracker is **state**, not a ref.
+  // StrictMode (and concurrent re-renders) invoke the component body
+  // twice; ref mutations persist across that double-invocation, so a
+  // ref tracker would flip on the first run, look "already up-to-date"
+  // on the second, skip the rebuild, and hand the list stale months
+  // back. State resets to the same value on each invocation until React
+  // commits the update — so both invocations agree the swap is fresh.
+  const [lastSystemId, setLastSystemId] = useState(system.id);
+  let activeMonths = months;
+  if (lastSystemId !== system.id) {
+    activeMonths = buildMonthsAround(system, displayed, WINDOW_RADIUS);
+    setLastSystemId(system.id);
+    setMonths(activeMonths);
+  }
+
   // `displayed` ↔ `months` reconciliation. Two cases:
   //   (1) displayed is inside the current window → no-op (active index
   //       is recomputed below; scroll-sync effect handles positioning).
@@ -681,31 +706,20 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
   //       resets its containers and `initialScrollIndex` re-anchors at
   //       `WINDOW_RADIUS`.
   useEffect(() => {
-    const idx = months.findIndex((m) =>
+    const idx = activeMonths.findIndex((m) =>
       isSameDisplayMonth(system, m, displayed)
     );
     if (idx === -1) {
       setMonths(buildMonthsAround(system, displayed, WINDOW_RADIUS));
     }
-  }, [displayed, months, system]);
-
-  // System change wipes the entire window — month identities differ
-  // between calendar systems, so reusing them would corrupt the keys.
-  // Captured via ref so this effect runs once per system change rather
-  // than on every render.
-  const lastSystemId = useRef(system.id);
-  useEffect(() => {
-    if (lastSystemId.current === system.id) return;
-    lastSystemId.current = system.id;
-    setMonths(buildMonthsAround(system, displayed, WINDOW_RADIUS));
-  }, [system, displayed]);
+  }, [displayed, activeMonths, system]);
 
   const activeIndex = useMemo(() => {
-    const idx = months.findIndex((m) =>
+    const idx = activeMonths.findIndex((m) =>
       isSameDisplayMonth(system, m, displayed)
     );
     return idx === -1 ? WINDOW_RADIUS : idx;
-  }, [months, system, displayed]);
+  }, [activeMonths, system, displayed]);
 
   // Sync external navigation → scroll. Runs whenever `displayed` (or
   // the resolved index) changes; LegendList's scroll position usually
@@ -798,7 +812,18 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
     >
       {pageWidth > 0 && (
         <LegendList<CalendarDateValue>
-          data={months}
+          // `key={system.id}` force-remounts the list whenever the
+          // active calendar system changes. Belt-and-braces alongside
+          // the `lastSystemId` rebuild above: it guarantees the list's
+          // internal measurement caches, recycled cell pool, and layout
+          // estimates start fresh for the new system instead of trying
+          // to reconcile wildly different month identities (Gregorian
+          // `{y,m,d}` vs Hijri `{hy,hm,hd}`). Without this, recycled
+          // cells can briefly hold a stale-shape date long enough to
+          // crash the converter ("month = 0") inside `system.year` /
+          // `system.month` calls fired by virtualisation bookkeeping.
+          key={system.id}
+          data={activeMonths}
           // One page on each side of the viewport stays mounted — keeps
           // swipes flash-free while still bounding mounted MonthGrids
           // to 3, regardless of how long the data window grows.
@@ -899,7 +924,7 @@ export interface DayGridProps {
    */
   renderDay?: DayRenderer;
   /**
-   * When `true`, render the day grid inside a horizontal `FlatList` so the
+   * When `true`, render the day grid inside a horizontal virtualised month list so the
    * user can swipe sideways to step to the previous / next month. Each
    * swipe dispatches `store.changeMonth(±1)`, so it composes seamlessly
    * with `useCalendarNavigation()` and any other external navigation —
@@ -909,6 +934,9 @@ export interface DayGridProps {
    *
    * Mutually exclusive with `numberOfMonths > 1` — the swipeable list
    * always shows a single page.
+   *
+   * In React Native development builds (`__DEV__`), passing both props
+   * logs a console warning (`swipeable` is ignored for multi-month grids).
    */
   swipeable?: boolean;
   /**
@@ -917,14 +945,23 @@ export interface DayGridProps {
    * `components.MonthCaption` slot (no caption is rendered when the slot
    * is omitted, preserving the single-month layout's headerless look).
    *
-   * Defaults to `1`. Values >= 2 disable `swipeable` automatically.
+   * Defaults to `1`. Values >= 2 disable `swipeable` automatically
+   * (Development: the combination raises a warning — see `swipeable`.)
    */
   numberOfMonths?: number;
   /**
-   * Show a leading column of ISO 8601 week numbers, computed via
-   * `system.weekNumber()` when available (the bundled Gregorian system
-   * implements it natively), or derived from `toNativeDate(d)` as a
-   * fallback. Defaults to `false`.
+   * Show a leading column of week numbers, one per grid row (Thursday of each
+   * row is taken as the reference day so numbering stays coherent across
+   * different `firstDayOfWeek` values).
+   *
+   * - When `CalendarSystem.weekNumber` is implemented, week numbers come from
+   *   the calendar system (the bundled Gregorian system uses ISO weeks).
+   * - Otherwise numbers are computed as **ISO 8601 week-of-year for the row's
+   *   underlying Gregorian calendar date** (`toNativeDate`), even when you are
+   *   displaying Jalali/Hijri day labels — extend the interface with `weekNumber`
+   *   if users need lunar/Persian week semantics.
+   *
+   * Defaults to `false`.
    */
   showWeekNumbers?: boolean;
 }
@@ -945,6 +982,15 @@ const DayGridComponent: React.FC<DayGridProps> = ({
   // require a per-page numberOfMonths slice, which adds complexity for
   // little practical gain. Document the precedence.
   const useSwipeable = swipeable && !isMultiMonth;
+
+  useEffect(() => {
+    if (!__DEV__ || !swipeable || !isMultiMonth) return;
+    console.warn(
+      '[react-native-fast-calendar] <Calendar.DayGrid swipeable /> is ' +
+        'ignored while numberOfMonths > 1. Remove swipeable=true or split ' +
+        'into separate roots if you truly need swipe + parallel months.'
+    );
+  }, [swipeable, isMultiMonth]);
 
   const monthsToRender = useMemo<readonly CalendarDateValue[]>(() => {
     if (!isMultiMonth) return [displayed];

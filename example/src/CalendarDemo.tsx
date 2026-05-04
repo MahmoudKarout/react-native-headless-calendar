@@ -30,10 +30,14 @@
  *                           WeekNumberCell }}` overrides.
  *   8. LocalisedExample   — `createGregorianSystem` with French month +
  *                           weekday labels, French action labels.
+ *   9. ImageCellExample   — `renderDay` swaps the day number for an
+ *                           image (e.g. video-upload thumbnails) on
+ *                           specific dates while keeping selection.
  */
 import React, { useState } from 'react';
 import {
   I18nManager,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -41,10 +45,6 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
-
-// Hijri converter is brought in by the consumer (see #6 below) — the
-// calendar package itself has no converter dependency.
-import * as hijriConverter from '@tabby_ai/hijri-converter';
 
 import {
   Calendar,
@@ -67,7 +67,7 @@ import {
   type WeekdayHeaderProps,
   type WeekNumberCellProps,
 } from 'react-native-fast-calendar';
-import { createHijriSystem } from 'react-native-fast-calendar/systems/hijri';
+import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
 import {
   createGregorianSystem,
   gregorianSystem,
@@ -821,13 +821,17 @@ function MultiMonthExample() {
 }
 
 // ===========================================================================
-// 6. Multi-system — Gregorian + Hijri with switcher and pickers
+// 6. Multi-system — Gregorian + Hijri with switcher and pickers.
+//
+//    The library ships pre-configured Hijri / Jalali systems alongside the
+//    default Gregorian one. Install the optional peer dep
+//    (`@tabby_ai/hijri-converter` for Hijri, `moment-jalaali` for Jalali)
+//    and import the ready-to-use instance — no factory call needed. For
+//    custom converters, use `createHijriSystem({ converter })` /
+//    `createJalaliSystem({ converter })` from the same module.
 // ===========================================================================
 
-const MULTI_SYSTEMS: CalendarSystem[] = [
-  gregorianSystem,
-  createHijriSystem({ converter: hijriConverter }),
-];
+const MULTI_SYSTEMS: CalendarSystem[] = [gregorianSystem, hijriSystem];
 
 function MultiSystemExample() {
   return (
@@ -1004,6 +1008,117 @@ function LocalisedExample() {
 }
 
 // ===========================================================================
+// 9. Image cells — render an image instead of the day number
+// ===========================================================================
+
+// A real consumer would ship the asset locally and `require()` it, but a
+// remote URL is the simplest way to demonstrate the API. The library
+// puts no constraint on what `renderDay` returns — any RN node (Image,
+// SVG, video poster, …) drops in here.
+const YT_LOGO_URI =
+  'https://img.freepik.com/premium-vector/youtube-logo-round-button-vector_768467-361.jpg';
+
+// Fake "video upload" schedule — kept relative to today so the example
+// always shows a few highlighted cells regardless of when it's run. In
+// a real app this would come from your CMS / API.
+const UPLOAD_DAYS: Date[] = (() => {
+  const today = new Date();
+  return [0, 3, 7, 12, 18, 24, 30].map(
+    (d) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + d)
+  );
+})();
+
+const isUploadDay = (info: DayCellInfo): boolean =>
+  UPLOAD_DAYS.some(
+    (d) =>
+      d.getFullYear() === info.nativeDate.getFullYear() &&
+      d.getMonth() === info.nativeDate.getMonth() &&
+      d.getDate() === info.nativeDate.getDate()
+  );
+
+/**
+ * Per-cell renderer used by `<Calendar.DayGrid renderDay={...}>`. On
+ * "upload" days we render the YouTube logo in place of the day number;
+ * every other day falls back to the standard text label. Selection,
+ * today indicator, and disabled state are all still honoured because we
+ * read `info.isSelected / isToday / isDisabled` ourselves — the library
+ * computes the flags, the consumer paints the pixels.
+ */
+function ImageDayCell({ info }: { info: DayCellInfo }) {
+  const store = useCalendarStore();
+  const onPress = () => store.selectDate(info.date);
+  const showLogo = info.isCurrentMonth && isUploadDay(info);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{
+        disabled: info.isDisabled,
+        selected: info.isSelected,
+      }}
+      disabled={info.isDisabled}
+      onPress={info.isDisabled ? undefined : onPress}
+      style={[
+        styles.imageCell,
+        info.isToday && !info.isSelected && styles.imageCellToday,
+        info.isSelected && styles.imageCellSelected,
+        info.isDisabled && styles.imageCellDisabled,
+      ]}
+    >
+      {showLogo ? (
+        <Image
+          accessibilityIgnoresInvertColors
+          source={{ uri: YT_LOGO_URI }}
+          style={styles.imageCellLogo}
+        />
+      ) : (
+        <Text
+          style={[
+            styles.imageCellLabel,
+            info.isSelected && styles.imageCellLabelSelected,
+            !info.isCurrentMonth && styles.imageCellLabelOutside,
+          ]}
+        >
+          {info.label}
+        </Text>
+      )}
+    </Pressable>
+  );
+}
+
+function ImageCellExample() {
+  return (
+    <Card>
+      <CardHeader
+        title="Image cells"
+        description="renderDay swaps the day number for any RN node. Here, video-upload days show a YouTube logo in place of the number while still being normally selectable."
+      />
+      <Calendar.Root
+        mode="single"
+        systems={SINGLE_GREGORIAN}
+        theme={SHADCN_THEME}
+      >
+        <CalendarShell>
+          <CalendarHeader />
+          <Calendar.DayGrid
+            renderDay={(info) => <ImageDayCell info={info} />}
+          />
+          <Separator />
+          <View style={styles.imageLegendRow}>
+            <Image
+              accessibilityIgnoresInvertColors
+              source={{ uri: YT_LOGO_URI }}
+              style={styles.imageLegendDot}
+            />
+            <Text style={styles.legendLabel}>Video upload day</Text>
+          </View>
+        </CalendarShell>
+      </Calendar.Root>
+    </Card>
+  );
+}
+
+// ===========================================================================
 // Demo entry point
 // ===========================================================================
 
@@ -1030,7 +1145,7 @@ export default function CalendarDemo() {
         <Text style={styles.introEyebrow}>react-native-fast-calendar</Text>
         <Text style={styles.introTitle}>Headless calendar, your UI</Text>
         <Text style={styles.introBody}>
-          Eight self-contained recipes. Every visual in this demo is consumer
+          Nine self-contained recipes. Every visual in this demo is consumer
           code — the library only ships &lt;Calendar.Root&gt; and
           &lt;Calendar.DayGrid&gt;.
         </Text>
@@ -1043,6 +1158,7 @@ export default function CalendarDemo() {
       <MultiSystemExample />
       <CustomSlotsExample />
       <LocalisedExample />
+      <ImageCellExample />
     </ScrollView>
   );
 }
@@ -1510,6 +1626,54 @@ const styles = StyleSheet.create({
     width: 36,
     textAlign: 'center',
     fontWeight: '600',
+  },
+
+  // Image cell ----------------------------------------------------------
+  imageCell: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+  },
+  imageCellToday: {
+    borderWidth: 1,
+    borderColor: C.foreground,
+  },
+  imageCellSelected: {
+    backgroundColor: C.primary,
+  },
+  imageCellDisabled: {
+    opacity: 0.4,
+  },
+  imageCellLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    resizeMode: 'cover',
+  },
+  imageCellLabel: {
+    fontSize: 14,
+    color: C.foreground,
+    fontVariant: ['tabular-nums'],
+  },
+  imageCellLabelSelected: {
+    color: C.primaryForeground,
+    fontWeight: '600',
+  },
+  imageCellLabelOutside: {
+    color: C.disabled,
+  },
+  imageLegendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  imageLegendDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    resizeMode: 'cover',
   },
 });
 

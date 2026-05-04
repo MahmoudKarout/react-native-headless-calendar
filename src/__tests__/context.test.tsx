@@ -8,6 +8,7 @@ import {
   useCalendarComponents,
   useCalendarConfig,
   useCalendarFirstDayOfWeek,
+  useCalendarHeader,
   useCalendarLabels,
   useCalendarMonthLabel,
   useCalendarMonthPicker,
@@ -527,6 +528,32 @@ describe('useCalendarNavigation', () => {
     expect(storeRef!.getSnapshot().displayed).toEqual(
       expect.objectContaining({ y: 2024, m: 3 })
     );
+  });
+});
+
+// ===========================================================================
+// useCalendarHeader — compound of month/year label hooks + navigation
+// ===========================================================================
+
+describe('useCalendarHeader', () => {
+  it('delegates fields to underlying hooks', () => {
+    let hdr: ReturnType<typeof useCalendarHeader> | null = null;
+
+    render(
+      <Root initialDate={new Date(2024, 6, 1)} systems={[gregorianSystem]}>
+        <Capture run={() => (hdr = useCalendarHeader())} />
+      </Root>
+    );
+
+    expect(hdr!.monthLabel).toBeTruthy();
+    expect(hdr!.yearLabel).toContain('2024');
+
+    hdr!.toggleMonthPicker();
+    hdr!.toggleYearPicker();
+    hdr!.goPrev();
+    hdr!.goNext();
+
+    expect(typeof hdr!.isMonthVisible).toBe('boolean');
   });
 });
 

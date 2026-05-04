@@ -414,23 +414,53 @@ import { SimpleCalendar, gregorianSystem, createGregorianSystem } from 'react-na
 
 ### Hijri
 
+Install the optional peer dep and import the pre-configured `hijriSystem`:
+
 ```bash
 npm install @tabby_ai/hijri-converter
 ```
 
 ```tsx
-import * as converter from '@tabby_ai/hijri-converter';
-import { createHijriSystem } from 'react-native-fast-calendar/systems/hijri';
+import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
 import { gregorianSystem } from 'react-native-fast-calendar';
 
-const hijri = createHijriSystem({ converter });
-
-<SimpleCalendar systems={[gregorianSystem, hijri]} />
+<SimpleCalendar systems={[gregorianSystem, hijriSystem]} />
 ```
+
+The library auto-loads `@tabby_ai/hijri-converter` on import and throws a clear, install-pointing error if the package is missing. To use a different converter (`moment-hijri`, `Intl.DateTimeFormat`, custom Umm al-Qura tables, …) wrap it in the `HijriConverter` shape and pass it explicitly:
+
+```tsx
+import { createHijriSystem } from 'react-native-fast-calendar/systems/hijri';
+
+const hijri = createHijriSystem({
+  converter: {
+    gregorianToHijri: ({ year, month, day }) => /* … */,
+    hijriToGregorian: ({ year, month, day }) => /* … */,
+  },
+  // Optional: monthLabels, weekdayLabels, label, formatDay, formatMonthYear
+});
+```
+
+### Jalali (Persian / Solar Hijri)
+
+Install the optional peer dep and import the pre-configured `jalaliSystem`:
+
+```bash
+npm install moment-jalaali
+```
+
+```tsx
+import { jalaliSystem } from 'react-native-fast-calendar/systems/jalali';
+import { gregorianSystem } from 'react-native-fast-calendar';
+
+<SimpleCalendar systems={[gregorianSystem, jalaliSystem]} />
+```
+
+Same auto-load pattern as Hijri: `moment-jalaali` is loaded lazily, and a missing install raises a friendly error at import time. Pass a custom converter (`jalaali-js` directly, an `Intl.DateTimeFormat` `ca-persian` wrapper, …) via `createJalaliSystem({ converter })` from the same module.
 
 ### Custom Calendar System
 
-Implement `CalendarSystem<T>` to add Persian, Chinese, Ethiopian, etc.:
+Implement `CalendarSystem<T>` to add Chinese, Ethiopian, or any other calendar — no plugin required:
 
 ```tsx
 import type { CalendarSystem } from 'react-native-fast-calendar';

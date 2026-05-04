@@ -16,7 +16,6 @@ import {
   forwardRef,
   useCallback,
   useImperativeHandle,
-  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -365,8 +364,6 @@ export const RangeDatePickerSheet = forwardRef<
   RangeDatePickerProps
 >(({ onSelect, minDate, maxDate, maxRangeDays }, ref) => {
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-
-  const snapPoints = useMemo(() => ['60%', '85%'], []);
 
   useImperativeHandle(ref, () => ({
     present: () => {

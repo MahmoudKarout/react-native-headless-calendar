@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { DayCell, DayGrid } from '../../components/DayGrid';
 import { Root } from '../../components/Root';
@@ -796,6 +796,53 @@ describe('<Calendar.DayGrid swipeable />', () => {
     // even though the calendar dates around it line up arithmetically.
     expect(data[0]).not.toBe(baselineFirst);
   });
+
+  it('rebuilds the window on system swap under React.StrictMode', () => {
+    // Regression for the "month = 0" production crash. A previous fix
+    // tracked the last-seen system id with `useRef`. Refs survive
+    // StrictMode's double-invocation, which (combined with concurrent
+    // re-renders in React 19) means the second invocation can see the
+    // ref already updated, skip the rebuild, and feed the LegendList
+    // stale-system months. Tracking the id with `useState` instead is
+    // the canonical "storing information from previous renders" idiom
+    // (https://react.dev/reference/react/useState#storing-information-
+    // from-previous-renders) and is robust against double-invocation.
+    const second = createGregorianSystem({ label: 'Alt' });
+    Object.defineProperty(second, 'id', { value: 'alt-gregorian' });
+
+    let switcherRef: ReturnType<typeof useCalendarSystemSwitcher> | null = null;
+    const SwitcherCapture: React.FC = () => {
+      switcherRef = useCalendarSystemSwitcher();
+      return null;
+    };
+
+    const utils = render(
+      <React.StrictMode>
+        <Root
+          initialDate={new Date(2024, 4, 15)}
+          systems={[gregorianSystem, second as CalendarSystem]}
+          testID="cal"
+        >
+          <SwitcherCapture />
+          <DayGrid swipeable />
+        </Root>
+      </React.StrictMode>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    const baselineFirst = (
+      getMockLegendListProps().data as CalendarDateValue[]
+    )[0];
+
+    expect(() => {
+      act(() => {
+        switcherRef!.setActive('alt-gregorian');
+      });
+    }).not.toThrow();
+
+    const data = getMockLegendListProps().data as CalendarDateValue[];
+    expect(data).toHaveLength(WINDOW_SIZE);
+    expect(data[0]).not.toBe(baselineFirst);
+  });
 });
 
 describe('<Calendar.DayCell /> equality', () => {
@@ -1154,6 +1201,32 @@ describe('<Calendar.DayGrid numberOfMonths />', () => {
       </Root>
     );
     expect(captions).toEqual(['May 2024', 'June 2024']);
+  });
+
+  it('warns once when swipeable is combined with numberOfMonths > 1 in dev', async () => {
+    const typedGlobal = globalThis as typeof globalThis & { __DEV__?: boolean };
+    const prev = typedGlobal.__DEV__;
+    typedGlobal.__DEV__ = true;
+    const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      render(
+        <Root
+          initialDate={new Date(2024, 4, 15)}
+          systems={[gregorianSystem]}
+          testID="cal"
+        >
+          <DayGrid numberOfMonths={2} swipeable />
+        </Root>
+      );
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          expect.stringMatching(/ignored while numberOfMonths > 1/)
+        );
+      });
+    } finally {
+      typedGlobal.__DEV__ = prev;
+      spy.mockRestore();
+    }
   });
 
   it('renders 84 day buttons for numberOfMonths={2}', () => {

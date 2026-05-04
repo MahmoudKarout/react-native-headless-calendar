@@ -129,6 +129,16 @@ describe('<Calendar.Root>', () => {
     expect(captured!.onSelectHaptic).toBeUndefined();
   });
 
+  it('defaults to bundled gregorianSystem when systems prop is omitted', () => {
+    let captured: string | null = null;
+    render(
+      <Root initialDate={new Date(2024, 6, 1)}>
+        <Probe capture={(c) => (captured = c.systemId)} />
+      </Root>
+    );
+    expect(captured).toBe('gregorian');
+  });
+
   it('initialises with the configured initialSystemId', () => {
     const second = createGregorianSystem();
     // Force a unique id so findIndex resolves to 1.
