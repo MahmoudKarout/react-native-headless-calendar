@@ -51,3 +51,35 @@ export const defaultLabels: CalendarLabels = {
   selectMonth: 'Select month',
   selectYear: 'Select year',
 };
+
+// ---------------------------------------------------------------------------
+// Dark theme preset — use via <Calendar.Root theme={darkTheme}>.
+// ---------------------------------------------------------------------------
+
+export const darkTheme: CalendarTheme = {
+  colors: {
+    background: '#18181B', // zinc-900
+    primary: '#60A5FA', // blue-400
+    onPrimary: '#0A0A0A',
+    text: '#FAFAFA', // zinc-50
+    textMuted: '#A1A1AA', // zinc-400
+    todayBorder: '#60A5FA',
+    rangeBackground: '#1E3A8A', // blue-900
+    disabled: '#52525B', // zinc-600
+    border: '#3F3F46', // zinc-700
+  },
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 24,
+  },
+  cellSize: 40,
+  borderRadius: 999,
+  fontSize: {
+    day: 14,
+    weekday: 12,
+    header: 16,
+  },
+};

@@ -580,3 +580,50 @@ export function useCalendarYearPicker(): CalendarYearPicker {
   );
   return { years, activeYear, selectYear };
 }
+
+// ---------------------------------------------------------------------------
+// useCalendarHeader — convenience hook combining month/year labels + navigation.
+//
+//   const {
+//     monthLabel, yearLabel, isMonthVisible,
+//     toggleMonthPicker, toggleYearPicker,
+//     goPrev, goNext
+//   } = useCalendarHeader();
+//
+// This is a compound of useCalendarMonthLabel + useCalendarYearLabel +
+// useCalendarNavigation for consumers building a standard header without
+// importing and wiring three separate hooks.
+// ---------------------------------------------------------------------------
+
+export interface CalendarHeader {
+  /** Localised month name for the displayed month. */
+  monthLabel: string;
+  /** Single year string in day/month view, "YYYY - YYYY" in year view. */
+  yearLabel: string;
+  /** False while year picker is open (month label should hide). */
+  isMonthVisible: boolean;
+  /** Switch between day and month views. */
+  toggleMonthPicker: () => void;
+  /** Switch between day and year views. */
+  toggleYearPicker: () => void;
+  /** Step backward (month/year/year-page depending on view). RTL-aware. */
+  goPrev: () => void;
+  /** Step forward (month/year/year-page depending on view). RTL-aware. */
+  goNext: () => void;
+}
+
+export function useCalendarHeader(): CalendarHeader {
+  const month = useCalendarMonthLabel();
+  const year = useCalendarYearLabel();
+  const nav = useCalendarNavigation();
+
+  return {
+    monthLabel: month.label,
+    yearLabel: year.label,
+    isMonthVisible: month.isVisible,
+    toggleMonthPicker: month.toggle,
+    toggleYearPicker: year.toggle,
+    goPrev: nav.goPrev,
+    goNext: nav.goNext,
+  };
+}

@@ -1,19 +1,24 @@
 /**
  * react-native-fast-calendar — public surface.
  *
+ *   // Simple usage (zero config, batteries included):
+ *   import { SimpleCalendar } from 'react-native-fast-calendar';
+ *   <SimpleCalendar mode="single" onConfirm={({ date }) => console.log(date)} />
+ *
+ *   // Headless usage (full control over UI):
  *   import { Calendar, useCalendarNavigation } from 'react-native-fast-calendar';
  *   import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
- *   // hijri lives in an opt-in sub-export — you bring the converter:
- *   import { createHijriSystem } from 'react-native-fast-calendar/systems/hijri';
  *
- * The library is headless: the only rendered components it ships are
- * `<Calendar.Root>` (the provider) and `<Calendar.DayGrid>` (the 6×7 day
- * matrix). Everything else — the system switcher, the prev/next buttons,
- * the month/year header labels, and the month/year pickers — is a hook,
- * so the developer brings their own UI and wires it to the same store.
+ * The library is headless by design, but ships `SimpleCalendar` for the 80%
+ * use case. For full control, use `<Calendar.Root>` with the `useCalendar*`
+ * hooks to wire your own buttons, layouts, and icons.
  */
 export { Calendar } from './Calendar';
 export type { CalendarNamespace } from './Calendar';
+
+// SimpleCalendar — batteries-included calendar for quick usage.
+export { SimpleCalendar } from './components/SimpleCalendar';
+export type { SimpleCalendarProps } from './components/SimpleCalendar';
 
 // The two stable rendered components — also exported individually for
 // consumers that prefer named imports over the namespace.
@@ -26,6 +31,7 @@ export {
   useCalendarComponents,
   useCalendarConfig,
   useCalendarFirstDayOfWeek,
+  useCalendarHeader,
   useCalendarLabels,
   useCalendarMonthLabel,
   useCalendarMonthPicker,
@@ -43,6 +49,7 @@ export {
 export type {
   CalendarActions,
   CalendarConfig,
+  CalendarHeader,
   CalendarMonthLabel,
   CalendarMonthPicker,
   CalendarMonthPickerEntry,
@@ -56,7 +63,7 @@ export type {
 export type { CalendarSnapshot, CalendarStore } from './store';
 
 // Defaults — re-exported so consumers can extend rather than reinvent.
-export { defaultLabels, defaultTheme } from './defaults';
+export { darkTheme, defaultLabels, defaultTheme } from './defaults';
 
 // Grid utilities for consumers building custom views.
 export {
@@ -74,6 +81,14 @@ export {
   rotateWeekdayLabels,
   usedRows,
 } from './utils/grid';
+
+// Calendar systems — also available via sub-exports for tree-shaking.
+export {
+  createGregorianSystem,
+  gregorianSystem,
+  type GregorianDate,
+  type GregorianSystemOptions,
+} from './systems/gregorian';
 
 // Public types.
 export type {

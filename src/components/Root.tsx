@@ -45,6 +45,7 @@ import type {
   OnSystemChange,
   Weekday,
 } from '../types';
+import { gregorianSystem } from '../systems/gregorian';
 import { DEFAULT_FIRST_DAY_OF_WEEK } from '../utils/grid';
 import {
   useStableArray,
@@ -58,8 +59,11 @@ export interface CalendarRootProps {
    * One or more calendar systems. The first is used by default unless
    * `initialSystemId` is set. Pass `[gregorianSystem, hijriSystem]` to
    * enable a system switcher; pass a single system to lock it.
+   *
+   * Defaults to `[gregorianSystem]` if not provided, so the simplest usage
+   * doesn't require any system imports.
    */
-  systems: readonly CalendarSystem[];
+  systems?: readonly CalendarSystem[];
   /** ID of the system to start on. Defaults to `systems[0].id`. */
   initialSystemId?: string;
   /** Selection mode. */
@@ -192,7 +196,7 @@ const mergeLabels = (
 ): CalendarLabels => ({ ...defaultLabels, ...(override ?? {}) });
 
 export const Root: React.FC<CalendarRootProps> = ({
-  systems,
+  systems: systemsProp,
   initialSystemId,
   mode = 'single',
   initialDate,
@@ -222,6 +226,10 @@ export const Root: React.FC<CalendarRootProps> = ({
   testID,
   children,
 }) => {
+  // Default to Gregorian system if none provided — removes mandatory import
+  // for the simplest use cases.
+  const systems = systemsProp ?? [gregorianSystem];
+
   // Stabilise inputs that consumers commonly write inline. Without this,
   // every parent re-render (e.g. after a `setState` triggered by the
   // user's own `onConfirm`) would create new identities for these props,
