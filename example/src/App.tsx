@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  I18nManager,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -9,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import ArabicCalendarExample from './ArabicCalendarExample';
 import BottomSheetCalendarDemo from './BottomSheetExample';
 import CalendarDemo from './CalendarDemo';
 import VerticalCalendarDemo from './VerticalCalendarExample';
@@ -25,6 +27,7 @@ import {
 
 type DemoId =
   | 'standard'
+  | 'arabic'
   | 'bottomSheet'
   | 'vertical'
   | 'verticalRange'
@@ -38,6 +41,7 @@ type DemoId =
 
 const DEMOS: ReadonlyArray<{ id: DemoId; label: string }> = [
   { id: 'standard', label: 'Standard' },
+  { id: 'arabic', label: 'Arabic' },
   { id: 'bottomSheet', label: 'Bottom Sheet' },
   { id: 'vertical', label: 'Vertical' },
   { id: 'verticalRange', label: 'Vertical · Range' },
@@ -51,6 +55,7 @@ const DEMOS: ReadonlyArray<{ id: DemoId; label: string }> = [
 ];
 
 export default function App() {
+  I18nManager.forceRTL(true);
   const [activeDemo, setActiveDemo] = useState<DemoId>('standard');
 
   return (
@@ -60,8 +65,7 @@ export default function App() {
       {/*
         Demo Switcher.
 
-        Wrapped in a horizontal ScrollView because we now ship 11 tabs
-        (3 originals + 8 vertical examples). Sized to content so each
+        Wrapped in a horizontal ScrollView — many tabs sized to content so each
         label stays legible instead of being squashed by `flex: 1`.
       */}
       <View style={styles.switcherWrapper}>
@@ -97,6 +101,7 @@ export default function App() {
 
       {/* Active Demo */}
       {activeDemo === 'standard' && <CalendarDemo />}
+      {activeDemo === 'arabic' && <ArabicCalendarExample />}
       {activeDemo === 'bottomSheet' && <BottomSheetCalendarDemo />}
       {activeDemo === 'vertical' && <VerticalCalendarDemo />}
       {activeDemo === 'verticalRange' && <VerticalRangeExample />}
