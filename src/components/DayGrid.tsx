@@ -338,10 +338,20 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
   const disabledPredicate = useCalendarSelector((s) => s.disabled);
 
   // --- Layer 1: build the cell skeletons. ---
-
+  //
+  // Key the cache on the (year, month) primitives rather than the `month`
+  // object reference. `selectDate` updates `displayed` to the tapped date,
+  // which arrives here as a brand-new `month` object even when the tap
+  // stayed inside the displayed calendar month — comparing by reference
+  // would invalidate Layer 1 on every same-month tap, churn 42 fresh
+  // `date` objects through Layer 2, and force every DayCell to re-render
+  // (its memo equality keys on `info.date === info.date`).
+  const monthYear = system.year(month);
+  const monthIndex = system.month(month);
   const cells = useMemo(
     () => buildMonthGrid(system, month, firstDayOfWeek),
-    [system, month, firstDayOfWeek]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [system, monthYear, monthIndex, firstDayOfWeek]
   );
 
   // --- Layer 2: enrich with selection / today / disabled flags. --------
@@ -600,6 +610,18 @@ const monthsBetween = (
   (system.year(to) - system.year(from)) * 12 +
   (system.month(to) - system.month(from));
 
+// Year+month equality. The `months` window stores one representative date
+// per calendar month, so reconciling against `displayed` must ignore the
+// day component — otherwise every `selectDate` tap (which carries the
+// tapped day in `displayed`) would miss the existing entry and trigger a
+// full window rebuild.
+const isSameDisplayMonth = (
+  system: CalendarSystem,
+  a: CalendarDateValue,
+  b: CalendarDateValue
+): boolean =>
+  system.year(a) === system.year(b) && system.month(a) === system.month(b);
+
 // Lazy require so the optional peer dep only blows up in `swipeable`
 // mode. Surfaced as a render-time throw so the stack trace points at
 // the consumer's `<Calendar.DayGrid swipeable />`.
@@ -659,7 +681,9 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
   //       resets its containers and `initialScrollIndex` re-anchors at
   //       `WINDOW_RADIUS`.
   useEffect(() => {
-    const idx = months.findIndex((m) => system.isSame(m, displayed));
+    const idx = months.findIndex((m) =>
+      isSameDisplayMonth(system, m, displayed)
+    );
     if (idx === -1) {
       setMonths(buildMonthsAround(system, displayed, WINDOW_RADIUS));
     }
@@ -677,7 +701,9 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
   }, [system, displayed]);
 
   const activeIndex = useMemo(() => {
-    const idx = months.findIndex((m) => system.isSame(m, displayed));
+    const idx = months.findIndex((m) =>
+      isSameDisplayMonth(system, m, displayed)
+    );
     return idx === -1 ? WINDOW_RADIUS : idx;
   }, [months, system, displayed]);
 

@@ -272,6 +272,56 @@ describe('<Calendar.DayGrid />', () => {
     expect(captured[2]?.label).toBe('1');
     expect(captured[2]?.isCurrentMonth).toBe(true);
   });
+
+  // Regression: tapping a day inside the displayed month must not
+  // invalidate Layer 1. `selectDate` updates `displayed` to the tapped
+  // date, so MonthGrid receives a fresh `month` object reference even
+  // though the calendar month is identical. The cell skeleton cache
+  // keys on (year, month) primitives so the 42 underlying `date` refs
+  // are reused across taps — which is what lets `dayCellPropsEqual`
+  // skip every cell whose visual state didn't change.
+  it('preserves Layer 1 cell date refs across same-month selectDate calls', () => {
+    let storeRef: CalendarStore | null = null;
+    const StoreCapture: React.FC = () => {
+      storeRef = useCalendarStore();
+      return null;
+    };
+    const renders: CalendarDateValue[][] = [];
+    let current: CalendarDateValue[] = [];
+    renders.push(current);
+    const renderDay = (info: DayCellInfo) => {
+      current.push(info.date);
+      return <Text key={String(current.length)}>x</Text>;
+    };
+
+    render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture />
+        <DayGrid renderDay={renderDay} />
+      </Root>
+    );
+
+    const before = renders[0]!.slice();
+    expect(before).toHaveLength(42);
+
+    current = [];
+    renders.push(current);
+    act(() => {
+      storeRef!.selectDate(
+        gregorianSystem.fromNativeDate(new Date(2024, 4, 20))
+      );
+    });
+
+    const after = renders[1]!;
+    expect(after).toHaveLength(42);
+    for (let i = 0; i < before.length; i += 1) {
+      expect(after[i]).toBe(before[i]);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -523,6 +573,41 @@ describe('<Calendar.DayGrid swipeable />', () => {
     });
     // Window stayed put; only the active slot moved.
     expect(getMockLegendListProps().data).toHaveLength(WINDOW_SIZE);
+  });
+
+  // Regression: tapping a date inside the displayed month must NOT
+  // rebuild the LegendList data window. `selectDate` updates `displayed`
+  // to the tapped date, so the reconciliation effect previously called
+  // `system.isSame` (which compares year+month+day) and missed the
+  // existing entry — triggering a full 25-month rebuild on every tap.
+  // Reconciling by year+month keeps the data array identity stable,
+  // which in turn keeps every mounted MonthGrid's `month` prop stable
+  // and avoids re-rendering the entire grid.
+  it('keeps the data window identity stable on a same-month tap', () => {
+    let storeRef: CalendarStore | null = null;
+    const utils = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <StoreCapture onCapture={(s) => (storeRef = s)} />
+        <DayGrid swipeable />
+      </Root>
+    );
+    fireSwipeableLayout(utils.getByTestId);
+    const dataBefore = getMockLegendListProps().data as CalendarDateValue[];
+    const activeBefore = dataBefore[ACTIVE_INDEX];
+
+    act(() => {
+      storeRef!.selectDate(
+        gregorianSystem.fromNativeDate(new Date(2024, 4, 20))
+      );
+    });
+
+    const dataAfter = getMockLegendListProps().data as CalendarDateValue[];
+    expect(dataAfter).toBe(dataBefore);
+    expect(dataAfter[ACTIVE_INDEX]).toBe(activeBefore);
   });
 
   it('rebuilds the window when external navigation jumps outside it', () => {
