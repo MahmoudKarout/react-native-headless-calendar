@@ -19,19 +19,19 @@ import type {
   WeekdayHeaderProps,
 } from '../../types';
 import {
-  getMockLegendListProps,
-  getMockLegendListScrollCalls,
-  resetMockLegendList,
-} from '../__mocks__/legend-list';
+  getMockFlashListProps,
+  getMockFlashListScrollCalls,
+  resetMockFlashList,
+} from '../__mocks__/flash-list';
 
-// Stand in for the optional `@legendapp/list` peer dep — see the mock
+// Stand in for the optional `@shopify/flash-list` peer dep — see the mock
 // file for the rationale.
-jest.mock('@legendapp/list', () => require('../__mocks__/legend-list'));
+jest.mock('@shopify/flash-list', () => require('../__mocks__/flash-list'));
 
 const PAGE_WIDTH = 350;
 
 // Drives the SwipeableMonthList from `pageWidth=0` to a measured width
-// so the inner LegendList mounts.
+// so the inner FlashList mounts.
 const fireSwipeableLayout = (
   target: ReturnType<typeof render>['getByTestId']
 ) =>
@@ -42,10 +42,10 @@ const fireSwipeableLayout = (
   });
 
 // Simulates a swipe landing on the month at `targetIndex` in the
-// LegendList's data window. Mirrors what a real LegendList would emit
+// FlashList's data window. Mirrors what a real FlashList would emit
 // once the new page crosses the `itemVisiblePercentThreshold`.
 const fireSwipeToItem = (item: CalendarDateValue, index: number) => {
-  const { onViewableItemsChanged } = getMockLegendListProps();
+  const { onViewableItemsChanged } = getMockFlashListProps();
   if (typeof onViewableItemsChanged !== 'function') {
     throw new Error(
       'fireSwipeToItem(): expected onViewableItemsChanged to be wired'
@@ -348,10 +348,10 @@ describe('<Calendar.DayGrid swipeable />', () => {
   const WINDOW_SIZE = WINDOW_RADIUS * 2 + 1;
 
   beforeEach(() => {
-    resetMockLegendList();
+    resetMockFlashList();
   });
 
-  it('does not mount the LegendList until the wrapper is laid out', () => {
+  it('does not mount the FlashList until the wrapper is laid out', () => {
     const { queryByTestId } = render(
       <Root
         initialDate={new Date(2024, 4, 15)}
@@ -367,7 +367,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
     expect(queryByTestId('cal.calendar.swipeable.list')).toBeNull();
   });
 
-  it('mounts the LegendList once the wrapper is laid out', () => {
+  it('mounts the FlashList once the wrapper is laid out', () => {
     const utils = render(
       <Root
         initialDate={new Date(2024, 4, 15)}
@@ -392,13 +392,13 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    // LegendList virtualises everything outside `drawDistance`, so even
+    // FlashList virtualises everything outside `drawDistance`, so even
     // though `data` carries 25 months only the active one mints day
     // cells (6 rows × 7 cols = 42).
     expect(utils.getAllByRole('button')).toHaveLength(42);
   });
 
-  it('hands LegendList a 25-month window centred on the displayed month', () => {
+  it('hands FlashList a 25-month window centred on the displayed month', () => {
     const utils = render(
       <Root
         initialDate={new Date(2024, 4, 15)}
@@ -409,7 +409,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    const props = getMockLegendListProps();
+    const props = getMockFlashListProps();
     expect(props.data).toHaveLength(WINDOW_SIZE);
     expect(props.initialScrollIndex).toBe(ACTIVE_INDEX);
     // Active slot is the requested initial date (May 2024).
@@ -453,7 +453,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    const data = getMockLegendListProps().data as CalendarDateValue[];
+    const data = getMockFlashListProps().data as CalendarDateValue[];
     fireSwipeToItem(data[ACTIVE_INDEX + 1]!, ACTIVE_INDEX + 1);
     expect(storeRef!.getSnapshot().displayed).toEqual(
       expect.objectContaining({ y: 2024, m: 5 })
@@ -473,7 +473,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    const data = getMockLegendListProps().data as CalendarDateValue[];
+    const data = getMockFlashListProps().data as CalendarDateValue[];
     fireSwipeToItem(data[ACTIVE_INDEX - 1]!, ACTIVE_INDEX - 1);
     expect(storeRef!.getSnapshot().displayed).toEqual(
       expect.objectContaining({ y: 2024, m: 3 })
@@ -493,7 +493,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    const data = getMockLegendListProps().data as CalendarDateValue[];
+    const data = getMockFlashListProps().data as CalendarDateValue[];
     // Same month re-reported — falls into the `delta === 0` branch and
     // doesn't dispatch into the store.
     fireSwipeToItem(data[ACTIVE_INDEX]!, ACTIVE_INDEX);
@@ -515,7 +515,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    const { onViewableItemsChanged } = getMockLegendListProps();
+    const { onViewableItemsChanged } = getMockFlashListProps();
     act(() => {
       (onViewableItemsChanged as (info: unknown) => void)({
         viewableItems: [],
@@ -540,7 +540,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    const data = getMockLegendListProps().data as CalendarDateValue[];
+    const data = getMockFlashListProps().data as CalendarDateValue[];
     fireSwipeToItem(data[ACTIVE_INDEX + 1]!, ACTIVE_INDEX + 1);
     fireSwipeToItem(data[ACTIVE_INDEX + 2]!, ACTIVE_INDEX + 2);
     expect(storeRef!.getSnapshot().displayed).toEqual(
@@ -561,22 +561,22 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    const baselineCalls = getMockLegendListScrollCalls().length;
+    const baselineCalls = getMockFlashListScrollCalls().length;
     act(() => {
       storeRef!.changeMonth(1);
     });
-    const calls = getMockLegendListScrollCalls();
+    const calls = getMockFlashListScrollCalls();
     expect(calls.length).toBeGreaterThan(baselineCalls);
     expect(calls[calls.length - 1]).toEqual({
       index: ACTIVE_INDEX + 1,
       animated: false,
     });
     // Window stayed put; only the active slot moved.
-    expect(getMockLegendListProps().data).toHaveLength(WINDOW_SIZE);
+    expect(getMockFlashListProps().data).toHaveLength(WINDOW_SIZE);
   });
 
   // Regression: tapping a date inside the displayed month must NOT
-  // rebuild the LegendList data window. `selectDate` updates `displayed`
+  // rebuild the FlashList data window. `selectDate` updates `displayed`
   // to the tapped date, so the reconciliation effect previously called
   // `system.isSame` (which compares year+month+day) and missed the
   // existing entry — triggering a full 25-month rebuild on every tap.
@@ -596,7 +596,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
       </Root>
     );
     fireSwipeableLayout(utils.getByTestId);
-    const dataBefore = getMockLegendListProps().data as CalendarDateValue[];
+    const dataBefore = getMockFlashListProps().data as CalendarDateValue[];
     const activeBefore = dataBefore[ACTIVE_INDEX];
 
     act(() => {
@@ -605,7 +605,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
       );
     });
 
-    const dataAfter = getMockLegendListProps().data as CalendarDateValue[];
+    const dataAfter = getMockFlashListProps().data as CalendarDateValue[];
     expect(dataAfter).toBe(dataBefore);
     expect(dataAfter[ACTIVE_INDEX]).toBe(activeBefore);
   });
@@ -627,7 +627,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
     act(() => {
       storeRef!.changeMonth(24);
     });
-    const data = getMockLegendListProps().data as CalendarDateValue[];
+    const data = getMockFlashListProps().data as CalendarDateValue[];
     expect(data).toHaveLength(WINDOW_SIZE);
     // After re-centring the active month sits at the middle slot again.
     expect(data[ACTIVE_INDEX]).toEqual(
@@ -647,16 +647,16 @@ describe('<Calendar.DayGrid swipeable />', () => {
     );
     fireSwipeableLayout(utils.getByTestId);
     const initialFirst = (
-      getMockLegendListProps().data as CalendarDateValue[]
+      getMockFlashListProps().data as CalendarDateValue[]
     )[0];
     expect(initialFirst).toBeDefined();
     act(() => {
-      const props = getMockLegendListProps();
+      const props = getMockFlashListProps();
       (props.onStartReached as (info: unknown) => void)({
         distanceFromStart: 0,
       });
     });
-    const grown = getMockLegendListProps().data as CalendarDateValue[];
+    const grown = getMockFlashListProps().data as CalendarDateValue[];
     expect(grown.length).toBeGreaterThan(WINDOW_SIZE);
     // Old first month now sits later in the array.
     const isSame = gregorianSystem.isSame as (
@@ -679,16 +679,16 @@ describe('<Calendar.DayGrid swipeable />', () => {
     );
     fireSwipeableLayout(utils.getByTestId);
     const initialLast = (() => {
-      const data = getMockLegendListProps().data as CalendarDateValue[];
+      const data = getMockFlashListProps().data as CalendarDateValue[];
       return data[data.length - 1];
     })();
     act(() => {
-      const props = getMockLegendListProps();
+      const props = getMockFlashListProps();
       (props.onEndReached as (info: unknown) => void)({
         distanceFromEnd: 0,
       });
     });
-    const grown = getMockLegendListProps().data as CalendarDateValue[];
+    const grown = getMockFlashListProps().data as CalendarDateValue[];
     expect(grown.length).toBeGreaterThan(WINDOW_SIZE);
     // The previous tail is no longer at the end — fresh months were
     // appended after it.
@@ -740,7 +740,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
     );
     expect(utils.queryByTestId('calendar.swipeable')).toBeNull();
     expect(utils.queryByTestId('calendar.swipeable.list')).toBeNull();
-    // Drive the layout so the LegendList mounts and exercises the
+    // Drive the layout so the FlashList mounts and exercises the
     // `testID ? ... : undefined` ternary on its own testID prop.
     // Without a testID prefix we can't address the wrapper by ID, so
     // we reach for it by the unique `width: '100%'` style our
@@ -754,9 +754,9 @@ describe('<Calendar.DayGrid swipeable />', () => {
     fireEvent(swipeableHosts[0]!, 'layout', {
       nativeEvent: { layout: { width: PAGE_WIDTH, height: 240, x: 0, y: 0 } },
     });
-    // The LegendList mounted; its testID ternary fell into the
+    // The FlashList mounted; its testID ternary fell into the
     // `undefined` arm (not a `cal.calendar.swipeable.list` ID).
-    expect(getMockLegendListProps().testID).toBeUndefined();
+    expect(getMockFlashListProps().testID).toBeUndefined();
   });
 
   it('rebuilds the window when the active calendar system swaps', () => {
@@ -783,14 +783,14 @@ describe('<Calendar.DayGrid swipeable />', () => {
     );
     fireSwipeableLayout(utils.getByTestId);
     const baselineFirst = (
-      getMockLegendListProps().data as CalendarDateValue[]
+      getMockFlashListProps().data as CalendarDateValue[]
     )[0];
 
     act(() => {
       switcherRef!.setActive('alt-gregorian');
     });
 
-    const data = getMockLegendListProps().data as CalendarDateValue[];
+    const data = getMockFlashListProps().data as CalendarDateValue[];
     expect(data).toHaveLength(WINDOW_SIZE);
     // Window was rebuilt — the first slot is a brand-new month value
     // even though the calendar dates around it line up arithmetically.
@@ -802,7 +802,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
     // tracked the last-seen system id with `useRef`. Refs survive
     // StrictMode's double-invocation, which (combined with concurrent
     // re-renders in React 19) means the second invocation can see the
-    // ref already updated, skip the rebuild, and feed the LegendList
+    // ref already updated, skip the rebuild, and feed the FlashList
     // stale-system months. Tracking the id with `useState` instead is
     // the canonical "storing information from previous renders" idiom
     // (https://react.dev/reference/react/useState#storing-information-
@@ -830,7 +830,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
     );
     fireSwipeableLayout(utils.getByTestId);
     const baselineFirst = (
-      getMockLegendListProps().data as CalendarDateValue[]
+      getMockFlashListProps().data as CalendarDateValue[]
     )[0];
 
     expect(() => {
@@ -839,7 +839,7 @@ describe('<Calendar.DayGrid swipeable />', () => {
       });
     }).not.toThrow();
 
-    const data = getMockLegendListProps().data as CalendarDateValue[];
+    const data = getMockFlashListProps().data as CalendarDateValue[];
     expect(data).toHaveLength(WINDOW_SIZE);
     expect(data[0]).not.toBe(baselineFirst);
   });

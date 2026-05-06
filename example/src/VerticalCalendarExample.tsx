@@ -14,7 +14,7 @@
  * a greyed-out adjacent-month number would create when months sit
  * directly above one another.
  *
- * Why `@legendapp/list` (vertical) over `FlatList` here:
+ * Why `@shopify/flash-list` (vertical) over `FlatList` here:
  *   - `recycleItems` keeps the DOM bounded: only the months in / near
  *     the viewport are mounted, even if the data window holds dozens.
  *   - `drawDistance` lets us keep one screenful of off-screen months
@@ -32,7 +32,6 @@
  */
 import {
   forwardRef,
-  memo,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -42,10 +41,10 @@ import {
 } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  LegendList,
-  type LegendListRef,
-  type LegendListRenderItemProps,
-} from '@legendapp/list';
+  FlashList,
+  type FlashListRef,
+  type ListRenderItemInfo,
+} from '@shopify/flash-list';
 
 import {
   Calendar,
@@ -87,34 +86,6 @@ const CELL_SIZE = 44;
 // the user scrolls past the edges.
 const WINDOW_RADIUS = 6;
 const WINDOW_GROWTH = 6;
-
-// Pixels of off-screen items to keep mounted on each side of the viewport.
-// Matches LegendApp/legend-list's "accurate-scrollto-huge" recipe — a
-// small, fixed value (independent of `estimatedItemSize`) keeps
-// `scrollToIndex` landings precise even after long jumps, while
-// `recycleItems` + `maintainVisibleContentPosition` (set on the list
-// below) bound the mounted MonthSection count.
-//
-// See https://github.com/LegendApp/legend-list/blob/main/example/app/accurate-scrollto-huge/index.tsx
-const DRAW_DISTANCE = 250;
-
-// Stable `extraData` reference passed to LegendList. Mirrors the cards
-// example, which uses `extraData?.recycleState` inside the renderItem
-// to opt into `useRecyclingState` over `useState` for any item-local
-// state that must reset when the container is recycled into a
-// different position.
-//
-// Defined at module scope so the reference is stable across parent
-// re-renders — passing `{ recycleState: true }` inline would create a
-// fresh object every time `VerticalMonthList` re-renders (which it does
-// on every store update / window growth), which in turn would force
-// LegendList to re-run each container's `getRenderedItem` memo (deps:
-// `[itemKey, data, extraData]`) on every render. Stability matters
-// more for us than for the cards example because cards' parent
-// component never re-renders after mount.
-//
-// See https://github.com/LegendApp/legend-list/blob/main/example/app/(tabs)/cards.tsx
-const EXTRA_DATA = { recycleState: true } as const;
 
 // `<DayCell>` reads `theme.cellSize` for its layout — passing it through
 // the Root theme keeps the weekday header (which sizes itself by the
@@ -179,9 +150,7 @@ interface MonthSectionProps {
 
 function MonthSectionComponent({ month }: MonthSectionProps) {
   const store = useCalendarStore();
-  // `showOutsideDays` is intentionally ignored in the vertical layout —
-  // see the cell renderer below.
-  const { firstDayOfWeek, fixedWeeks } = useCalendarConfig();
+  const { firstDayOfWeek, showOutsideDays, fixedWeeks } = useCalendarConfig();
   const system = useCalendarSelector((s) => s.system);
   const selectedDate = useCalendarSelector((s) => s.selectedDate);
   const minDate = useCalendarSelector((s) => s.minDate);
@@ -264,15 +233,7 @@ function MonthSectionComponent({ month }: MonthSectionProps) {
       <Text style={styles.monthHeader}>{system.formatMonthYear(month)}</Text>
       <View style={styles.monthGrid}>
         {cellInfos.slice(0, visibleCellCount).map((info, idx) => {
-          // Outside-month cells are ALWAYS rendered as blank spacers in
-          // the vertical layout, regardless of any `showOutsideDays`
-          // config on `<Calendar.Root>`. Consecutive months stack
-          // directly above one another in the scroll, so a greyed-out
-          // "May 30" tail on June would duplicate the same calendar
-          // day already shown as a current-month cell on May —
-          // exactly the "is that May 30 or June 1?" confusion the iOS
-          // Calendar avoids by suppressing outside days entirely.
-          if (!info.isCurrentMonth) {
+          if (!showOutsideDays && !info.isCurrentMonth) {
             return <View key={idx} style={styles.spacerCell} />;
           }
           return <DayCell info={info} key={idx} onSelect={onSelect} />;
@@ -282,20 +243,10 @@ function MonthSectionComponent({ month }: MonthSectionProps) {
   );
 }
 
-// Wrap in React.memo for the same reason cards.tsx wraps `ItemCard` and
-// the library's own `MonthGrid` does — the parent (`VerticalMonthList`)
-// re-renders on every `displayed` / `months` / `pageWidth` change. The
-// only prop is `month`, whose reference is stable as long as the entry
-// in the data window is the same object. Without memo, every parent
-// re-render would re-execute `buildMonthGrid`, the `cellInfos` Layer 2
-// pass, and ~42 `DayCell` renders for every mounted month — material
-// frame budget burned exactly when LegendList is also trying to mount
-// the next item during a fast scroll.
-const MonthSection = memo(MonthSectionComponent);
-MonthSection.displayName = 'VerticalCalendar.MonthSection';
+const MonthSection = MonthSectionComponent;
 
 // ---------------------------------------------------------------------------
-// WeekdayHeaderRow — sticky row above the LegendList. Stays mounted so
+// WeekdayHeaderRow — sticky row above the FlashList. Stays mounted so
 // it doesn't repeat per-month and the columns line up.
 // ---------------------------------------------------------------------------
 
@@ -313,7 +264,7 @@ function WeekdayHeaderRow() {
 }
 
 // ---------------------------------------------------------------------------
-// VerticalMonthList — the LegendList. Mirrors the windowing + growth
+// VerticalMonthList — the FlashList. Mirrors the windowing + growth
 // pattern used by the library's own SwipeableMonthList, but oriented
 // vertically.
 //
@@ -340,7 +291,7 @@ const VerticalMonthList = forwardRef<VerticalMonthListHandle>(
     const system = useCalendarSelector((s) => s.system);
     const displayed = useCalendarSelector((s) => s.displayed);
 
-    const listRef = useRef<LegendListRef>(null);
+    const listRef = useRef<FlashListRef<CalendarDateValue>>(null);
 
     const [months, setMonths] = useState<readonly CalendarDateValue[]>(() =>
       buildMonthsAround(system, displayed, WINDOW_RADIUS)
@@ -352,7 +303,7 @@ const VerticalMonthList = forwardRef<VerticalMonthListHandle>(
     const recentreOn = useCallback(
       (target: CalendarDateValue) => {
         setMonths(buildMonthsAround(system, target, WINDOW_RADIUS));
-        // The new array forces LegendList to re-mount its containers;
+        // The new array forces FlashList to re-mount its containers;
         // wait one frame so the new data is committed before issuing
         // the scroll, otherwise it would target the old list.
         requestAnimationFrame(() => {
@@ -393,45 +344,27 @@ const VerticalMonthList = forwardRef<VerticalMonthListHandle>(
       [months, system, recentreOn]
     );
 
-    // The `distanceFromStart > 0` / `distanceFromEnd > 0` guards mirror
-    // LegendApp/legend-list's "perfect bidirectional list" recipe — they
-    // skip the prepend/append work when the list reports it is already
-    // past the edge (which can happen on initial mount or after a
-    // re-centre, when the threshold is satisfied with nothing more to
-    // load on that side). LegendList internally throttles repeat fires
-    // via `startReachedBlockedByTimer` / `endReachedBlockedByTimer`, so
-    // a separate re-entrancy ref isn't necessary.
-    //
-    // See https://github.com/LegendApp/legend-list/blob/main/example/app/bidirectional-infinite-list/index.tsx
-    const onStartReached = useCallback(
-      ({ distanceFromStart }: { distanceFromStart: number }) => {
-        if (distanceFromStart <= 0) return;
-        setMonths((prev) => {
-          const first = prev[0]!;
-          const before = new Array<CalendarDateValue>(WINDOW_GROWTH);
-          for (let i = 0; i < WINDOW_GROWTH; i += 1) {
-            before[i] = system.addMonths(first, i - WINDOW_GROWTH);
-          }
-          return [...before, ...prev];
-        });
-      },
-      [system]
-    );
+    const onStartReached = useCallback(() => {
+      setMonths((prev) => {
+        const first = prev[0]!;
+        const before = new Array<CalendarDateValue>(WINDOW_GROWTH);
+        for (let i = 0; i < WINDOW_GROWTH; i += 1) {
+          before[i] = system.addMonths(first, i - WINDOW_GROWTH);
+        }
+        return [...before, ...prev];
+      });
+    }, [system]);
 
-    const onEndReached = useCallback(
-      ({ distanceFromEnd }: { distanceFromEnd: number }) => {
-        if (distanceFromEnd <= 0) return;
-        setMonths((prev) => {
-          const last = prev[prev.length - 1]!;
-          const after = new Array<CalendarDateValue>(WINDOW_GROWTH);
-          for (let i = 0; i < WINDOW_GROWTH; i += 1) {
-            after[i] = system.addMonths(last, i + 1);
-          }
-          return [...prev, ...after];
-        });
-      },
-      [system]
-    );
+    const onEndReached = useCallback(() => {
+      setMonths((prev) => {
+        const last = prev[prev.length - 1]!;
+        const after = new Array<CalendarDateValue>(WINDOW_GROWTH);
+        for (let i = 0; i < WINDOW_GROWTH; i += 1) {
+          after[i] = system.addMonths(last, i + 1);
+        }
+        return [...prev, ...after];
+      });
+    }, [system]);
 
     const keyExtractor = useCallback(
       (item: CalendarDateValue) =>
@@ -440,35 +373,31 @@ const VerticalMonthList = forwardRef<VerticalMonthListHandle>(
     );
 
     const renderItem = useCallback(
-      ({ item }: LegendListRenderItemProps<CalendarDateValue>) => (
+      ({ item }: ListRenderItemInfo<CalendarDateValue>) => (
         <MonthSection month={item} />
       ),
       []
     );
 
-    // Header (32) + 6 rows × CELL_SIZE + section padding. Doesn't have to
-    // be exact — LegendList recovers from misestimates — but a close
-    // figure means the initial scroll position is right on first paint.
-    const estimatedItemSize = 56 + CELL_SIZE * ROWS;
+    // Caption (32) + 6 rows × CELL_SIZE + section padding. Drives the
+    // off-screen render budget so initial scroll lands close to the
+    // active month on first paint.
+    const drawDistance = 56 + CELL_SIZE * ROWS;
 
     return (
-      <LegendList<CalendarDateValue>
+      <FlashList<CalendarDateValue>
         data={months}
-        drawDistance={DRAW_DISTANCE}
-        estimatedItemSize={estimatedItemSize}
-        extraData={EXTRA_DATA}
+        drawDistance={drawDistance}
         initialScrollIndex={WINDOW_RADIUS}
         keyExtractor={keyExtractor}
-        maintainVisibleContentPosition
         onEndReached={onEndReached}
         onStartReached={onStartReached}
         // Cast: under `react-native-strict-api`, ScrollView's `ref` and
-        // LegendList's `RefAttributes<LegendListRef>` intersect into an
+        // FlashList's `RefAttributes<FlashListRef>` intersect into an
         // un-satisfiable type. The runtime contract is fine — we only
-        // call methods from the LegendListRef surface — so we narrow
+        // call methods from the FlashListRef surface — so we narrow
         // with a single contained `as never` here.
         ref={listRef as never}
-        recycleItems
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
         style={styles.list}
@@ -481,29 +410,14 @@ const VerticalMonthList = forwardRef<VerticalMonthListHandle>(
 // Top-level demo screen.
 // ---------------------------------------------------------------------------
 
-interface ReadoutBarProps {
-  /**
-   * Fired after the store's `selectDate(today)` runs. Lets the parent
-   * drive the LegendList's scroll position imperatively — relying on a
-   * `displayed`-watching effect inside the list isn't enough because
-   * `displayed` may already point at today's month (the user just
-   * scrolled away from it visually) and React would skip the effect.
-   */
-  onJumpTo: (target: CalendarDateValue) => void;
-}
-
-function ReadoutBar({ onJumpTo }: ReadoutBarProps) {
+function ReadoutBar() {
   const store = useCalendarStore();
   const selectedDate = useCalendarSelector((s) => s.selectedDate);
   const system = useCalendarSelector((s) => s.system);
 
   const native = selectedDate ? system.toNativeDate(selectedDate) : null;
 
-  const onJumpToday = () => {
-    const today = system.today();
-    store.selectDate(today);
-    onJumpTo(today);
-  };
+  const onJumpToday = () => store.selectDate(system.today());
 
   return (
     <View style={styles.readoutBar}>
@@ -528,12 +442,6 @@ function ReadoutBar({ onJumpTo }: ReadoutBarProps) {
 }
 
 export default function VerticalCalendarDemo() {
-  const monthListRef = useRef<VerticalMonthListHandle>(null);
-
-  const handleJumpTo = useCallback((target: CalendarDateValue) => {
-    monthListRef.current?.scrollToMonth(target);
-  }, []);
-
   return (
     <View style={styles.container}>
       <View style={styles.headerBlock}>
@@ -548,20 +456,18 @@ export default function VerticalCalendarDemo() {
         // Each month renders only its own days — outside-month cells are
         // blank spacers and trailing all-outside rows are dropped, so
         // months in the vertical list visually never overlap (mirrors
-        // the iOS Calendar look). The vertical `MonthSection` below
-        // always treats outside-month cells as spacers regardless of
-        // any `showOutsideDays` config — see the renderer comment for
-        // the rationale.
+        // the iOS Calendar look).
         fixedWeeks={false}
         mode="single"
+        showOutsideDays={false}
         systems={SINGLE_GREGORIAN}
         theme={VERTICAL_THEME}
       >
-        <ReadoutBar onJumpTo={handleJumpTo} />
+        <ReadoutBar />
         <View style={styles.weekdayHeaderWrapper}>
           <WeekdayHeaderRow />
         </View>
-        <VerticalMonthList ref={monthListRef} />
+        <VerticalMonthList />
       </Calendar.Root>
     </View>
   );

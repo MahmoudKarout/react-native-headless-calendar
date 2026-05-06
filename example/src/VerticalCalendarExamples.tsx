@@ -20,7 +20,7 @@
  *   - `WeekdayHeaderRow` defers to `components.WeekdayHeader` /
  *     `components.WeekdayCell` if either is provided.
  *
- *   - `VerticalMonthList` is the LegendList wrapper from the recipe
+ *   - `VerticalMonthList` is the FlashList wrapper from the recipe
  *     extended with `renderDay` / `showWeekNumbers` props that flow
  *     into every per-month section.
  *
@@ -52,10 +52,10 @@ import {
   type ViewStyle,
 } from 'react-native';
 import {
-  LegendList,
-  type LegendListRef,
-  type LegendListRenderItemProps,
-} from '@legendapp/list';
+  FlashList,
+  type FlashListRef,
+  type ListRenderItemInfo,
+} from '@shopify/flash-list';
 import {
   Calendar,
   COLS,
@@ -398,7 +398,7 @@ const MonthSection = memo(MonthSectionComponent);
 MonthSection.displayName = 'VerticalCalendarExamples.MonthSection';
 
 // ---------------------------------------------------------------------------
-// WeekdayHeaderRow — sticky row above the LegendList. Defers to
+// WeekdayHeaderRow — sticky row above the FlashList. Defers to
 // `components.WeekdayHeader` (full-row override) or `components.WeekdayCell`
 // (per-column override) when either is provided, otherwise renders the
 // default lowercase shadcn-style row.
@@ -446,7 +446,7 @@ function WeekdayHeaderRow({ showWeekNumbers }: WeekdayHeaderRowProps) {
 }
 
 // ---------------------------------------------------------------------------
-// VerticalMonthList — the LegendList. Identical windowing + growth logic
+// VerticalMonthList — the FlashList. Identical windowing + growth logic
 // to the recipe, parameterised with `renderDay` / `showWeekNumbers` so
 // each example threads its own per-cell config through.
 // ---------------------------------------------------------------------------
@@ -467,7 +467,7 @@ const VerticalMonthList = forwardRef<
   const system = useCalendarSelector((s) => s.system);
   const displayed = useCalendarSelector((s) => s.displayed);
 
-  const listRef = useRef<LegendListRef>(null);
+  const listRef = useRef<FlashListRef<CalendarDateValue>>(null);
 
   const [months, setMonths] = useState<readonly CalendarDateValue[]>(() =>
     buildMonthsAround(system, displayed, WINDOW_RADIUS)
@@ -486,7 +486,7 @@ const VerticalMonthList = forwardRef<
   // invokes the component body twice; mutations to a `useRef` persist
   // across that double-invocation, so a ref-based tracker would flip on
   // the first invocation, look "already up-to-date" on the second, and
-  // hand the LegendList stale (old-system) `months` back. State, by
+  // hand the FlashList stale (old-system) `months` back. State, by
   // contrast, is restarted from the same value on every invocation
   // until React commits the update — so both invocations agree the
   // swap is fresh and rebuild the window. This is the canonical
@@ -537,35 +537,27 @@ const VerticalMonthList = forwardRef<
     [activeMonths, system, recentreOn]
   );
 
-  const onStartReached = useCallback(
-    ({ distanceFromStart }: { distanceFromStart: number }) => {
-      if (distanceFromStart <= 0) return;
-      setMonths((prev) => {
-        const first = prev[0]!;
-        const before = new Array<CalendarDateValue>(WINDOW_GROWTH);
-        for (let i = 0; i < WINDOW_GROWTH; i += 1) {
-          before[i] = system.addMonths(first, i - WINDOW_GROWTH);
-        }
-        return [...before, ...prev];
-      });
-    },
-    [system]
-  );
+  const onStartReached = useCallback(() => {
+    setMonths((prev) => {
+      const first = prev[0]!;
+      const before = new Array<CalendarDateValue>(WINDOW_GROWTH);
+      for (let i = 0; i < WINDOW_GROWTH; i += 1) {
+        before[i] = system.addMonths(first, i - WINDOW_GROWTH);
+      }
+      return [...before, ...prev];
+    });
+  }, [system]);
 
-  const onEndReached = useCallback(
-    ({ distanceFromEnd }: { distanceFromEnd: number }) => {
-      if (distanceFromEnd <= 0) return;
-      setMonths((prev) => {
-        const last = prev[prev.length - 1]!;
-        const after = new Array<CalendarDateValue>(WINDOW_GROWTH);
-        for (let i = 0; i < WINDOW_GROWTH; i += 1) {
-          after[i] = system.addMonths(last, i + 1);
-        }
-        return [...prev, ...after];
-      });
-    },
-    [system]
-  );
+  const onEndReached = useCallback(() => {
+    setMonths((prev) => {
+      const last = prev[prev.length - 1]!;
+      const after = new Array<CalendarDateValue>(WINDOW_GROWTH);
+      for (let i = 0; i < WINDOW_GROWTH; i += 1) {
+        after[i] = system.addMonths(last, i + 1);
+      }
+      return [...prev, ...after];
+    });
+  }, [system]);
 
   const keyExtractor = useCallback(
     (item: CalendarDateValue) =>
@@ -574,7 +566,7 @@ const VerticalMonthList = forwardRef<
   );
 
   const renderItem = useCallback(
-    ({ item }: LegendListRenderItemProps<CalendarDateValue>) => (
+    ({ item }: ListRenderItemInfo<CalendarDateValue>) => (
       <MonthSection
         month={item}
         renderDay={renderDay}
@@ -584,11 +576,8 @@ const VerticalMonthList = forwardRef<
     [renderDay, showWeekNumbers]
   );
 
-  // Caption (24) + 6 rows × CELL_SIZE + section padding.
-  const estimatedItemSize = 56 + CELL_SIZE * ROWS;
-
   return (
-    <LegendList<CalendarDateValue>
+    <FlashList<CalendarDateValue>
       // `key={system.id}` force-remounts the list whenever the active
       // calendar system changes. Belt-and-braces alongside the
       // `lastSystemId` rebuild above: it guarantees the list's internal
@@ -602,18 +591,15 @@ const VerticalMonthList = forwardRef<
       key={system.id}
       data={activeMonths}
       drawDistance={DRAW_DISTANCE}
-      estimatedItemSize={estimatedItemSize}
       extraData={EXTRA_DATA}
       initialScrollIndex={WINDOW_RADIUS}
       keyExtractor={keyExtractor}
-      maintainVisibleContentPosition
       onEndReached={onEndReached}
       onStartReached={onStartReached}
       // Cast: under `react-native-strict-api`, ScrollView's `ref` and
-      // LegendList's `RefAttributes<LegendListRef>` intersect into an
+      // FlashList's `RefAttributes<FlashListRef>` intersect into an
       // un-satisfiable type. The runtime contract is fine.
       ref={listRef as never}
-      recycleItems
       renderItem={renderItem}
       showsVerticalScrollIndicator={false}
       style={styles.list}

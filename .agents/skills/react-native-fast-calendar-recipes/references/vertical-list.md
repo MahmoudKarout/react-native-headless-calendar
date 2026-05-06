@@ -1,6 +1,6 @@
 # Vertical Calendar — Infinite iOS-Style Month List
 
-Endless scrollable list of months, one row per month, sharing selection with the rest of the app via the `<Calendar.Root>` store. Built on `@legendapp/list` for windowing + recycling.
+Endless scrollable list of months, one row per month, sharing selection with the rest of the app via the `<Calendar.Root>` store. Built on `@shopify/flash-list` for windowing + recycling.
 
 The library does **not** ship a vertical month list. `<Calendar.DayGrid>` always renders the store's currently *displayed* month. To render arbitrary months you compose the **building blocks** (`buildMonthGrid`, `<DayCell>`, the `useCalendar*` hooks) yourself.
 
@@ -19,10 +19,10 @@ The library does **not** ship a vertical month list. `<Calendar.DayGrid>` always
 Peer dependency:
 
 ```bash
-npm install @legendapp/list
+npm install @shopify/flash-list
 ```
 
-`@legendapp/list` is listed as an *optional* peer dependency on `react-native-fast-calendar` — install it explicitly if you're using this recipe.
+`@shopify/flash-list` is listed as an *optional* peer dependency on `react-native-fast-calendar` — install it explicitly if you're using this recipe.
 
 ## Architecture
 
@@ -30,7 +30,7 @@ The vertical list has four layers, top to bottom:
 
 1. **`ReadoutBar`** (optional) — selected date readout + "Today" jump button.
 2. **`WeekdayHeaderRow`** (sticky) — column headers, stay mounted so they don't repeat per month.
-3. **`VerticalMonthList`** — the `LegendList`. Mounts `<MonthSection>` for each month in a sliding window.
+3. **`VerticalMonthList`** — the `FlashList`. Mounts `<MonthSection>` for each month in a sliding window.
 4. **`MonthSection`** (per row) — one month's caption + 7-column day grid.
 
 The data window slides:
@@ -42,7 +42,7 @@ The data window slides:
 - **Layer 1** — keyed on `year + month` primitives → `buildMonthGrid` (42 cells).
 - **Layer 2** — keyed on selection state → overlays `isSelected`, `isToday`, `isDisabled`, modifier flags. Reuses Layer 1's `date` refs so `<DayCell>`'s field-level memo correctly skips unchanged cells.
 
-`recycleItems` + `maintainVisibleContentPosition` on `LegendList` mean the mounted `<MonthSection>` count is bounded to the viewport + draw distance, even if the user scrolls through years.
+FlashList recycles its cells and (under the new architecture) maintains the visible content position by default, so the mounted `<MonthSection>` count is bounded to the viewport + `drawDistance`, even if the user scrolls through years.
 
 ## The minimal recipe
 
@@ -61,10 +61,10 @@ import {
 } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  LegendList,
-  type LegendListRef,
-  type LegendListRenderItemProps,
-} from '@legendapp/list';
+  FlashList,
+  type FlashListRef,
+  type ListRenderItemInfo,
+} from '@shopify/flash-list';
 import {
   Calendar,
   COLS,
@@ -239,7 +239,7 @@ const VerticalMonthList = forwardRef<VerticalMonthListHandle>(
   function VerticalMonthList(_, ref) {
     const system = useCalendarSelector((s) => s.system);
     const displayed = useCalendarSelector((s) => s.displayed);
-    const listRef = useRef<LegendListRef>(null);
+    const listRef = useRef<FlashListRef<CalendarDateValue>>(null);
 
     const [months, setMonths] = useState<readonly CalendarDateValue[]>(() =>
       buildMonthsAround(system, displayed, WINDOW_RADIUS),
@@ -276,35 +276,27 @@ const VerticalMonthList = forwardRef<VerticalMonthListHandle>(
       [months, system, recentreOn],
     );
 
-    const onStartReached = useCallback(
-      ({ distanceFromStart }: { distanceFromStart: number }) => {
-        if (distanceFromStart <= 0) return;
-        setMonths((prev) => {
-          const first = prev[0]!;
-          const before = new Array<CalendarDateValue>(WINDOW_GROWTH);
-          for (let i = 0; i < WINDOW_GROWTH; i += 1) {
-            before[i] = system.addMonths(first, i - WINDOW_GROWTH);
-          }
-          return [...before, ...prev];
-        });
-      },
-      [system],
-    );
+    const onStartReached = useCallback(() => {
+      setMonths((prev) => {
+        const first = prev[0]!;
+        const before = new Array<CalendarDateValue>(WINDOW_GROWTH);
+        for (let i = 0; i < WINDOW_GROWTH; i += 1) {
+          before[i] = system.addMonths(first, i - WINDOW_GROWTH);
+        }
+        return [...before, ...prev];
+      });
+    }, [system]);
 
-    const onEndReached = useCallback(
-      ({ distanceFromEnd }: { distanceFromEnd: number }) => {
-        if (distanceFromEnd <= 0) return;
-        setMonths((prev) => {
-          const last = prev[prev.length - 1]!;
-          const after = new Array<CalendarDateValue>(WINDOW_GROWTH);
-          for (let i = 0; i < WINDOW_GROWTH; i += 1) {
-            after[i] = system.addMonths(last, i + 1);
-          }
-          return [...prev, ...after];
-        });
-      },
-      [system],
-    );
+    const onEndReached = useCallback(() => {
+      setMonths((prev) => {
+        const last = prev[prev.length - 1]!;
+        const after = new Array<CalendarDateValue>(WINDOW_GROWTH);
+        for (let i = 0; i < WINDOW_GROWTH; i += 1) {
+          after[i] = system.addMonths(last, i + 1);
+        }
+        return [...prev, ...after];
+      });
+    }, [system]);
 
     const keyExtractor = useCallback(
       (item: CalendarDateValue) => `${system.id}:${system.year(item)}-${system.month(item)}`,
@@ -312,31 +304,23 @@ const VerticalMonthList = forwardRef<VerticalMonthListHandle>(
     );
 
     const renderItem = useCallback(
-      ({ item }: LegendListRenderItemProps<CalendarDateValue>) => <MonthSection month={item} />,
+      ({ item }: ListRenderItemInfo<CalendarDateValue>) => <MonthSection month={item} />,
       [],
     );
 
-    // Header (32) + 6 rows × CELL_SIZE + section padding. Doesn't have to
-    // be exact — LegendList recovers from misestimates — but a close
-    // figure means the initial scroll position is right on first paint.
-    const estimatedItemSize = 56 + CELL_SIZE * ROWS;
-
     return (
-      <LegendList<CalendarDateValue>
+      <FlashList<CalendarDateValue>
         data={months}
         drawDistance={DRAW_DISTANCE}
-        estimatedItemSize={estimatedItemSize}
         extraData={EXTRA_DATA}
         initialScrollIndex={WINDOW_RADIUS}
         keyExtractor={keyExtractor}
-        maintainVisibleContentPosition
         onEndReached={onEndReached}
         onStartReached={onStartReached}
         // Cast: under react-native-strict-api, ScrollView's `ref` and
-        // LegendList's `RefAttributes<LegendListRef>` intersect into an
+        // FlashList's `RefAttributes<FlashListRef>` intersect into an
         // un-satisfiable type. The runtime contract is fine.
         ref={listRef as never}
-        recycleItems
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
@@ -794,7 +778,7 @@ Same as grid recipe §9, plumbed through `renderDay`:
 - **List flashes blank on system swap.** Add the synchronous `lastSystemId` ref check shown above. Don't try to wipe the list in `useEffect` — that fires after children have already rendered with mismatched data.
 - **Outside-month days re-rendered as greyed cells.** The vertical layout always renders them as blank spacers regardless of `showOutsideDays`. Adjacent months stack above one another in the scroll, so a greyed "May 30" tail on June would duplicate May's last cell — exactly the "is that May 30 or June 1?" confusion the iOS Calendar avoids by suppressing outside days entirely.
 - **Today button doesn't scroll.** `displayed`-watching effects only fire on reference change. If the user has scrolled away visually but `displayed` already points to today's month, calling `selectDate(today)` won't trigger a scroll. Use the imperative ref pattern (`scrollToMonth`).
-- **Janky scrolling after a long jump.** Keep `drawDistance` small (~250 px). LegendList's "accurate-scrollto-huge" recipe shows that a small fixed value gives precise landings while `recycleItems` + `maintainVisibleContentPosition` bound the mounted count.
+- **Janky scrolling after a long jump.** Keep `drawDistance` small (~250 px). FlashList recycles cells automatically, so a small fixed value bounds the mounted count and gives precise landings even after a long `scrollToIndex`.
 - **`extraData` instability.** Pass a module-scoped `EXTRA_DATA = { recycleState: true } as const`. Inline `extraData={{ ... }}` creates fresh references on every parent re-render and forces every container's `getRenderedItem` memo to invalidate.
 - **`firstDayOfWeek` is wrong on first paint.** `useCalendarWeekdayLabels()` is pre-rotated; just trust it. Hand-coding `['Sun', 'Mon', …]` and switching on `firstDayOfWeek` yourself will desync the header from the grid.
 

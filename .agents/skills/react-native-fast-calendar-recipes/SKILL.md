@@ -1,7 +1,7 @@
 ---
 name: react-native-fast-calendar-recipes
 description: |
-  Build calendar features in React Native apps using the react-native-fast-calendar library. Covers all eleven recipes shipped in the library's example app: single-date pickers, date-range pickers (minRangeDays / maxRangeDays / allowSameDay), multi-select with modifiers (booked / holiday / weekend dots), bounded selection (minDate / maxDate / disabledDates / disabledRanges / disabled predicate), multi-month side-by-side grids with ISO week numbers, multi-calendar-system pickers (Gregorian + Hijri / Persian / etc.), custom component slots (DayCell, WeekdayHeader, WeekdayCell, WeekNumberCell, MonthCaption), localised labels via createGregorianSystem, per-day image cells via renderDay, bottom-sheet date pickers using @gorhom/bottom-sheet, and iOS-Calendar-style infinite vertical month lists using @legendapp/list. Use this skill whenever the user asks for a calendar, date picker, range picker, booking calendar, scheduling UI, monthly grid, vertical scrolling calendar, custom day cell, holiday markers, blackout dates, modal date picker, multi-system or Hijri calendar, or any usage of <Calendar.Root>, <Calendar.DayGrid>, SimpleCalendar, or the useCalendar* hooks — even when the user does not name the library directly. Reach for this skill instead of writing fast-calendar UI from scratch.
+  Build calendar features in React Native apps using the react-native-fast-calendar library. Covers all eleven recipes shipped in the library's example app: single-date pickers, date-range pickers (minRangeDays / maxRangeDays / allowSameDay), multi-select with modifiers (booked / holiday / weekend dots), bounded selection (minDate / maxDate / disabledDates / disabledRanges / disabled predicate), multi-month side-by-side grids with ISO week numbers, multi-calendar-system pickers (Gregorian + Hijri / Persian / etc.), custom component slots (DayCell, WeekdayHeader, WeekdayCell, WeekNumberCell, MonthCaption), localised labels via createGregorianSystem, per-day image cells via renderDay, bottom-sheet date pickers using @gorhom/bottom-sheet, and iOS-Calendar-style infinite vertical month lists using @shopify/flash-list. Use this skill whenever the user asks for a calendar, date picker, range picker, booking calendar, scheduling UI, monthly grid, vertical scrolling calendar, custom day cell, holiday markers, blackout dates, modal date picker, multi-system or Hijri calendar, or any usage of <Calendar.Root>, <Calendar.DayGrid>, SimpleCalendar, or the useCalendar* hooks — even when the user does not name the library directly. Reach for this skill instead of writing fast-calendar UI from scratch.
 ---
 
 # react-native-fast-calendar — Recipe Pack
@@ -106,7 +106,7 @@ When the user asks for a calendar feature, follow these steps:
    - All recipes: `react-native-fast-calendar`, `react`, `react-native`.
    - Hijri / multi-system: `@tabby_ai/hijri-converter` (or any compatible converter that exports `toHijri` / `toGregorian`).
    - Bottom sheet: `@gorhom/bottom-sheet`, `react-native-reanimated`, `react-native-gesture-handler` (and the Reanimated babel plugin).
-   - Vertical list: `@legendapp/list`.
+   - Vertical list: `@shopify/flash-list`.
    
    Read the user's `package.json` first. If a dep is missing, tell the user — don't auto-install. Confirm package manager (npm / yarn / pnpm / bun) before suggesting an install command.
 3. **Read only the reference files you need.** One recipe = one reference. Don't preload all of them.

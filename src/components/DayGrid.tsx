@@ -14,7 +14,7 @@
  * tapping a date re-renders at most 2-4 cells.
  *
  * When `swipeable` is enabled, months are rendered in a horizontal virtualised list
- * (`@legendapp/list`): one page per calendar month plus growable prepend/append
+ * (`@shopify/flash-list`): one page per calendar month plus growable prepend/append
  * windows (`SwipeableMonthList`). The weekday header stays fixed outside the pager.
  *
  * Consumers can fully replace the cell rendering with the `renderDay`
@@ -38,11 +38,10 @@ import {
   type GestureResponderEvent,
 } from 'react-native';
 import type {
-  LegendList as LegendListType,
-  LegendListRef,
-  LegendListRenderItemProps,
+  FlashListRef,
+  ListRenderItemInfo,
   ViewToken,
-} from '@legendapp/list';
+} from '@shopify/flash-list';
 
 import {
   useCalendarComponents,
@@ -70,7 +69,6 @@ import type {
   DayRenderer,
   WeekdayCellProps,
 } from '../types';
-
 // ---------------------------------------------------------------------------
 // WeekdayHeader — static row of weekday names. Memoised so it never
 // re-renders on day taps.
@@ -554,11 +552,11 @@ MonthGrid.displayName = 'Calendar.MonthGrid';
 
 // ---------------------------------------------------------------------------
 // SwipeableMonthList — internal: an infinite, virtualised, horizontal
-// month list backed by `@legendapp/list`.
+// month list backed by `@shopify/flash-list`.
 //
-// Why LegendList over FlatList here:
-//   - `recycleItems` reuses MonthGrid instances across months, so
-//     swiping through 24+ months doesn't pay 24× the mount cost.
+// Why FlashList over FlatList here:
+//   - Recycling reuses `MonthGrid` instances across months, so swiping
+//     through 24+ months doesn't pay 24× the mount cost.
 //   - Per-month virtualisation through `drawDistance` instead of a
 //     hand-rolled `[prev, current, next]` window — only the month(s)
 //     within `pageWidth` of the viewport are mounted; the rest of the
@@ -568,11 +566,12 @@ MonthGrid.displayName = 'Calendar.MonthGrid';
 //   - `scrollToIndex` ref API gives us a clean way to react to external
 //     `displayed` changes (arrow buttons, year picker, system switch).
 //
-// `@legendapp/list` is an OPTIONAL peer dependency — it's only required
-// when the consumer renders `<Calendar.DayGrid swipeable />`. If the
-// package isn't installed we throw a clear, README-pointing error from
-// the first render rather than letting the bundler emit "Cannot find
-// module" deep in our internals.
+// `@shopify/flash-list` is loaded lazily so it stays an optional peer
+// dep — only required when the consumer renders
+// `<Calendar.DayGrid swipeable />`. If the package isn't installed we
+// throw a clear, README-pointing error from the first swipeable render
+// rather than letting the bundler emit "Cannot find module" deep in
+// our internals.
 // ---------------------------------------------------------------------------
 
 const WINDOW_RADIUS = 12; // initial: ±12 months around displayed → 25 items
@@ -616,21 +615,23 @@ const isSameDisplayMonth = (
 ): boolean =>
   system.year(a) === system.year(b) && system.month(a) === system.month(b);
 
-// Lazy require so the optional peer dep only blows up in `swipeable`
-// mode. Surfaced as a render-time throw so the stack trace points at
-// the consumer's `<Calendar.DayGrid swipeable />`.
-let cachedLegendList: typeof LegendListType | null = null;
-const loadLegendList = (): typeof LegendListType => {
-  if (cachedLegendList) return cachedLegendList;
+// Lazy require so missing `@shopify/flash-list` only blows up in
+// `swipeable` mode. Surfaced as a render-time throw so the stack trace
+// points at the consumer's `<Calendar.DayGrid swipeable />`.
+type SwipeableFlashList = typeof import('@shopify/flash-list').FlashList;
+
+let cachedFlashList: SwipeableFlashList | null = null;
+const loadFlashList = (): SwipeableFlashList => {
+  if (cachedFlashList) return cachedFlashList;
   try {
-    const mod = require('@legendapp/list');
-    cachedLegendList = mod.LegendList as typeof LegendListType;
-    return cachedLegendList;
+    const mod = require('@shopify/flash-list');
+    cachedFlashList = mod.FlashList as SwipeableFlashList;
+    return cachedFlashList;
   } catch {
     throw new Error(
       '[react-native-fast-calendar] <Calendar.DayGrid swipeable /> ' +
-        'requires `@legendapp/list` to be installed. Add it with:\n\n' +
-        '    yarn add @legendapp/list\n\n' +
+        'requires `@shopify/flash-list` to be installed. Add it with:\n\n' +
+        '    yarn add @shopify/flash-list\n\n' +
         'See the README for the full swipeable-mode setup.'
     );
   }
@@ -640,7 +641,7 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
   renderDay,
   showWeekNumbers,
 }) => {
-  const LegendList = loadLegendList();
+  const FlashList = loadFlashList();
 
   const store = useCalendarStore();
   const { testID } = useCalendarConfig();
@@ -648,7 +649,7 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
   const displayed = useCalendarSelector((s) => s.displayed);
   const theme = useCalendarTheme();
 
-  const listRef = useRef<LegendListRef>(null);
+  const listRef = useRef<FlashListRef<CalendarDateValue>>(null);
   const [pageWidth, setPageWidth] = useState(0);
 
   // Horizontal lists in React Native take their cross-axis (height)
@@ -674,7 +675,7 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
   // `NaN` into the converter, and crash with a "month = 0" assertion.
   //
   // The detection has to be synchronous-during-render (not a post-commit
-  // `useEffect`) — by the time an effect fires, LegendList has already
+  // `useEffect`) — by the time an effect fires, FlashList has already
   // rendered the stale data through `renderItem` and crashed. Calling
   // `setMonths` during render is the React-recommended pattern for
   // deriving state from props (see https://react.dev/reference/react/
@@ -702,7 +703,7 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
   //   (1) displayed is inside the current window → no-op (active index
   //       is recomputed below; scroll-sync effect handles positioning).
   //   (2) displayed jumped outside the window → rebuild the window
-  //       around it. The new array is a brand-new identity so LegendList
+  //       around it. The new array is a brand-new identity so FlashList
   //       resets its containers and `initialScrollIndex` re-anchors at
   //       `WINDOW_RADIUS`.
   useEffect(() => {
@@ -722,7 +723,7 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
   }, [activeMonths, system, displayed]);
 
   // Sync external navigation → scroll. Runs whenever `displayed` (or
-  // the resolved index) changes; LegendList's scroll position usually
+  // the resolved index) changes; FlashList's scroll position usually
   // already matches when the change came from a swipe so this is a
   // cheap no-op in that case.
   useEffect(() => {
@@ -789,7 +790,7 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
   );
 
   const renderItem = useCallback(
-    ({ item }: LegendListRenderItemProps<CalendarDateValue>) => (
+    ({ item }: ListRenderItemInfo<CalendarDateValue>) => (
       <MonthGrid
         month={item}
         pageWidth={pageWidth}
@@ -811,7 +812,7 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
       testID={testID ? `${testID}.calendar.swipeable` : undefined}
     >
       {pageWidth > 0 && (
-        <LegendList<CalendarDateValue>
+        <FlashList<CalendarDateValue>
           // `key={system.id}` force-remounts the list whenever the
           // active calendar system changes. Belt-and-braces alongside
           // the `lastSystemId` rebuild above: it guarantees the list's
@@ -828,26 +829,17 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
           // swipes flash-free while still bounding mounted MonthGrids
           // to 3, regardless of how long the data window grows.
           drawDistance={pageWidth}
-          estimatedItemSize={pageWidth}
           horizontal
           initialScrollIndex={activeIndex}
           keyExtractor={keyExtractor}
           // Stable scroll anchor when `onStartReached` prepends — without
           // this the active month would visually jump every time the
           // window grows backwards.
-          maintainVisibleContentPosition
           onEndReached={onEndReached}
           onStartReached={onStartReached}
           onViewableItemsChanged={onViewableItemsChanged}
           pagingEnabled
-          recycleItems
-          // Cast: under `react-native-strict-api`, ScrollView's `ref` is
-          // typed as `PublicScrollViewInstance` and the LegendList type
-          // intersects that with `RefAttributes<LegendListRef>` into an
-          // un-satisfiable type. The runtime contract is fine — we only
-          // call methods from the `LegendListRef` surface — so we
-          // narrow the prop with a single contained `as never` here.
-          ref={listRef as never}
+          ref={listRef}
           renderItem={renderItem}
           showsHorizontalScrollIndicator={false}
           testID={testID ? `${testID}.calendar.swipeable.list` : undefined}

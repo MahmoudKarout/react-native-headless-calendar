@@ -1,12 +1,12 @@
-// Jest test double for `@legendapp/list`.
+// Jest test double for `@shopify/flash-list` (swipeable `FlashList`).
 //
-// We can't run the real LegendList in jest — its layout calculations
+// We can't run the real FlashList in jest — its layout calculations
 // depend on the native `RCTScrollView` measuring itself, which never
 // happens under react-test-renderer. So instead we wire up a tiny
 // component that:
 //
 //   1. Captures the props passed by `SwipeableMonthList`, exposing them
-//      via `getMockLegendListProps()` so tests can read them and fire
+//      via `getMockFlashListProps()` so tests can read them and fire
 //      the wired callbacks (`onViewableItemsChanged`,
 //      `onStartReached`, `onEndReached`).
 //   2. Records every `scrollToIndex` call against the imperative ref so
@@ -21,14 +21,14 @@
 //      passes a plain `(item, index) => string` so this is a cheap
 //      no-op for tests.
 //
-// `resetMockLegendList()` is exported so jest's `beforeEach` can clear
+// `resetMockFlashList()` is exported so jest's `beforeEach` can clear
 // state between tests; without it, the most recently rendered
 // SwipeableMonthList would leak its captured props into the next
 // scenario.
 import React from 'react';
 import { View } from 'react-native';
 
-interface MockLegendListProps {
+interface MockFlashListProps {
   data?: ReadonlyArray<unknown>;
   initialScrollIndex?: number | { index: number };
   renderItem?: (info: {
@@ -45,8 +45,8 @@ interface MockLegendListProps {
     viewableItems: ReadonlyArray<unknown>;
     changed: ReadonlyArray<unknown>;
   }) => void;
-  onStartReached?: (info: { distanceFromStart: number }) => void;
-  onEndReached?: (info: { distanceFromEnd: number }) => void;
+  onStartReached?: () => void;
+  onEndReached?: () => void;
 }
 
 interface ScrollCall {
@@ -55,24 +55,24 @@ interface ScrollCall {
 }
 
 const state = {
-  props: null as MockLegendListProps | null,
+  props: null as MockFlashListProps | null,
   scrollCalls: [] as ScrollCall[],
 };
 
-export const getMockLegendListProps = (): MockLegendListProps => {
+export const getMockFlashListProps = (): MockFlashListProps => {
   if (!state.props) {
     throw new Error(
-      'getMockLegendListProps(): no LegendList has rendered yet ' +
+      'getMockFlashListProps(): no FlashList has rendered yet ' +
         '— make sure to call this after `fireSwipeableLayout`.'
     );
   }
   return state.props;
 };
 
-export const getMockLegendListScrollCalls = (): ReadonlyArray<ScrollCall> =>
+export const getMockFlashListScrollCalls = (): ReadonlyArray<ScrollCall> =>
   state.scrollCalls;
 
-export const resetMockLegendList = () => {
+export const resetMockFlashList = () => {
   state.props = null;
   state.scrollCalls = [];
 };
@@ -103,7 +103,7 @@ const ref = {
 };
 
 const resolveInitialIndex = (
-  raw: MockLegendListProps['initialScrollIndex']
+  raw: MockFlashListProps['initialScrollIndex']
 ): number => {
   if (typeof raw === 'number') return raw;
   if (raw && typeof raw === 'object' && typeof raw.index === 'number') {
@@ -112,7 +112,7 @@ const resolveInitialIndex = (
   return 0;
 };
 
-export const LegendList = React.forwardRef<unknown, MockLegendListProps>(
+export const FlashList = React.forwardRef<unknown, MockFlashListProps>(
   (props, refArg) => {
     state.props = props;
     React.useImperativeHandle(refArg, () => ref, []);
@@ -145,4 +145,4 @@ export const LegendList = React.forwardRef<unknown, MockLegendListProps>(
   }
 );
 
-LegendList.displayName = 'MockLegendList';
+FlashList.displayName = 'MockFlashList';

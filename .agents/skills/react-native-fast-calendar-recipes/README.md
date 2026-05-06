@@ -17,7 +17,7 @@ Agent skill that teaches AI coding assistants (Cursor, Claude Code, Copilot, etc
 | Localised | French / Arabic / any language via `createGregorianSystem` |
 | Image cells | `renderDay` swaps day numbers for `<Image>` / SVG / video poster |
 | Bottom sheet | `@gorhom/bottom-sheet` integration (single + range) |
-| Vertical list | iOS Calendar-style infinite month scroll via `@legendapp/list` |
+| Vertical list | iOS Calendar-style infinite month scroll via `@shopify/flash-list` |
 
 ## Install
 

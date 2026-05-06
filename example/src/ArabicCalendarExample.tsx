@@ -110,7 +110,7 @@ export default function ArabicCalendarExample() {
         </Text>
       </View>
       <SimpleCalendar
-        firstDayOfWeek={6}
+        firstDayOfWeek={0}
         labels={LABELS_AR}
         swipeable
         systems={SYSTEMS_AR}
