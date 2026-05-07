@@ -9,13 +9,24 @@
     "web": "expo start --web",
     "build:ios": "xcodebuild ONLY_ACTIVE_ARCH=YES -workspace ios/FastCalendarExample.xcworkspace -UseNewBuildSystem=YES -scheme FastCalendarExample -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -quiet",
     "build:android": "cd android && ./gradlew assembleDebug -DtestBuildType=debug -Dorg.gradle.jvmargs=-Xmx4g",
-    "build:web": "expo export --platform web"
+    "build:web": "expo export --platform web",
+    "storybook-generate": "sb-rn-get-stories",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@babel/core": "^7.29.0",
     "@expo/metro-runtime": "~55.0.10",
     "@gorhom/bottom-sheet": "^5",
+    "@react-native-async-storage/async-storage": "^3.0.2",
+    "@react-native-community/datetimepicker": "^9.1.0",
+    "@react-native-community/slider": "^5.2.0",
     "@shopify/flash-list": "^2.3.1",
+    "@storybook/addon-ondevice-actions": "^10.4.0",
+    "@storybook/addon-ondevice-controls": "^10.4.0",
+    "@storybook/react-native": "^10.4.0",
     "@tabby_ai/hijri-converter": "^1.0.5",
+    "babel-loader": "^8.4.1",
     "expo": "~55.0.19",
     "expo-status-bar": "~55.0.5",
     "moment-jalaali": "^0.10.4",
@@ -24,12 +35,27 @@
     "react-native": "0.83.6",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-reanimated": "4.3.0",
+    "react-native-safe-area-context": "^5.7.0",
+    "react-native-svg": "^15.15.4",
     "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.8.1"
+    "react-native-worklets": "0.8.1",
+    "storybook": "^10.3.6"
   },
   "private": true,
   "devDependencies": {
+    "@chromatic-com/storybook": "^5.1.2",
+    "@storybook/addon-a11y": "^10.3.6",
+    "@storybook/addon-docs": "^10.3.6",
+    "@storybook/addon-vitest": "^10.3.6",
+    "@storybook/react-native-web-vite": "^10.3.6",
+    "@vitest/browser-playwright": "^4.1.5",
+    "@vitest/coverage-v8": "^4.1.5",
+    "eslint-plugin-storybook": "^10.3.6",
+    "playwright": "^1.59.1",
     "react-native-builder-bob": "^0.41.0",
-    "react-native-monorepo-config": "^0.3.3"
+    "react-native-monorepo-config": "^0.3.3",
+    "storybook": "^10.3.6",
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
   }
 }

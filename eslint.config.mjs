@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import { fixupConfigRules } from '@eslint/compat';
 import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
@@ -14,16 +17,13 @@ const compat = new FlatCompat({
   allConfig: js.configs.all,
 });
 
-export default defineConfig([
-  {
-    extends: fixupConfigRules(compat.extends('@react-native', 'prettier')),
-    plugins: { prettier },
-    rules: {
-      'react/react-in-jsx-scope': 'off',
-      'prettier/prettier': 'error',
-    },
+export default defineConfig([{
+  extends: fixupConfigRules(compat.extends('@react-native', 'prettier')),
+  plugins: { prettier },
+  rules: {
+    'react/react-in-jsx-scope': 'off',
+    'prettier/prettier': 'error',
   },
-  {
-    ignores: ['node_modules/', 'lib/'],
-  },
-]);
+}, {
+  ignores: ['node_modules/', 'lib/'],
+}, ...storybook.configs["flat/recommended"]]);
