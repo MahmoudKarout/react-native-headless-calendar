@@ -1,0 +1,27 @@
+{
+  "id": "types/calendar-modifiers",
+  "title": "CalendarModifiers",
+  "description": "The CalendarModifiers type is a map of named date matchers. Use it to mark dates with semantic meaning (booked, holiday, weekend) that can then be styled via DayCellInfo.modifiers.",
+  "source": "@site/docs/types/calendar-modifiers.md",
+  "sourceDirName": "types",
+  "slug": "/types/calendar-modifiers",
+  "permalink": "/docs/types/calendar-modifiers",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/types/calendar-modifiers.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_position": 5
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "CalendarComponents",
+    "permalink": "/docs/types/calendar-components"
+  },
+  "next": {
+    "title": "CalendarMatcher",
+    "permalink": "/docs/types/calendar-matcher"
+  }
+}

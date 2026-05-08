@@ -1,0 +1,27 @@
+{
+  "id": "hooks/use-calendar-weekday-labels",
+  "title": "useCalendarWeekdayLabels",
+  "description": "The useCalendarWeekdayLabels hook returns weekday labels rotated to match the active firstDayOfWeek.",
+  "source": "@site/docs/hooks/use-calendar-weekday-labels.md",
+  "sourceDirName": "hooks",
+  "slug": "/hooks/use-calendar-weekday-labels",
+  "permalink": "/docs/hooks/use-calendar-weekday-labels",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/hooks/use-calendar-weekday-labels.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 12,
+  "frontMatter": {
+    "sidebar_position": 12
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "useCalendarSelectedDates",
+    "permalink": "/docs/hooks/use-calendar-selected-dates"
+  },
+  "next": {
+    "title": "useCalendarWeekNumbers",
+    "permalink": "/docs/hooks/use-calendar-week-numbers"
+  }
+}

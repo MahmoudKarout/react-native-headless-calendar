@@ -1,0 +1,27 @@
+{
+  "id": "types/day-cell-info",
+  "title": "DayCellInfo",
+  "description": "The DayCellInfo interface contains all metadata about a day cell. It's passed to custom renderDay functions and DayCell components.",
+  "source": "@site/docs/types/day-cell-info.md",
+  "sourceDirName": "types",
+  "slug": "/types/day-cell-info",
+  "permalink": "/docs/types/day-cell-info",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/types/day-cell-info.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "CalendarTheme",
+    "permalink": "/docs/types/calendar-theme"
+  },
+  "next": {
+    "title": "CalendarComponents",
+    "permalink": "/docs/types/calendar-components"
+  }
+}

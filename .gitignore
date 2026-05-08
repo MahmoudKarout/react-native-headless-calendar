@@ -89,3 +89,7 @@ example/ios/
 example/android/
 *storybook.log
 storybook-static
+
+# Docusaurus
+
+/docs/.yarn

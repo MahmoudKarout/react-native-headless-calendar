@@ -1,0 +1,27 @@
+{
+  "id": "systems/hijri",
+  "title": "Hijri Calendar System",
+  "description": "The Hijri (Islamic) calendar system. Requires @tabby_ai/hijri-converter or a compatible converter.",
+  "source": "@site/docs/systems/hijri.md",
+  "sourceDirName": "systems",
+  "slug": "/systems/hijri",
+  "permalink": "/docs/systems/hijri",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/systems/hijri.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Gregorian Calendar System",
+    "permalink": "/docs/systems/gregorian"
+  },
+  "next": {
+    "title": "Jalali (Persian) Calendar System",
+    "permalink": "/docs/systems/jalali"
+  }
+}

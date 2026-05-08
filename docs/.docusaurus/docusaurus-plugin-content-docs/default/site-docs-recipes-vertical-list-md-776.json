@@ -1,0 +1,27 @@
+{
+  "id": "recipes/vertical-list",
+  "title": "Vertical List",
+  "description": "An infinite scrolling vertical month list using @shopify/flash-list — similar to the iOS Calendar app.",
+  "source": "@site/docs/recipes/vertical-list.md",
+  "sourceDirName": "recipes",
+  "slug": "/recipes/vertical-list",
+  "permalink": "/docs/recipes/vertical-list",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/recipes/vertical-list.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 9,
+  "frontMatter": {
+    "sidebar_position": 9
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Bottom Sheet Date Picker",
+    "permalink": "/docs/recipes/bottom-sheet-picker"
+  },
+  "next": {
+    "title": "Flight Price Calendar",
+    "permalink": "/docs/recipes/flight-price-calendar"
+  }
+}

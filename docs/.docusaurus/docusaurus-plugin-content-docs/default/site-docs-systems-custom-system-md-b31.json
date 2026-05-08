@@ -1,0 +1,27 @@
+{
+  "id": "systems/custom-system",
+  "title": "Custom Calendar System",
+  "description": "You can implement any calendar system by creating a CalendarSystem adapter.",
+  "source": "@site/docs/systems/custom-system.md",
+  "sourceDirName": "systems",
+  "slug": "/systems/custom-system",
+  "permalink": "/docs/systems/custom-system",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/systems/custom-system.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_position": 4
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Jalali (Persian) Calendar System",
+    "permalink": "/docs/systems/jalali"
+  },
+  "next": {
+    "title": "CalendarSystem",
+    "permalink": "/docs/types/calendar-system"
+  }
+}

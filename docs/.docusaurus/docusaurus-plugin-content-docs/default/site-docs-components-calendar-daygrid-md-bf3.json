@@ -1,0 +1,27 @@
+{
+  "id": "components/calendar-daygrid",
+  "title": "Calendar.DayGrid",
+  "description": "`` is the only built-in visual component that renders the 6×7 day grid. It handles layout, memoization, and swipe gestures.",
+  "source": "@site/docs/components/calendar-daygrid.md",
+  "sourceDirName": "components",
+  "slug": "/components/calendar-daygrid",
+  "permalink": "/docs/components/calendar-daygrid",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/components/calendar-daygrid.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Calendar.Root",
+    "permalink": "/docs/components/calendar-root"
+  },
+  "next": {
+    "title": "Calendar.DayCell",
+    "permalink": "/docs/components/calendar-daycell"
+  }
+}

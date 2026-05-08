@@ -1,0 +1,27 @@
+{
+  "id": "utilities/used-rows",
+  "title": "usedRows",
+  "description": "Calculates how many rows in a month grid contain at least one day from the target month.",
+  "source": "@site/docs/utilities/used-rows.md",
+  "sourceDirName": "utilities",
+  "slug": "/utilities/used-rows",
+  "permalink": "/docs/utilities/used-rows",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/utilities/used-rows.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 8,
+  "frontMatter": {
+    "sidebar_position": 8
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "getYearPage",
+    "permalink": "/docs/utilities/get-year-page"
+  },
+  "next": {
+    "title": "Single Date Picker",
+    "permalink": "/docs/recipes/single-date-picker"
+  }
+}

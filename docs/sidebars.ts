@@ -1,0 +1,122 @@
+import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
+
+const sidebars: SidebarsConfig = {
+  tutorialSidebar: [
+    'intro',
+    'installation',
+    {
+      type: 'category',
+      label: 'Core Concepts',
+      items: [
+        'core-concepts/mental-model',
+        'core-concepts/headless-design',
+        'core-concepts/calendar-systems',
+        'core-concepts/theming',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Components',
+      items: [
+        'components/simple-calendar',
+        'components/calendar-root',
+        'components/calendar-daygrid',
+        'components/calendar-daycell',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Hooks',
+      items: [
+        'hooks/use-calendar-store',
+        'hooks/use-calendar-selector',
+        'hooks/use-calendar-actions',
+        'hooks/use-calendar-navigation',
+        'hooks/use-calendar-header',
+        'hooks/use-calendar-month-label',
+        'hooks/use-calendar-year-label',
+        'hooks/use-calendar-month-picker',
+        'hooks/use-calendar-year-picker',
+        'hooks/use-calendar-system-switcher',
+        'hooks/use-calendar-selected-dates',
+        'hooks/use-calendar-weekday-labels',
+        'hooks/use-calendar-week-numbers',
+        'hooks/use-calendar-config',
+        'hooks/use-calendar-theme',
+        'hooks/use-calendar-labels',
+        'hooks/use-calendar-components',
+        'hooks/use-calendar-first-day-of-week',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Calendar Systems',
+      items: [
+        'systems/gregorian',
+        'systems/hijri',
+        'systems/jalali',
+        'systems/custom-system',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Types & Interfaces',
+      items: [
+        'types/calendar-system',
+        'types/calendar-theme',
+        'types/day-cell-info',
+        'types/calendar-components',
+        'types/calendar-modifiers',
+        'types/calendar-matcher',
+        'types/calendar-selection-payload',
+        'types/calendar-snapshot',
+        'types/calendar-store',
+        'types/calendar-root-props',
+        'types/simple-calendar-props',
+        'types/day-grid-props',
+        'types/day-cell-props',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Grid Utilities',
+      items: [
+        'utilities/build-month-grid',
+        'utilities/iso-week-number',
+        'utilities/rotate-weekday-labels',
+        'utilities/match-date',
+        'utilities/is-between',
+        'utilities/is-explicitly-disabled',
+        'utilities/get-year-page',
+        'utilities/used-rows',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Recipes',
+      items: [
+        'recipes/single-date-picker',
+        'recipes/date-range-picker',
+        'recipes/multi-date-picker',
+        'recipes/bounded-selection',
+        'recipes/multi-month-grid',
+        'recipes/custom-day-cell',
+        'recipes/week-numbers',
+        'recipes/bottom-sheet-picker',
+        'recipes/vertical-list',
+        'recipes/flight-price-calendar',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Advanced Topics',
+      items: [
+        'advanced/custom-calendar-system',
+        'advanced/performance-optimization',
+        'advanced/testing',
+      ],
+    },
+  ],
+};
+
+export default sidebars;

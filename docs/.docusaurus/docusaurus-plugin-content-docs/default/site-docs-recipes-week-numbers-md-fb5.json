@@ -1,0 +1,27 @@
+{
+  "id": "recipes/week-numbers",
+  "title": "Week Numbers",
+  "description": "Display ISO 8601 week numbers alongside the calendar grid.",
+  "source": "@site/docs/recipes/week-numbers.md",
+  "sourceDirName": "recipes",
+  "slug": "/recipes/week-numbers",
+  "permalink": "/docs/recipes/week-numbers",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/recipes/week-numbers.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "sidebar_position": 7
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Custom Day Cell",
+    "permalink": "/docs/recipes/custom-day-cell"
+  },
+  "next": {
+    "title": "Bottom Sheet Date Picker",
+    "permalink": "/docs/recipes/bottom-sheet-picker"
+  }
+}

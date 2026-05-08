@@ -1,0 +1,27 @@
+{
+  "id": "types/calendar-components",
+  "title": "CalendarComponents",
+  "description": "The CalendarComponents interface defines the component slots that can be customized via ``. Use these to replace visual atoms without building the full UI from scratch.",
+  "source": "@site/docs/types/calendar-components.md",
+  "sourceDirName": "types",
+  "slug": "/types/calendar-components",
+  "permalink": "/docs/types/calendar-components",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/types/calendar-components.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_position": 4
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "DayCellInfo",
+    "permalink": "/docs/types/day-cell-info"
+  },
+  "next": {
+    "title": "CalendarModifiers",
+    "permalink": "/docs/types/calendar-modifiers"
+  }
+}

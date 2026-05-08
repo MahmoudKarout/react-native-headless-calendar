@@ -1,0 +1,27 @@
+{
+  "id": "types/calendar-selection-payload",
+  "title": "CalendarSelectionPayload",
+  "description": "The CalendarSelectionPayload interface is the object passed to onConfirm callbacks. It contains the selected date(s) as native JavaScript Date objects.",
+  "source": "@site/docs/types/calendar-selection-payload.md",
+  "sourceDirName": "types",
+  "slug": "/types/calendar-selection-payload",
+  "permalink": "/docs/types/calendar-selection-payload",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/types/calendar-selection-payload.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "sidebar_position": 7
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "CalendarMatcher",
+    "permalink": "/docs/types/calendar-matcher"
+  },
+  "next": {
+    "title": "CalendarSnapshot",
+    "permalink": "/docs/types/calendar-snapshot"
+  }
+}

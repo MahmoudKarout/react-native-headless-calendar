@@ -1,0 +1,27 @@
+{
+  "id": "components/calendar-root",
+  "title": "Calendar.Root",
+  "description": "`` is the headless provider that owns the calendar store. It renders no visible UI itself, but provides state to all child components via hooks.",
+  "source": "@site/docs/components/calendar-root.md",
+  "sourceDirName": "components",
+  "slug": "/components/calendar-root",
+  "permalink": "/docs/components/calendar-root",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/components/calendar-root.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "SimpleCalendar",
+    "permalink": "/docs/components/simple-calendar"
+  },
+  "next": {
+    "title": "Calendar.DayGrid",
+    "permalink": "/docs/components/calendar-daygrid"
+  }
+}

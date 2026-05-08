@@ -1,0 +1,677 @@
+/*
+ * shadcn/ui-inspired calendar styling.
+ * Design tokens are scoped to .calendarContainer so they only affect demos.
+ */
+.calendarContainer {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222.2 84% 4.9%);
+  --muted: hsl(210 40% 96.1%);
+  --muted-foreground: hsl(215.4 16.3% 46.9%);
+  --accent: hsl(210 40% 96.1%);
+  --accent-foreground: hsl(222.2 47.4% 11.2%);
+  --primary: hsl(222.2 47.4% 11.2%);
+  --primary-foreground: hsl(210 40% 98%);
+  --border: hsl(214.3 31.8% 91.4%);
+  --ring: hsl(222.2 84% 4.9%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(210 40% 98%);
+  --radius: 0.5rem;
+
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  max-width: 320px;
+  margin: 0 auto 1.5rem;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.calendarWide {
+  max-width: 640px;
+}
+
+[data-theme='dark'] .calendarContainer {
+  --background: hsl(222.2 84% 4.9%);
+  --foreground: hsl(210 40% 98%);
+  --muted: hsl(217.2 32.6% 17.5%);
+  --muted-foreground: hsl(215 20.2% 65.1%);
+  --accent: hsl(217.2 32.6% 17.5%);
+  --accent-foreground: hsl(210 40% 98%);
+  --primary: hsl(210 40% 98%);
+  --primary-foreground: hsl(222.2 47.4% 11.2%);
+  --border: hsl(217.2 32.6% 17.5%);
+  --ring: hsl(212.7 26.8% 83.9%);
+  --destructive: hsl(0 62.8% 30.6%);
+  --destructive-foreground: hsl(210 40% 98%);
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  position: relative;
+}
+
+.navButton {
+  height: 28px;
+  width: 28px;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--foreground);
+  opacity: 0.7;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.navButton:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  opacity: 1;
+}
+
+.navButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.monthYear {
+  display: flex;
+  gap: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--foreground);
+}
+
+.month,
+.year {
+  cursor: default;
+}
+
+/* Multi-month layout */
+.singleMonth {
+  display: block;
+}
+
+.multiMonthRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 640px) {
+  .multiMonthRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.monthBlock {
+  display: flex;
+  flex-direction: column;
+}
+
+.monthCaption {
+  text-align: center;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--foreground);
+  margin-bottom: 8px;
+}
+
+/* Weekdays row */
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.weekdaysWithNumbers {
+  grid-template-columns: 28px repeat(7, 1fr);
+  gap: 0;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+  padding: 6px 0;
+  width: 36px;
+  margin: 0 auto;
+}
+
+.weekNumberHeader {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  padding: 6px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Days grid */
+.daysGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+
+.daysGridWithWeeks {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.weekRow {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: center;
+}
+
+.weekRowDays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+
+.weekNumber {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Day cell wrapper — handles range background that flows edge-to-edge */
+.dayWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 2px 0;
+}
+
+.rangeMiddle {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.rangeStart {
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    transparent 50%,
+    var(--accent) 50%,
+    var(--accent) 100%
+  );
+}
+
+.rangeEnd {
+  background: linear-gradient(
+    to right,
+    var(--accent) 0%,
+    var(--accent) 50%,
+    transparent 50%,
+    transparent 100%
+  );
+}
+
+/* Day cell — square, rounded, ghost-button style */
+.day {
+  position: relative;
+  height: 36px;
+  width: 36px;
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--foreground);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.day:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.day:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.outsideMonth {
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+
+.disabled {
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.disabled:hover:not(:disabled) {
+  background: transparent;
+}
+
+.today {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-weight: 500;
+}
+
+.selected,
+.selected:hover:not(:disabled) {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 500;
+}
+
+
+/* Modifier dots under the day number */
+.modifierDots {
+  position: absolute;
+  bottom: 3px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.selected .dot {
+  background: var(--primary-foreground) !important;
+}
+
+/* Price cell variant */
+.priceCell {
+  flex-direction: column;
+  height: 52px;
+  width: 100%;
+  gap: 2px;
+  padding: 4px;
+}
+
+.priceDay {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.priceValue {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-weight: 400;
+}
+
+.selected .priceValue {
+  color: var(--primary-foreground) !important;
+  opacity: 0.85;
+}
+
+/* Status cell variant */
+.statusCell {
+  flex-direction: column;
+  height: 52px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  background: var(--background);
+  gap: 2px;
+  align-items: flex-start;
+  padding: 6px 8px;
+}
+
+.statusLabel {
+  font-size: 9px;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  letter-spacing: 0.04em;
+}
+
+/* Footer */
+.footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.selectionInfo {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  margin-bottom: 12px;
+  min-height: 18px;
+}
+
+.errorText {
+  color: var(--destructive);
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* shadcn-style buttons */
+.clearButton,
+.todayButton,
+.confirmButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: calc(var(--radius) - 2px);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+  border: 1px solid transparent;
+}
+
+/* outline variant */
+.clearButton {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.clearButton:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* secondary/ghost variant for "Today" */
+.todayButton {
+  background: var(--muted);
+  color: var(--foreground);
+  border-color: transparent;
+}
+
+.todayButton:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* primary variant */
+.confirmButton {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: transparent;
+}
+
+.confirmButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.confirmButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Legend */
+.legend {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Bottom-sheet variant — input "trigger" matches shadcn Input */
+.sheetTriggerWrapper {
+  max-width: 320px;
+  margin: 0 auto 1.5rem;
+}
+
+.sheetTriggerInput {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: hsl(0 0% 100%);
+  border: 1px solid hsl(214.3 31.8% 91.4%);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  color: hsl(215.4 16.3% 46.9%);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.sheetTriggerInput:hover {
+  border-color: hsl(222.2 84% 4.9%);
+}
+
+.sheetTriggerInput:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(222.2 84% 4.9%);
+}
+
+[data-theme='dark'] .sheetTriggerInput {
+  background: hsl(222.2 84% 4.9%);
+  border-color: hsl(217.2 32.6% 17.5%);
+  color: hsl(215 20.2% 65.1%);
+}
+
+[data-theme='dark'] .sheetTriggerInput:hover {
+  border-color: hsl(212.7 26.8% 83.9%);
+}
+
+.sheetTriggerLabel {
+  text-align: left;
+}
+
+.sheetTriggerIcon {
+  font-size: 16px;
+  opacity: 0.6;
+}
+
+.sheetTriggerHelper {
+  margin-top: 6px;
+  font-size: 12px;
+  color: hsl(215.4 16.3% 46.9%);
+  text-align: center;
+}
+
+[data-theme='dark'] .sheetTriggerHelper {
+  color: hsl(215 20.2% 65.1%);
+}
+
+.sheetOverlay {
+  position: relative;
+  background: hsla(222.2, 84%, 4.9%, 0.5);
+  border-radius: 0.5rem;
+  padding: 36px 12px 0;
+  min-height: 460px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  max-width: 420px;
+}
+
+.sheetContainer {
+  width: 100%;
+  background: hsl(0 0% 100%);
+  border: 1px solid hsl(214.3 31.8% 91.4%);
+  border-bottom: none;
+  border-radius: 0.75rem 0.75rem 0 0;
+  padding: 12px 0 0;
+  box-shadow: 0 -4px 12px hsla(222.2, 84%, 4.9%, 0.1);
+}
+
+[data-theme='dark'] .sheetContainer {
+  background: hsl(222.2 84% 4.9%);
+  border-color: hsl(217.2 32.6% 17.5%);
+}
+
+.sheetHandle {
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: hsl(214.3 31.8% 91.4%);
+  margin: 0 auto 8px;
+}
+
+[data-theme='dark'] .sheetHandle {
+  background: hsl(217.2 32.6% 17.5%);
+}
+
+.sheetContainer .calendarContainer {
+  border: none;
+  margin: 0;
+  border-radius: 0;
+  max-width: 100%;
+  padding: 8px 16px 16px;
+}
+
+/* Vertical (infinite) variant */
+.verticalContainer {
+  background: var(--background, hsl(0 0% 100%));
+  border: 1px solid hsl(214.3 31.8% 91.4%);
+  border-radius: 0.5rem;
+  max-width: 320px;
+  margin: 0 auto 1.5rem;
+  overflow: hidden;
+}
+
+[data-theme='dark'] .verticalContainer {
+  background: hsl(222.2 84% 4.9%);
+  border-color: hsl(217.2 32.6% 17.5%);
+}
+
+.verticalScroll {
+  max-height: 440px;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.verticalScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.verticalScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.verticalScroll::-webkit-scrollbar-thumb {
+  background: hsl(214.3 31.8% 91.4%);
+  border-radius: 4px;
+}
+
+[data-theme='dark'] .verticalScroll::-webkit-scrollbar-thumb {
+  background: hsl(217.2 32.6% 17.5%);
+}
+
+.verticalMonth {
+  margin-bottom: 16px;
+}
+
+.verticalMonth:last-child {
+  margin-bottom: 0;
+}
+
+.verticalMonthCaption {
+  position: sticky;
+  top: -12px;
+  background: hsl(0 0% 100%);
+  font-weight: 500;
+  font-size: 14px;
+  color: hsl(222.2 84% 4.9%);
+  padding: 8px 0;
+  margin-bottom: 4px;
+  border-bottom: 1px solid hsl(214.3 31.8% 91.4%);
+  z-index: 1;
+}
+
+[data-theme='dark'] .verticalMonthCaption {
+  background: hsl(222.2 84% 4.9%);
+  color: hsl(210 40% 98%);
+  border-bottom-color: hsl(217.2 32.6% 17.5%);
+}
+
+/* Demo badge (kept for backward compat with intro page) */
+.demoBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  background: hsl(210 40% 96.1%);
+  color: hsl(222.2 47.4% 11.2%);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  border: 1px solid hsl(214.3 31.8% 91.4%);
+}
+
+[data-theme='dark'] .demoBadge {
+  background: hsl(217.2 32.6% 17.5%);
+  color: hsl(210 40% 98%);
+  border-color: hsl(217.2 32.6% 17.5%);
+}

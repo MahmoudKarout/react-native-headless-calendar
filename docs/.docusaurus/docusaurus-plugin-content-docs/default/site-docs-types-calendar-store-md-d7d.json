@@ -1,0 +1,27 @@
+{
+  "id": "types/calendar-store",
+  "title": "CalendarStore",
+  "description": "The CalendarStore class is the external store that manages all calendar state. It provides granular subscriptions and stable action methods.",
+  "source": "@site/docs/types/calendar-store.md",
+  "sourceDirName": "types",
+  "slug": "/types/calendar-store",
+  "permalink": "/docs/types/calendar-store",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/types/calendar-store.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 9,
+  "frontMatter": {
+    "sidebar_position": 9
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "CalendarSnapshot",
+    "permalink": "/docs/types/calendar-snapshot"
+  },
+  "next": {
+    "title": "CalendarRootProps",
+    "permalink": "/docs/types/calendar-root-props"
+  }
+}

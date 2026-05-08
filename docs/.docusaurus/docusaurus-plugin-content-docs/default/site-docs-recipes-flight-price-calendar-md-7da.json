@@ -1,0 +1,27 @@
+{
+  "id": "recipes/flight-price-calendar",
+  "title": "Flight Price Calendar",
+  "description": "A dark-themed, fare-aware date range picker — the kind of UI Skyscanner, Google Flights, and Kayak use to surface the cheapest departure / return combinations at a glance.",
+  "source": "@site/docs/recipes/flight-price-calendar.md",
+  "sourceDirName": "recipes",
+  "slug": "/recipes/flight-price-calendar",
+  "permalink": "/docs/recipes/flight-price-calendar",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/recipes/flight-price-calendar.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 10,
+  "frontMatter": {
+    "sidebar_position": 10
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Vertical List",
+    "permalink": "/docs/recipes/vertical-list"
+  },
+  "next": {
+    "title": "Custom Calendar System",
+    "permalink": "/docs/advanced/custom-calendar-system"
+  }
+}

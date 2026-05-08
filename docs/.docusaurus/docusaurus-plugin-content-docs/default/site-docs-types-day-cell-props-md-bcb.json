@@ -1,0 +1,27 @@
+{
+  "id": "types/day-cell-props",
+  "title": "DayCellProps",
+  "description": "The DayCellProps interface defines all props accepted by the DayCell component.",
+  "source": "@site/docs/types/day-cell-props.md",
+  "sourceDirName": "types",
+  "slug": "/types/day-cell-props",
+  "permalink": "/docs/types/day-cell-props",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/types/day-cell-props.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 13,
+  "frontMatter": {
+    "sidebar_position": 13
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "DayGridProps",
+    "permalink": "/docs/types/day-grid-props"
+  },
+  "next": {
+    "title": "buildMonthGrid",
+    "permalink": "/docs/utilities/build-month-grid"
+  }
+}

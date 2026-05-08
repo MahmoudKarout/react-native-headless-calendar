@@ -1,0 +1,27 @@
+{
+  "id": "recipes/multi-month-grid",
+  "title": "Multi-Month Grid",
+  "description": "Display multiple months side-by-side — useful for travel booking, seasonal planning, and date range selection.",
+  "source": "@site/docs/recipes/multi-month-grid.md",
+  "sourceDirName": "recipes",
+  "slug": "/recipes/multi-month-grid",
+  "permalink": "/docs/recipes/multi-month-grid",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/recipes/multi-month-grid.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_position": 5
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Bounded Selection",
+    "permalink": "/docs/recipes/bounded-selection"
+  },
+  "next": {
+    "title": "Custom Day Cell",
+    "permalink": "/docs/recipes/custom-day-cell"
+  }
+}

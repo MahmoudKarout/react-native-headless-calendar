@@ -1,0 +1,27 @@
+{
+  "id": "hooks/use-calendar-system-switcher",
+  "title": "useCalendarSystemSwitcher",
+  "description": "The useCalendarSystemSwitcher hook provides the list of configured calendar systems, the active system ID, and a function to switch between them.",
+  "source": "@site/docs/hooks/use-calendar-system-switcher.md",
+  "sourceDirName": "hooks",
+  "slug": "/hooks/use-calendar-system-switcher",
+  "permalink": "/docs/hooks/use-calendar-system-switcher",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/docs/hooks/use-calendar-system-switcher.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 10,
+  "frontMatter": {
+    "sidebar_position": 10
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "useCalendarYearPicker",
+    "permalink": "/docs/hooks/use-calendar-year-picker"
+  },
+  "next": {
+    "title": "useCalendarSelectedDates",
+    "permalink": "/docs/hooks/use-calendar-selected-dates"
+  }
+}

@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import CalendarDemo from '../../src/CalendarDemo';
 import ArabicCalendarExample from '../../src/ArabicCalendarExample';
 import BottomSheetCalendarDemo from '../../src/BottomSheetExample';
+import FlightPriceExample from '../../src/FlightPriceExample';
 import VerticalCalendarDemo from '../../src/VerticalCalendarExample';
 import {
   VerticalRangeExample,
@@ -71,6 +72,19 @@ export const BottomSheet: StoryObj = {
   render: () => (
     <View style={{ flex: 1 }}>
       <BottomSheetCalendarDemo />
+    </View>
+  ),
+};
+
+// ---------------------------------------------------------------------------
+// Flight price calendar — dark themed, fare-aware range picker
+// ---------------------------------------------------------------------------
+
+export const FlightPrice: StoryObj = {
+  name: 'Flight Price (range + fares)',
+  render: () => (
+    <View style={{ flex: 1, backgroundColor: '#000000' }}>
+      <FlightPriceExample />
     </View>
   ),
 };
