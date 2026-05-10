@@ -13,11 +13,11 @@
  *       plugins: ['react-native-reanimated/plugin']
  */
 import {
-  forwardRef,
   useCallback,
   useImperativeHandle,
   useRef,
   useState,
+  type Ref,
 } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
@@ -260,10 +260,13 @@ interface SingleDatePickerProps {
   initialDate?: Date;
 }
 
-export const SingleDatePickerSheet = forwardRef<
-  SingleDatePickerRef,
-  SingleDatePickerProps
->(({ onSelect, minDate, maxDate, initialDate }, ref) => {
+function SingleDatePickerSheet({
+  onSelect,
+  minDate,
+  maxDate,
+  initialDate,
+  ref,
+}: SingleDatePickerProps & { ref?: Ref<SingleDatePickerRef> }) {
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
   useImperativeHandle(ref, () => ({
@@ -339,9 +342,7 @@ export const SingleDatePickerSheet = forwardRef<
       </BottomSheetView>
     </BottomSheetModal>
   );
-});
-
-SingleDatePickerSheet.displayName = 'SingleDatePickerSheet';
+}
 
 // =============================================================================
 // Range Date Picker Bottom Sheet
@@ -359,10 +360,13 @@ interface RangeDatePickerProps {
   maxRangeDays?: number;
 }
 
-export const RangeDatePickerSheet = forwardRef<
-  RangeDatePickerRef,
-  RangeDatePickerProps
->(({ onSelect, minDate, maxDate, maxRangeDays }, ref) => {
+function RangeDatePickerSheet({
+  onSelect,
+  minDate,
+  maxDate,
+  maxRangeDays,
+  ref,
+}: RangeDatePickerProps & { ref?: Ref<RangeDatePickerRef> }) {
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
   useImperativeHandle(ref, () => ({
@@ -424,9 +428,7 @@ export const RangeDatePickerSheet = forwardRef<
       </BottomSheetView>
     </BottomSheetModal>
   );
-});
-
-RangeDatePickerSheet.displayName = 'RangeDatePickerSheet';
+}
 
 // =============================================================================
 // Demo Screen

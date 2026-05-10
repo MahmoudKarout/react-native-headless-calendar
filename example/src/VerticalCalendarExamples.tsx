@@ -32,7 +32,6 @@
  * untouched as the minimal recipe for projects copying the pattern.
  */
 import {
-  forwardRef,
   memo,
   useCallback,
   useEffect,
@@ -41,6 +40,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type Ref,
 } from 'react';
 import {
   I18nManager,
@@ -83,7 +83,6 @@ import {
   type DayCellInfo,
   type DayRenderer,
   type MonthCaptionProps,
-  type WeekdayCellProps,
   type WeekdayHeaderProps,
   type WeekNumberCellProps,
 } from 'react-native-fast-calendar';
@@ -342,15 +341,16 @@ function MonthSectionComponent({
   // June 1?" confusion the iOS Calendar avoids by suppressing outside
   // days. The spacer keeps the 7-column grid aligned under the sticky
   // weekday header.
-  const renderCell = (info: DayCellInfo, idx: number): ReactNode => {
+  const renderCell = (info: DayCellInfo): ReactNode => {
+    const k = info.nativeDate.toISOString();
     if (!info.isCurrentMonth) {
-      return <View key={idx} style={styles.spacerCell} />;
+      return <View key={k} style={styles.spacerCell} />;
     }
-    if (renderDay) return <View key={idx}>{renderDay(info)}</View>;
+    if (renderDay) return <View key={k}>{renderDay(info)}</View>;
     if (SlotDayCell) {
-      return <SlotDayCell info={info} key={idx} onSelect={onSelect} />;
+      return <SlotDayCell info={info} key={k} onSelect={onSelect} />;
     }
-    return <DayCell info={info} key={idx} onSelect={onSelect} />;
+    return <DayCell info={info} key={k} onSelect={onSelect} />;
   };
 
   return (
@@ -376,9 +376,7 @@ function MonthSectionComponent({
               )}
               {cellInfos
                 .slice(rowIdx * COLS, rowIdx * COLS + COLS)
-                .map((info, colIdx) =>
-                  renderCell(info, rowIdx * COLS + colIdx)
-                )}
+                .map((info) => renderCell(info))}
             </View>
           ))}
         </View>
@@ -387,7 +385,7 @@ function MonthSectionComponent({
         <View style={[styles.monthGrid, { width: sectionWidth }]}>
           {cellInfos
             .slice(0, visibleCellCount)
-            .map((info, idx) => renderCell(info, idx))}
+            .map((info) => renderCell(info))}
         </View>
       )}
     </View>
@@ -434,9 +432,9 @@ function WeekdayHeaderRow({ showWeekNumbers }: WeekdayHeaderRowProps) {
       {showWeekNumbers && <View style={styles.weekNumberCell} />}
       {labels.map((l, i) =>
         Cell ? (
-          <Cell index={i} key={`${l}-${i}`} label={l} />
+          <Cell index={i} key={l} label={l} />
         ) : (
-          <Text key={`${l}-${i}`} style={styles.weekdayLabel}>
+          <Text key={l} style={styles.weekdayLabel}>
             {l.slice(0, 3)}
           </Text>
         )
@@ -460,10 +458,11 @@ interface VerticalMonthListProps {
   showWeekNumbers?: boolean;
 }
 
-const VerticalMonthList = forwardRef<
-  VerticalMonthListHandle,
-  VerticalMonthListProps
->(function VerticalMonthList({ renderDay, showWeekNumbers }, ref) {
+function VerticalMonthList({
+  renderDay,
+  showWeekNumbers,
+  ref,
+}: VerticalMonthListProps & { ref?: Ref<VerticalMonthListHandle> }) {
   const system = useCalendarSelector((s) => s.system);
   const displayed = useCalendarSelector((s) => s.displayed);
 
@@ -605,7 +604,7 @@ const VerticalMonthList = forwardRef<
       style={styles.list}
     />
   );
-});
+}
 
 // ---------------------------------------------------------------------------
 // VerticalCalendarShell — composes the screen-fillingscaffold every
@@ -1152,7 +1151,7 @@ const BorderedWeekdayHeader: NonNullable<
   <View style={styles.borderedWeekdayHeader}>
     {labels.map((l, i) => (
       <View
-        key={`${l}-${i}`}
+        key={l}
         style={[
           styles.borderedWeekdayCell,
           i < labels.length - 1 && styles.borderedWeekdayCellDivider,
@@ -1172,16 +1171,6 @@ const ShoutyWeekNumberCell: NonNullable<
   </View>
 );
 
-/**
- * Per-column weekday cell. Ignored when `WeekdayHeader` is also
- * provided (full-row override wins), but exported as a recipe for
- * projects that want to swap typography only.
- */
-export const SubtleWeekdayCell: NonNullable<
-  CalendarComponents['WeekdayCell']
-> = ({ label }: WeekdayCellProps) => (
-  <Text style={styles.subtleWeekday}>{label.slice(0, 1)}</Text>
-);
 
 export function VerticalCustomSlotsExample() {
   return (
@@ -1613,11 +1602,7 @@ const styles = StyleSheet.create({
   },
   segmentedItemActive: {
     backgroundColor: C.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
   },
   segmentedItemPressed: {
     opacity: 0.6,

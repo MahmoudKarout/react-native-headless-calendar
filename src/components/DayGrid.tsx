@@ -54,7 +54,6 @@ import {
 import {
   COLS,
   ROWS,
-  TOTAL_CELLS,
   buildMonthGrid,
   isBetween,
   isExplicitlyDisabled,
@@ -133,7 +132,7 @@ const WeekdayHeaderComponent: React.FC<WeekdayHeaderComponentProps> = ({
     <View style={weekdayHeaderStyle.container}>
       {showWeekNumbers && <View style={{ width: theme.cellSize }} />}
       {labels.map((label, idx) => (
-        <Cell key={`${label}-${idx}`} label={label} index={idx} />
+        <Cell key={label} label={label} index={idx} />
       ))}
     </View>
   );
@@ -457,27 +456,25 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
           flexWrap: 'wrap',
         }}
       >
-        {cellInfos.slice(0, visibleCellCount).map((info, idx) => {
+        {cellInfos.slice(0, visibleCellCount).map((info) => {
+          const k = info.nativeDate.toISOString();
           // showOutsideDays={false} → keep the cell slot but render an
           // invisible spacer so the column grid stays aligned.
           if (!showOutsideDays && !info.isCurrentMonth) {
             return (
               <View
-                key={idx}
+                key={k}
                 style={{ width: theme.cellSize, height: theme.cellSize }}
               />
             );
           }
           if (renderDay) {
-            return <Fragment key={idx}>{renderDay(info)}</Fragment>;
+            return <Fragment key={k}>{renderDay(info)}</Fragment>;
           }
           if (SlotDayCell) {
-            return <SlotDayCell info={info} key={idx} onSelect={onSelect} />;
+            return <SlotDayCell info={info} key={k} onSelect={onSelect} />;
           }
-          /* istanbul ignore next — defensive guard; cellInfos is always
-           * exactly TOTAL_CELLS entries long. */
-          if (idx >= TOTAL_CELLS) return null;
-          return <DayCell info={info} key={idx} onSelect={onSelect} />;
+          return <DayCell info={info} key={k} onSelect={onSelect} />;
         })}
       </View>
     );
@@ -488,7 +485,7 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
   return (
     <View style={{ width: pageWidth ?? '100%' }}>
       {weekNumbers.map((wn, rowIdx) => (
-        <View key={rowIdx} style={weekNumberRowStyle.row}>
+        <View key={wn} style={weekNumberRowStyle.row}>
           {SlotWeekNumberCell ? (
             <SlotWeekNumberCell weekNumber={wn} />
           ) : (
@@ -511,25 +508,25 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
           )}
           {cellInfos
             .slice(rowIdx * COLS, rowIdx * COLS + COLS)
-            .map((info, colIdx) => {
-              const idx = rowIdx * COLS + colIdx;
+            .map((info) => {
+              const k = info.nativeDate.toISOString();
               if (!showOutsideDays && !info.isCurrentMonth) {
                 return (
                   <View
-                    key={idx}
+                    key={k}
                     style={{ width: theme.cellSize, height: theme.cellSize }}
                   />
                 );
               }
               if (renderDay) {
-                return <Fragment key={idx}>{renderDay(info)}</Fragment>;
+                return <Fragment key={k}>{renderDay(info)}</Fragment>;
               }
               if (SlotDayCell) {
                 return (
-                  <SlotDayCell info={info} key={idx} onSelect={onSelect} />
+                  <SlotDayCell info={info} key={k} onSelect={onSelect} />
                 );
               }
-              return <DayCell info={info} key={idx} onSelect={onSelect} />;
+              return <DayCell info={info} key={k} onSelect={onSelect} />;
             })}
         </View>
       ))}
@@ -1026,9 +1023,9 @@ const DayGridComponent: React.FC<DayGridProps> = ({
       // eslint-disable-next-line react-native/no-inline-styles
       style={{ flexDirection: 'row', gap: theme.spacing.monthGap }}
     >
-      {monthsToRender.map((m, i) => (
+      {monthsToRender.map((m) => (
         <View
-          key={i}
+          key={`${system.year(m)}-${system.month(m)}`}
           // eslint-disable-next-line react-native/no-inline-styles
           style={{
             gap: 8,

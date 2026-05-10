@@ -193,7 +193,7 @@ export default function CalendarDemo({
           setErrorMessage(`Maximum ${maxSelected} dates allowed`);
           return;
         }
-        setSelectedDates([...selectedDates, date]);
+        setSelectedDates((prev) => [...prev, date]);
       }
       return;
     }
@@ -491,7 +491,7 @@ export default function CalendarDemo({
                 onClick={() => setSheetOpen(false)}
                 disabled={!hasSelection}
               >
-                Done
+                Confirm selection
               </button>
             )}
           </div>

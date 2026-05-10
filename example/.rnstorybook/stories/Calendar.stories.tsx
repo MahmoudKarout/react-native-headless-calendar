@@ -83,7 +83,7 @@ export const BottomSheet: StoryObj = {
 export const FlightPrice: StoryObj = {
   name: 'Flight Price (range + fares)',
   render: () => (
-    <View style={{ flex: 1, backgroundColor: '#000000' }}>
+    <View style={{ flex: 1, backgroundColor: '#0a0a0f' }}>
       <FlightPriceExample />
     </View>
   ),

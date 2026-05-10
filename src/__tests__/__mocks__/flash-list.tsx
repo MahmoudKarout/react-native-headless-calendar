@@ -112,37 +112,36 @@ const resolveInitialIndex = (
   return 0;
 };
 
-export const FlashList = React.forwardRef<unknown, MockFlashListProps>(
-  (props, refArg) => {
-    state.props = props;
-    React.useImperativeHandle(refArg, () => ref, []);
+export function FlashList({
+  ref: refArg,
+  ...props
+}: MockFlashListProps & { ref?: React.Ref<unknown> }) {
+  state.props = props;
+  React.useImperativeHandle(refArg, () => ref, []);
 
-    const data: ReadonlyArray<unknown> = props.data ?? [];
-    const idx = resolveInitialIndex(props.initialScrollIndex);
-    const item = data[idx];
+  const data: ReadonlyArray<unknown> = props.data ?? [];
+  const idx = resolveInitialIndex(props.initialScrollIndex);
+  const item = data[idx];
 
-    // Exercise the keyExtractor for every item so its branch is covered
-    // by the very first render — matches what a real list does as it
-    // populates its key map.
-    if (typeof props.keyExtractor === 'function') {
-      for (let i = 0; i < data.length; i += 1) {
-        props.keyExtractor(data[i], i);
-      }
+  // Exercise the keyExtractor for every item so its branch is covered
+  // by the very first render — matches what a real list does as it
+  // populates its key map.
+  if (typeof props.keyExtractor === 'function') {
+    for (let i = 0; i < data.length; i += 1) {
+      props.keyExtractor(data[i], i);
     }
-
-    const node =
-      item !== undefined && typeof props.renderItem === 'function'
-        ? props.renderItem({
-            item,
-            index: idx,
-            data,
-            extraData: props.extraData,
-            type: undefined,
-          })
-        : null;
-
-    return <View testID={props.testID}>{node}</View>;
   }
-);
 
-FlashList.displayName = 'MockFlashList';
+  const node =
+    item !== undefined && typeof props.renderItem === 'function'
+      ? props.renderItem({
+          item,
+          index: idx,
+          data,
+          extraData: props.extraData,
+          type: undefined,
+        })
+      : null;
+
+  return <View testID={props.testID}>{node}</View>;
+}

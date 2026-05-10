@@ -31,13 +31,13 @@
  * copy if it wanted the same UX.
  */
 import {
-  forwardRef,
   useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
   useState,
+  type Ref,
 } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
@@ -232,11 +232,12 @@ function MonthSectionComponent({ month }: MonthSectionProps) {
     <View style={styles.monthSection}>
       <Text style={styles.monthHeader}>{system.formatMonthYear(month)}</Text>
       <View style={styles.monthGrid}>
-        {cellInfos.slice(0, visibleCellCount).map((info, idx) => {
+        {cellInfos.slice(0, visibleCellCount).map((info) => {
+          const k = info.nativeDate.toISOString();
           if (!showOutsideDays && !info.isCurrentMonth) {
-            return <View key={idx} style={styles.spacerCell} />;
+            return <View key={k} style={styles.spacerCell} />;
           }
-          return <DayCell info={info} key={idx} onSelect={onSelect} />;
+          return <DayCell info={info} key={k} onSelect={onSelect} />;
         })}
       </View>
     </View>
@@ -254,8 +255,8 @@ function WeekdayHeaderRow() {
   const labels = useCalendarWeekdayLabels();
   return (
     <View style={styles.weekdayRow}>
-      {labels.map((l, i) => (
-        <Text key={`${l}-${i}`} style={styles.weekdayLabel}>
+      {labels.map((l) => (
+        <Text key={l} style={styles.weekdayLabel}>
           {l.slice(0, 3)}
         </Text>
       ))}
@@ -286,8 +287,7 @@ interface VerticalMonthListHandle {
   scrollToMonth: (date: CalendarDateValue) => void;
 }
 
-const VerticalMonthList = forwardRef<VerticalMonthListHandle>(
-  function VerticalMonthList(_props, ref) {
+function VerticalMonthList({ ref }: { ref?: Ref<VerticalMonthListHandle> }) {
     const system = useCalendarSelector((s) => s.system);
     const displayed = useCalendarSelector((s) => s.displayed);
 
@@ -403,8 +403,7 @@ const VerticalMonthList = forwardRef<VerticalMonthListHandle>(
         style={styles.list}
       />
     );
-  }
-);
+}
 
 // ---------------------------------------------------------------------------
 // Top-level demo screen.
@@ -447,7 +446,7 @@ export default function VerticalCalendarDemo() {
       <View style={styles.headerBlock}>
         <Text style={styles.title}>Infinite vertical calendar</Text>
         <Text style={styles.subtitle}>
-          iOS-style continuous month list. Scroll forever in either direction —
+          iOS-style continuous month list. Scroll forever in either direction;
           months are virtualised and grow on demand.
         </Text>
       </View>

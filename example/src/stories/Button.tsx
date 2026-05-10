@@ -1,5 +1,5 @@
 import type { StyleProp, ViewStyle } from 'react-native';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export interface ButtonProps {
   /** Is this the principal call to action on the page? */
@@ -31,7 +31,7 @@ export const Button = ({
   const textSizeStyle = textSizeStyles[size];
 
   return (
-    <TouchableOpacity accessibilityRole="button" activeOpacity={0.6} onPress={onPress}>
+    <Pressable accessibilityRole="button" style={({ pressed }) => pressed && { opacity: 0.6 }} onPress={onPress}>
       <View
         style={[
           styles.button,
@@ -44,7 +44,7 @@ export const Button = ({
       >
         <Text style={[textModeStyle, textSizeStyle]}>{label}</Text>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 

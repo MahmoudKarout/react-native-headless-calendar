@@ -18,13 +18,12 @@
  *  - "Reset counters" remounts <Calendar.Root> via a key change, which
  *    destroys every cell instance and starts all counts from 1.
  */
-import React, { memo, useRef, useState } from 'react';
+import { memo, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -149,25 +148,25 @@ function PerfHeader() {
 
   return (
     <View style={styles.header}>
-      <TouchableOpacity
+      <Pressable
         onPress={goPrev}
         style={styles.navBtn}
         accessibilityLabel="Previous month"
       >
         <Text style={styles.navBtnText}>‹</Text>
-      </TouchableOpacity>
+      </Pressable>
 
       <Text style={styles.headerTitle}>
         {month.label} {year.label}
       </Text>
 
-      <TouchableOpacity
+      <Pressable
         onPress={goNext}
         style={styles.navBtn}
         accessibilityLabel="Next month"
       >
         <Text style={styles.navBtnText}>›</Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }
@@ -190,7 +189,7 @@ export default function PerfCalendarDemo() {
           <Text style={styles.cardDescription}>
             Each cell is wrapped in{' '}
             <Text style={styles.code}>React.memo</Text>. The counter shows how
-            many times it has rendered since mount — select a range and watch
+            many times it has rendered since mount. Select a range and watch
             only the affected cells update.
           </Text>
         </View>
@@ -220,14 +219,14 @@ export default function PerfCalendarDemo() {
 
         {/* reset button lives outside Root so it survives the remount */}
         <View style={styles.footer}>
-          <TouchableOpacity
+          <Pressable
             onPress={() => setResetKey((k) => k + 1)}
             style={styles.resetBtn}
             accessibilityRole="button"
             accessibilityLabel="Reset render counters"
           >
             <Text style={styles.resetBtnText}>Reset counters</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </ScrollView>

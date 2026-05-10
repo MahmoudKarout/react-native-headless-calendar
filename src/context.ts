@@ -17,8 +17,8 @@
  */
 import {
   createContext,
+  use,
   useCallback,
-  useContext,
   useMemo,
   useSyncExternalStore,
 } from 'react';
@@ -53,7 +53,7 @@ import {
 export const CalendarStoreContext = createContext<CalendarStore | null>(null);
 
 export function useCalendarStore(): CalendarStore {
-  const store = useContext(CalendarStoreContext);
+  const store = use(CalendarStoreContext);
   if (!store) {
     throw new Error(
       '[Calendar] useCalendarStore must be used within <Calendar.Root>'
@@ -121,7 +121,7 @@ export interface CalendarConfig {
 export const CalendarConfigContext = createContext<CalendarConfig | null>(null);
 
 export function useCalendarConfig(): CalendarConfig {
-  const config = useContext(CalendarConfigContext);
+  const config = use(CalendarConfigContext);
   if (!config) {
     throw new Error(
       '[Calendar] useCalendarConfig must be used within <Calendar.Root>'

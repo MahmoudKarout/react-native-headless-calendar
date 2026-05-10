@@ -63,7 +63,6 @@ import {
   type CalendarSystem,
   type CalendarThemeOverride,
   type DayCellInfo,
-  type WeekdayCellProps,
   type WeekdayHeaderProps,
   type WeekNumberCellProps,
 } from 'react-native-fast-calendar';
@@ -895,7 +894,7 @@ const BorderedWeekdayHeader: NonNullable<
   <View style={styles.borderedWeekdayHeader}>
     {labels.map((l, i) => (
       <View
-        key={`${l}-${i}`}
+        key={l}
         style={[
           styles.borderedWeekdayCell,
           i < labels.length - 1 && styles.borderedWeekdayCellDivider,
@@ -915,17 +914,6 @@ const ShoutyWeekNumberCell: NonNullable<
   </View>
 );
 
-/**
- * Alternative weekday cell — `WeekdayCell` is the per-column slot used
- * by the default `WeekdayHeader`. Swap it on its own to keep layout but
- * change typography. Ignored here because we override `WeekdayHeader`
- * outright, but exported as a recipe.
- */
-export const SubtleWeekdayCell: NonNullable<
-  CalendarComponents['WeekdayCell']
-> = ({ label }: WeekdayCellProps) => (
-  <Text style={styles.subtleWeekday}>{label.slice(0, 1)}</Text>
-);
 
 function CustomSlotsExample() {
   return (
@@ -1146,7 +1134,7 @@ export default function CalendarDemo() {
         <Text style={styles.introTitle}>Headless calendar, your UI</Text>
         <Text style={styles.introBody}>
           Nine self-contained recipes. Every visual in this demo is consumer
-          code — the library only ships &lt;Calendar.Root&gt; and
+          code: the library only ships &lt;Calendar.Root&gt; and
           &lt;Calendar.DayGrid&gt;.
         </Text>
       </View>
@@ -1387,11 +1375,7 @@ const styles = StyleSheet.create({
   },
   segmentedItemActive: {
     backgroundColor: C.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
   },
   segmentedItemPressed: {
     backgroundColor: C.mutedHover,
