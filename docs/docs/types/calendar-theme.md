@@ -22,11 +22,11 @@ interface CalendarTheme {
     border: string;
   };
   spacing: {
-    xs: number;
-    sm: number;
-    md: number;
-    lg: number;
-    xl: number;
+    cellInnerGap: number;
+    controlGap: number;
+    controlPadding: number;
+    monthGap: number;
+    containerPadding: number;
   };
   cellSize: number;
   borderRadius: number;
@@ -123,15 +123,15 @@ border: '#3F3F46' // Dark (zinc-700)
 
 ## Spacing
 
-Spacing tokens for consistent layout.
+Spacing tokens for consistent layout across custom components. Read at runtime via `useCalendarTheme().spacing`.
 
 ```ts
 spacing: {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
+  cellInnerGap: 4,       // Tight gap inside a cell — e.g. between the day number and modifier dots
+  controlGap: 8,         // Gap between adjacent controls — e.g. nav buttons, system-switcher pills
+  controlPadding: 12,    // Padding inside a button or control — e.g. horizontal inset of header buttons
+  monthGap: 16,          // Gap between months in multi-month layout (numberOfMonths > 1) — the only token consumed by the library
+  containerPadding: 24,  // Outer padding wrapping the whole calendar — e.g. inside a card or bottom sheet
 }
 ```
 
@@ -200,7 +200,7 @@ const defaultTheme: CalendarTheme = {
     disabled: '#D1D5DB',
     border: '#E5E7EB',
   },
-  spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 },
+  spacing: { cellInnerGap: 4, controlGap: 8, controlPadding: 12, monthGap: 16, containerPadding: 24 },
   cellSize: 40,
   borderRadius: 999,
   fontSize: { day: 14, weekday: 12, header: 16 },
@@ -222,7 +222,7 @@ const darkTheme: CalendarTheme = {
     disabled: '#52525B',
     border: '#3F3F46',
   },
-  spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 },
+  spacing: { cellInnerGap: 4, controlGap: 8, controlPadding: 12, monthGap: 16, containerPadding: 24 },
   cellSize: 40,
   borderRadius: 999,
   fontSize: { day: 14, weekday: 12, header: 16 },

@@ -91,5 +91,6 @@ example/android/
 storybook-static
 
 # Docusaurus
-
-/docs/.yarn
+docs/.docusaurus/
+docs/build/
+docs/.yarn

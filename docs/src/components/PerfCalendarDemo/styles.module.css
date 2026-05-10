@@ -1,0 +1,308 @@
+/*
+ * PerfCalendarDemo styles.
+ * Self-contained — uses the same neutral design tokens as CalendarDemo
+ * but scoped to .perfContainer so they don't bleed elsewhere.
+ */
+
+/* ─── design tokens ───────────────────────────────────────────────────── */
+.perfContainer {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(0 0% 5%);
+  --muted: hsl(0 0% 96%);
+  --muted-foreground: hsl(0 0% 45%);
+  --accent: hsl(0 0% 96%);
+  --accent-foreground: hsl(0 0% 5%);
+  --primary: hsl(0 0% 9%);
+  --primary-foreground: hsl(0 0% 98%);
+  --border: hsl(0 0% 91%);
+  --ring: hsl(0 0% 5%);
+  --radius: 0.5rem;
+
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  max-width: 340px;
+  margin: 0 auto;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-theme='dark'] .perfContainer {
+  --background: hsl(0 0% 5%);
+  --foreground: hsl(0 0% 98%);
+  --muted: hsl(0 0% 12%);
+  --muted-foreground: hsl(0 0% 65%);
+  --accent: hsl(0 0% 15%);
+  --accent-foreground: hsl(0 0% 98%);
+  --primary: hsl(0 0% 98%);
+  --primary-foreground: hsl(0 0% 9%);
+  --border: hsl(0 0% 16%);
+  --ring: hsl(0 0% 85%);
+}
+
+/* ─── header ──────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+}
+
+.navButton {
+  height: 28px;
+  width: 28px;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--foreground);
+  opacity: 0.7;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.navButton:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  opacity: 1;
+}
+
+.monthYear {
+  display: flex;
+  gap: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--foreground);
+}
+
+/* ─── counter hint bar ────────────────────────────────────────────────── */
+.perfHint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 0 8px;
+  font-size: 11px;
+  font-family: ui-monospace, 'Menlo', 'Monaco', 'Consolas', monospace;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.perfHintSep {
+  color: var(--muted-foreground);
+}
+
+.perfHintDim {
+  color: var(--muted-foreground);
+  font-weight: 500;
+  opacity: 0.55;
+}
+
+.perfHintHot {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+/* ─── weekday row ─────────────────────────────────────────────────────── */
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+  padding: 6px 0;
+  width: 40px;
+  margin: 0 auto;
+}
+
+/* ─── day grid ────────────────────────────────────────────────────────── */
+.daysGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+/* Wrapper handles the range-fill background that flows edge-to-edge */
+.dayWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 2px 0;
+}
+
+.rangeMiddle {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.rangeStart {
+  background: linear-gradient(
+    to right,
+    transparent 0%, transparent 50%,
+    var(--accent) 50%, var(--accent) 100%
+  );
+}
+
+.rangeEnd {
+  background: linear-gradient(
+    to right,
+    var(--accent) 0%, var(--accent) 50%,
+    transparent 50%, transparent 100%
+  );
+}
+
+/* ─── day cell ────────────────────────────────────────────────────────── */
+.day {
+  position: relative;
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  color: var(--foreground);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: inherit;
+}
+
+/* Perf variant — taller to fit render count below the number */
+.perfDay {
+  height: 44px;
+  width: 40px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 2px;
+}
+
+.day:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.day:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.outsideMonth {
+  color: var(--muted-foreground);
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+.day.today {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-weight: 500;
+}
+
+.day.selected,
+.day.selected:hover:not(:disabled) {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 500;
+}
+
+/* ─── render counter inside the cell ─────────────────────────────────── */
+.perfNum {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.perfCount {
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, 'Menlo', 'Monaco', 'Consolas', monospace;
+  color: var(--muted-foreground);
+  opacity: 0.45;
+  letter-spacing: -0.02em;
+}
+
+/* When count > 1 the counter becomes bold and fully visible */
+.perfCountHot {
+  opacity: 1;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+/* Make the counter contrast on selected (dark) cells */
+.selected .perfCount {
+  color: var(--primary-foreground);
+  opacity: 0.6;
+}
+
+.selected .perfCountHot {
+  opacity: 1;
+  color: var(--primary-foreground);
+}
+
+/* ─── footer ──────────────────────────────────────────────────────────── */
+.footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.selectionInfo {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-bottom: 10px;
+  min-height: 16px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.clearButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: calc(var(--radius) - 2px);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.clearButton:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}

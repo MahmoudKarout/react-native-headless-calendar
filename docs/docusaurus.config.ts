@@ -36,7 +36,6 @@ const config: Config = {
       } satisfies Preset.Options,
     ],
   ],
-
   themeConfig: {
     image: 'img/docusaurus-social-card.jpg',
     navbar: {
@@ -53,7 +52,7 @@ const config: Config = {
           label: 'Documentation',
         },
         {
-          href: 'https://github.com/react-native-fast-calendar/react-native-fast-calendar',
+          href: 'https://github.com/MahmoudKarout/react-native-fast-calendar',
           label: 'GitHub',
           position: 'right',
         },
@@ -70,8 +69,12 @@ const config: Config = {
               to: '/docs/intro',
             },
             {
-              label: 'API Reference',
-              to: '/docs/category/api-reference',
+              label: 'Components',
+              to: '/docs/components/simple-calendar',
+            },
+            {
+              label: 'Hooks',
+              to: '/docs/hooks/use-calendar-store',
             },
           ],
         },
@@ -80,7 +83,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/react-native-fast-calendar/react-native-fast-calendar',
+              href: 'https://github.com/MahmoudKarout/react-native-fast-calendar',
             },
           ],
         },
@@ -89,7 +92,7 @@ const config: Config = {
     },
     prism: {
       theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      darkTheme: prismThemes.vsDark,
     },
   } satisfies Preset.ThemeConfig,
 };

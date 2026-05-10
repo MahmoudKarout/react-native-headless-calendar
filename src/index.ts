@@ -23,7 +23,7 @@ export type { SimpleCalendarProps } from './components/SimpleCalendar';
 // The two stable rendered components — also exported individually for
 // consumers that prefer named imports over the namespace.
 export { Root } from './components/Root';
-export { DayCell, DayGrid } from './components/DayGrid';
+export { DayCell, DayGrid, dayCellPropsEqual } from './components/DayGrid';
 
 // Hooks — the headless surface. Compose into whatever UI you ship.
 export {

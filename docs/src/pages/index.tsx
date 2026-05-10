@@ -4,6 +4,7 @@ import Layout from '@theme/Layout';
 import CodeBlock from '@theme/CodeBlock';
 
 import CalendarDemo from '@site/src/components/CalendarDemo';
+import PerfCalendarDemo from '@site/src/components/PerfCalendarDemo';
 import styles from './index.module.css';
 
 const SIMPLE_EXAMPLE = `import { SimpleCalendar } from 'react-native-fast-calendar';
@@ -217,7 +218,7 @@ export default function Home(): JSX.Element {
               </Link>
               <Link
                 className={styles.ctaSecondary}
-                to="https://github.com/react-native-fast-calendar/react-native-fast-calendar"
+                to="https://github.com/MahmoudKarout/react-native-fast-calendar"
               >
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
                   <path
@@ -267,6 +268,30 @@ export default function Home(): JSX.Element {
                   <div className={styles.statLabel}>{stat.label}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* PERF DEMO */}
+        <section className={`${styles.section} ${styles.sectionMuted}`}>
+          <div className={styles.container}>
+            <SectionHeader
+              eyebrow="Granular re-renders"
+              title="One tap. One re-render."
+              description="Every day cell is an isolated reactive unit wrapped in React.memo. The tiny counter inside each cell shows exactly how many times it has rendered since the month was loaded — click any date and watch only the affected cells update."
+            />
+            <div className={styles.perfDemoWrapper}>
+              <PerfCalendarDemo />
+              <div className={styles.perfDemoCaption}>
+                <svg className={styles.perfDemoCaptionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 2 3 14h8l-1 8 10-12h-8l1-8Z" />
+                </svg>
+                <span>
+                  Cells frozen at <strong>1×</strong> never re-rendered. Only
+                  the cells whose state changed update — the header, footer, and
+                  every other day stay completely still.
+                </span>
+              </div>
             </div>
           </div>
         </section>

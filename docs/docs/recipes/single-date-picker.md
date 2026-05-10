@@ -14,7 +14,7 @@ Try selecting a date below:
 
 <CalendarDemo mode="single" />
 
-This demo mirrors what `<SimpleCalendar mode="single" />` produces — tap any day to select it and use **Clear** / **Today** for the headless [`useCalendarActions`](/docs/hooks/useCalendarActions) and [`useCalendarNavigation`](/docs/hooks/useCalendarNavigation) hooks.
+This demo mirrors what `<SimpleCalendar mode="single" />` produces — tap any day to select it and use **Clear** / **Today** for the headless [`useCalendarActions`](/docs/hooks/use-calendar-actions) and [`useCalendarNavigation`](/docs/hooks/use-calendar-navigation) hooks.
 
 ## Quick Start
 

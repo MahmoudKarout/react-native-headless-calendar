@@ -503,7 +503,7 @@ type CalendarTheme = {
   cellSize: number;       // e.g. 36, 40, 44
   borderRadius: number;
   fontSize: { day: number; weekday: number; header: number };
-  spacing: { xs; sm; md; lg; xl: number };
+  spacing: { cellInnerGap; controlGap; controlPadding; monthGap; containerPadding: number };
 };
 
 type CalendarThemeOverride = DeepPartial<CalendarTheme>;

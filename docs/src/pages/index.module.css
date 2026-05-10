@@ -4,15 +4,15 @@
  */
 .page {
   --bg: hsl(0 0% 100%);
-  --fg: hsl(222.2 84% 4.9%);
-  --muted: hsl(210 40% 96.1%);
-  --muted-fg: hsl(215.4 16.3% 46.9%);
-  --border: hsl(214.3 31.8% 91.4%);
-  --accent: hsl(210 40% 96.1%);
-  --accent-fg: hsl(222.2 47.4% 11.2%);
-  --primary: hsl(222.2 47.4% 11.2%);
-  --primary-fg: hsl(210 40% 98%);
-  --ring: hsl(222.2 84% 4.9%);
+  --fg: hsl(0 0% 5%);
+  --muted: hsl(0 0% 96%);
+  --muted-fg: hsl(0 0% 45%);
+  --border: hsl(0 0% 91%);
+  --accent: hsl(0 0% 96%);
+  --accent-fg: hsl(0 0% 5%);
+  --primary: hsl(0 0% 9%);
+  --primary-fg: hsl(0 0% 98%);
+  --ring: hsl(0 0% 5%);
   --radius: 0.5rem;
 
   background: var(--bg);
@@ -23,16 +23,16 @@
 }
 
 [data-theme='dark'] .page {
-  --bg: hsl(222.2 84% 4.9%);
-  --fg: hsl(210 40% 98%);
-  --muted: hsl(217.2 32.6% 17.5%);
-  --muted-fg: hsl(215 20.2% 65.1%);
-  --border: hsl(217.2 32.6% 17.5%);
-  --accent: hsl(217.2 32.6% 17.5%);
-  --accent-fg: hsl(210 40% 98%);
-  --primary: hsl(210 40% 98%);
-  --primary-fg: hsl(222.2 47.4% 11.2%);
-  --ring: hsl(212.7 26.8% 83.9%);
+  --bg: hsl(0 0% 5%);
+  --fg: hsl(0 0% 98%);
+  --muted: hsl(0 0% 12%);
+  --muted-fg: hsl(0 0% 65%);
+  --border: hsl(0 0% 16%);
+  --accent: hsl(0 0% 15%);
+  --accent-fg: hsl(0 0% 98%);
+  --primary: hsl(0 0% 98%);
+  --primary-fg: hsl(0 0% 9%);
+  --ring: hsl(0 0% 85%);
 }
 
 .container {
@@ -73,26 +73,7 @@
 }
 
 .heroBgGlow {
-  position: absolute;
-  top: -40%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 1200px;
-  height: 800px;
-  background: radial-gradient(
-    ellipse at center,
-    hsla(217, 91%, 60%, 0.12) 0%,
-    transparent 60%
-  );
-  pointer-events: none;
-}
-
-[data-theme='dark'] .heroBgGlow {
-  background: radial-gradient(
-    ellipse at center,
-    hsla(217, 91%, 60%, 0.18) 0%,
-    transparent 60%
-  );
+  display: none;
 }
 
 .heroInner {
@@ -124,8 +105,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: hsl(142 76% 45%);
-  box-shadow: 0 0 8px hsl(142 76% 45% / 0.6);
+  background: var(--fg);
+  opacity: 0.5;
 }
 
 .heroTitle {
@@ -139,15 +120,8 @@
 }
 
 .heroTitleAccent {
-  background: linear-gradient(
-    135deg,
-    hsl(217 91% 60%) 0%,
-    hsl(262 83% 58%) 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  color: var(--fg);
+  opacity: 0.55;
 }
 
 .heroSubtitle {
@@ -198,11 +172,11 @@
   color: var(--primary-fg);
   text-decoration: none;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px hsla(222, 47%, 11%, 0.15);
+  box-shadow: 0 4px 12px hsla(0, 0%, 0%, 0.15);
 }
 
 [data-theme='dark'] .ctaPrimary:hover {
-  box-shadow: 0 4px 12px hsla(0, 0%, 100%, 0.1);
+  box-shadow: 0 4px 12px hsla(0, 0%, 100%, 0.08);
 }
 
 .ctaSecondary {
@@ -234,7 +208,7 @@
 
 .installLabel {
   font-size: 13px;
-  color: hsl(142 71% 45%);
+  color: var(--muted-fg);
   font-weight: 600;
   user-select: none;
 }
@@ -262,17 +236,7 @@
 }
 
 .heroDemoWrapper::before {
-  content: '';
-  position: absolute;
-  inset: -40px -80px;
-  background: radial-gradient(
-    ellipse at center,
-    hsla(217, 91%, 60%, 0.18) 0%,
-    transparent 70%
-  );
-  pointer-events: none;
-  filter: blur(20px);
-  z-index: 0;
+  display: none;
 }
 
 .heroDemoFrame {
@@ -285,16 +249,16 @@
   border-radius: 12px;
   overflow: hidden;
   box-shadow:
-    0 1px 0 hsla(222, 47%, 11%, 0.04),
-    0 12px 40px hsla(222, 47%, 11%, 0.1),
-    0 2px 8px hsla(222, 47%, 11%, 0.04);
+    0 1px 0 hsla(0, 0%, 0%, 0.04),
+    0 12px 40px hsla(0, 0%, 0%, 0.08),
+    0 2px 8px hsla(0, 0%, 0%, 0.04);
 }
 
 [data-theme='dark'] .heroDemoFrame {
   box-shadow:
     0 1px 0 hsla(0, 0%, 100%, 0.04),
-    0 12px 40px hsla(0, 0%, 0%, 0.4),
-    0 2px 8px hsla(0, 0%, 0%, 0.2);
+    0 12px 40px hsla(0, 0%, 0%, 0.5),
+    0 2px 8px hsla(0, 0%, 0%, 0.25);
 }
 
 .heroDemoBar {
@@ -460,13 +424,13 @@
 }
 
 .featureCard:hover {
-  border-color: hsl(217 91% 60% / 0.4);
+  border-color: var(--fg);
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px hsla(222, 47%, 11%, 0.06);
+  box-shadow: 0 6px 24px hsla(0, 0%, 0%, 0.06);
 }
 
 [data-theme='dark'] .featureCard:hover {
-  box-shadow: 0 6px 24px hsla(0, 0%, 0%, 0.4);
+  box-shadow: 0 6px 24px hsla(0, 0%, 0%, 0.5);
 }
 
 .featureIcon {
@@ -615,21 +579,17 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(
-    90deg,
-    hsl(217 91% 60%) 0%,
-    hsl(262 83% 58%) 100%
-  );
+  background: var(--fg);
   opacity: 0;
   transition: opacity 0.2s ease;
 }
 
 .recipeCard:hover {
-  border-color: hsl(217 91% 60% / 0.4);
+  border-color: var(--fg);
   transform: translateY(-2px);
   text-decoration: none;
   color: inherit;
-  box-shadow: 0 6px 24px hsla(222, 47%, 11%, 0.06);
+  box-shadow: 0 6px 24px hsla(0, 0%, 0%, 0.06);
 }
 
 .recipeCard:hover::before {
@@ -637,7 +597,7 @@
 }
 
 [data-theme='dark'] .recipeCard:hover {
-  box-shadow: 0 6px 24px hsla(0, 0%, 0%, 0.4);
+  box-shadow: 0 6px 24px hsla(0, 0%, 0%, 0.5);
 }
 
 .recipeCardTitle {
@@ -691,23 +651,7 @@
 }
 
 .ctaCard::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at top,
-    hsla(217, 91%, 60%, 0.08) 0%,
-    transparent 60%
-  );
-  pointer-events: none;
-}
-
-[data-theme='dark'] .ctaCard::before {
-  background: radial-gradient(
-    ellipse at top,
-    hsla(217, 91%, 60%, 0.15) 0%,
-    transparent 60%
-  );
+  display: none;
 }
 
 .ctaTitle {
@@ -742,3 +686,38 @@
   font-size: 0.9em;
   font-family: ui-monospace, SFMono-Regular, 'Menlo', monospace;
 }
+
+/* ============================================================
+ * PERF DEMO wrapper
+ * ============================================================ */
+.perfDemoWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.perfDemoCaption {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 480px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted-fg);
+  text-align: left;
+}
+
+.perfDemoCaptionIcon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--muted-fg);
+}
+
+.perfDemoCaption strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+

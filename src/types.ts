@@ -154,11 +154,20 @@ export interface CalendarTheme {
     border: string;
   };
   spacing: {
-    xs: number;
-    sm: number;
-    md: number;
-    lg: number;
-    xl: number;
+    /** Tight gap inside a cell — e.g. between the day number and modifier dots below it. Default: 4 */
+    cellInnerGap: number;
+    /** Gap between adjacent controls — e.g. between nav buttons or system-switcher pills. Default: 8 */
+    controlGap: number;
+    /** Padding inside a button or control — e.g. horizontal inset of header/footer buttons. Default: 12 */
+    controlPadding: number;
+    /**
+     * Gap between months in a multi-month (`numberOfMonths > 1`) layout.
+     * This is the only spacing token consumed directly by the library.
+     * Default: 16
+     */
+    monthGap: number;
+    /** Outer padding wrapping the whole calendar — e.g. inside a card or bottom sheet. Default: 24 */
+    containerPadding: number;
   };
   cellSize: number;
   borderRadius: number;

@@ -368,7 +368,7 @@ import { SimpleCalendar, defaultTheme, darkTheme } from 'react-native-fast-calen
     cellSize: 44,
     borderRadius: 8,
     fontSize: { day: 14, weekday: 12, header: 16 },
-    spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 },
+    spacing: { cellInnerGap: 4, controlGap: 8, controlPadding: 12, monthGap: 16, containerPadding: 24 },
   }}
 />
 ```

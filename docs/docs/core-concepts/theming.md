@@ -22,11 +22,11 @@ interface CalendarTheme {
     border: string;          // Borders, dividers
   };
   spacing: {
-    xs: number;  // 4
-    sm: number;  // 8
-    md: number;  // 12
-    lg: number;  // 16
-    xl: number;  // 24
+    cellInnerGap: number;  // 4  — gap inside a cell (day number ↔ modifier dots)
+    controlGap: number;    // 8  — gap between adjacent controls (nav buttons, switcher pills)
+    controlPadding: number;// 12 — padding inside buttons/controls
+    monthGap: number;      // 16 — gap between months in multi-month layout
+    containerPadding: number;// 24 — outer padding wrapping the calendar
   };
   cellSize: number;       // Day cell width/height (default: 40)
   borderRadius: number;   // Day cell border radius (default: 999 for pill shape)
@@ -53,7 +53,7 @@ const defaultTheme: CalendarTheme = {
     disabled: '#D1D5DB',
     border: '#E5E7EB',
   },
-  spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 },
+  spacing: { cellInnerGap: 4, controlGap: 8, controlPadding: 12, monthGap: 16, containerPadding: 24 },
   cellSize: 40,
   borderRadius: 999,
   fontSize: { day: 14, weekday: 12, header: 16 },
@@ -83,7 +83,7 @@ const darkTheme: CalendarTheme = {
     disabled: '#52525B',       // zinc-600
     border: '#3F3F46',         // zinc-700
   },
-  spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 },
+  spacing: { cellInnerGap: 4, controlGap: 8, controlPadding: 12, monthGap: 16, containerPadding: 24 },
   cellSize: 40,
   borderRadius: 999,
   fontSize: { day: 14, weekday: 12, header: 16 },

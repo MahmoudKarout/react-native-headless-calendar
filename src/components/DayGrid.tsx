@@ -236,7 +236,7 @@ function DayCellComponent({ info, onSelect }: DayCellProps) {
  * `nativeDate` is intentionally not compared — it's a fresh `Date` instance
  * per render and never affects rendered output.
  */
-const dayCellPropsEqual = (prev: DayCellProps, next: DayCellProps): boolean => {
+export const dayCellPropsEqual = (prev: DayCellProps, next: DayCellProps): boolean => {
   if (prev.onSelect !== next.onSelect) return false;
   const a = prev.info;
   const b = next.info;
@@ -1024,7 +1024,7 @@ const DayGridComponent: React.FC<DayGridProps> = ({
   return (
     <View
       // eslint-disable-next-line react-native/no-inline-styles
-      style={{ flexDirection: 'row', gap: theme.spacing.lg }}
+      style={{ flexDirection: 'row', gap: theme.spacing.monthGap }}
     >
       {monthsToRender.map((m, i) => (
         <View
