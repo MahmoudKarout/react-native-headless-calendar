@@ -83,7 +83,13 @@ const FLIGHT_THEME: CalendarThemeOverride = {
   cellSize: CELL_WIDTH,
   borderRadius: 8,
   fontSize: { day: 14, weekday: 12, header: 14 },
-  spacing: { cellInnerGap: 4, controlGap: 6, controlPadding: 10, monthGap: 14, containerPadding: 20 },
+  spacing: {
+    cellInnerGap: 4,
+    controlGap: 6,
+    controlPadding: 10,
+    monthGap: 14,
+    containerPadding: 20,
+  },
 };
 
 const SYSTEMS: CalendarSystem[] = [gregorianSystem];

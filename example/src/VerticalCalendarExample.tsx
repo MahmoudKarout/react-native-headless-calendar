@@ -288,121 +288,121 @@ interface VerticalMonthListHandle {
 }
 
 function VerticalMonthList({ ref }: { ref?: Ref<VerticalMonthListHandle> }) {
-    const system = useCalendarSelector((s) => s.system);
-    const displayed = useCalendarSelector((s) => s.displayed);
+  const system = useCalendarSelector((s) => s.system);
+  const displayed = useCalendarSelector((s) => s.displayed);
 
-    const listRef = useRef<FlashListRef<CalendarDateValue>>(null);
+  const listRef = useRef<FlashListRef<CalendarDateValue>>(null);
 
-    const [months, setMonths] = useState<readonly CalendarDateValue[]>(() =>
-      buildMonthsAround(system, displayed, WINDOW_RADIUS)
-    );
+  const [months, setMonths] = useState<readonly CalendarDateValue[]>(() =>
+    buildMonthsAround(system, displayed, WINDOW_RADIUS)
+  );
 
-    // Rebuild the data window around `target` and jump (no animation)
-    // to its centre. Shared by the imperative API and the
-    // out-of-window reconciliation effect below.
-    const recentreOn = useCallback(
-      (target: CalendarDateValue) => {
-        setMonths(buildMonthsAround(system, target, WINDOW_RADIUS));
-        // The new array forces FlashList to re-mount its containers;
-        // wait one frame so the new data is committed before issuing
-        // the scroll, otherwise it would target the old list.
-        requestAnimationFrame(() => {
-          listRef.current?.scrollToIndex({
-            index: WINDOW_RADIUS,
-            animated: false,
-          });
+  // Rebuild the data window around `target` and jump (no animation)
+  // to its centre. Shared by the imperative API and the
+  // out-of-window reconciliation effect below.
+  const recentreOn = useCallback(
+    (target: CalendarDateValue) => {
+      setMonths(buildMonthsAround(system, target, WINDOW_RADIUS));
+      // The new array forces FlashList to re-mount its containers;
+      // wait one frame so the new data is committed before issuing
+      // the scroll, otherwise it would target the old list.
+      requestAnimationFrame(() => {
+        listRef.current?.scrollToIndex({
+          index: WINDOW_RADIUS,
+          animated: false,
         });
+      });
+    },
+    [system]
+  );
+
+  // Auto re-centre when `displayed` lands outside the window (e.g. a
+  // future programmatic store mutation from another component). Taps
+  // inside the visible window are no-ops here — the imperative API
+  // owns the in-window scroll-to-date case.
+  useEffect(() => {
+    const idx = months.findIndex((m) =>
+      isSameDisplayMonth(system, m, displayed)
+    );
+    if (idx === -1) recentreOn(displayed);
+  }, [displayed, months, system, recentreOn]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToMonth: (target) => {
+        const idx = months.findIndex((m) =>
+          isSameDisplayMonth(system, m, target)
+        );
+        if (idx >= 0) {
+          listRef.current?.scrollToIndex({ index: idx, animated: true });
+        } else {
+          recentreOn(target);
+        }
       },
-      [system]
-    );
+    }),
+    [months, system, recentreOn]
+  );
 
-    // Auto re-centre when `displayed` lands outside the window (e.g. a
-    // future programmatic store mutation from another component). Taps
-    // inside the visible window are no-ops here — the imperative API
-    // owns the in-window scroll-to-date case.
-    useEffect(() => {
-      const idx = months.findIndex((m) =>
-        isSameDisplayMonth(system, m, displayed)
-      );
-      if (idx === -1) recentreOn(displayed);
-    }, [displayed, months, system, recentreOn]);
+  const onStartReached = useCallback(() => {
+    setMonths((prev) => {
+      const first = prev[0]!;
+      const before = new Array<CalendarDateValue>(WINDOW_GROWTH);
+      for (let i = 0; i < WINDOW_GROWTH; i += 1) {
+        before[i] = system.addMonths(first, i - WINDOW_GROWTH);
+      }
+      return [...before, ...prev];
+    });
+  }, [system]);
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        scrollToMonth: (target) => {
-          const idx = months.findIndex((m) =>
-            isSameDisplayMonth(system, m, target)
-          );
-          if (idx >= 0) {
-            listRef.current?.scrollToIndex({ index: idx, animated: true });
-          } else {
-            recentreOn(target);
-          }
-        },
-      }),
-      [months, system, recentreOn]
-    );
+  const onEndReached = useCallback(() => {
+    setMonths((prev) => {
+      const last = prev[prev.length - 1]!;
+      const after = new Array<CalendarDateValue>(WINDOW_GROWTH);
+      for (let i = 0; i < WINDOW_GROWTH; i += 1) {
+        after[i] = system.addMonths(last, i + 1);
+      }
+      return [...prev, ...after];
+    });
+  }, [system]);
 
-    const onStartReached = useCallback(() => {
-      setMonths((prev) => {
-        const first = prev[0]!;
-        const before = new Array<CalendarDateValue>(WINDOW_GROWTH);
-        for (let i = 0; i < WINDOW_GROWTH; i += 1) {
-          before[i] = system.addMonths(first, i - WINDOW_GROWTH);
-        }
-        return [...before, ...prev];
-      });
-    }, [system]);
+  const keyExtractor = useCallback(
+    (item: CalendarDateValue) =>
+      `${system.id}:${system.year(item)}-${system.month(item)}`,
+    [system]
+  );
 
-    const onEndReached = useCallback(() => {
-      setMonths((prev) => {
-        const last = prev[prev.length - 1]!;
-        const after = new Array<CalendarDateValue>(WINDOW_GROWTH);
-        for (let i = 0; i < WINDOW_GROWTH; i += 1) {
-          after[i] = system.addMonths(last, i + 1);
-        }
-        return [...prev, ...after];
-      });
-    }, [system]);
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<CalendarDateValue>) => (
+      <MonthSection month={item} />
+    ),
+    []
+  );
 
-    const keyExtractor = useCallback(
-      (item: CalendarDateValue) =>
-        `${system.id}:${system.year(item)}-${system.month(item)}`,
-      [system]
-    );
+  // Caption (32) + 6 rows × CELL_SIZE + section padding. Drives the
+  // off-screen render budget so initial scroll lands close to the
+  // active month on first paint.
+  const drawDistance = 56 + CELL_SIZE * ROWS;
 
-    const renderItem = useCallback(
-      ({ item }: ListRenderItemInfo<CalendarDateValue>) => (
-        <MonthSection month={item} />
-      ),
-      []
-    );
-
-    // Caption (32) + 6 rows × CELL_SIZE + section padding. Drives the
-    // off-screen render budget so initial scroll lands close to the
-    // active month on first paint.
-    const drawDistance = 56 + CELL_SIZE * ROWS;
-
-    return (
-      <FlashList<CalendarDateValue>
-        data={months}
-        drawDistance={drawDistance}
-        initialScrollIndex={WINDOW_RADIUS}
-        keyExtractor={keyExtractor}
-        onEndReached={onEndReached}
-        onStartReached={onStartReached}
-        // Cast: under `react-native-strict-api`, ScrollView's `ref` and
-        // FlashList's `RefAttributes<FlashListRef>` intersect into an
-        // un-satisfiable type. The runtime contract is fine — we only
-        // call methods from the FlashListRef surface — so we narrow
-        // with a single contained `as never` here.
-        ref={listRef as never}
-        renderItem={renderItem}
-        showsVerticalScrollIndicator={false}
-        style={styles.list}
-      />
-    );
+  return (
+    <FlashList<CalendarDateValue>
+      data={months}
+      drawDistance={drawDistance}
+      initialScrollIndex={WINDOW_RADIUS}
+      keyExtractor={keyExtractor}
+      onEndReached={onEndReached}
+      onStartReached={onStartReached}
+      // Cast: under `react-native-strict-api`, ScrollView's `ref` and
+      // FlashList's `RefAttributes<FlashListRef>` intersect into an
+      // un-satisfiable type. The runtime contract is fine — we only
+      // call methods from the FlashListRef surface — so we narrow
+      // with a single contained `as never` here.
+      ref={listRef as never}
+      renderItem={renderItem}
+      showsVerticalScrollIndicator={false}
+      style={styles.list}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------

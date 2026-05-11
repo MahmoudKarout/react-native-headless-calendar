@@ -383,9 +383,7 @@ function MonthSectionComponent({
       ) : (
         // Flat layout — flex-wrap keeps the original 6×7 grid behaviour.
         <View style={[styles.monthGrid, { width: sectionWidth }]}>
-          {cellInfos
-            .slice(0, visibleCellCount)
-            .map((info) => renderCell(info))}
+          {cellInfos.slice(0, visibleCellCount).map((info) => renderCell(info))}
         </View>
       )}
     </View>
@@ -1170,7 +1168,6 @@ const ShoutyWeekNumberCell: NonNullable<
     <Text style={styles.shoutyWeekNumberText}>w{weekNumber}</Text>
   </View>
 );
-
 
 export function VerticalCustomSlotsExample() {
   return (

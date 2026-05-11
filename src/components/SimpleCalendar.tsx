@@ -307,7 +307,7 @@ function SimpleFooter() {
         style={[
           styles.confirmButton,
           { backgroundColor: theme.colors.primary },
-          !canConfirm && { opacity: 0.5 },
+          !canConfirm && styles.confirmButtonDisabled,
         ]}
         testID={testID ? `${testID}.simple.confirm` : undefined}
       >
@@ -559,6 +559,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
+  },
+  confirmButtonDisabled: {
+    opacity: 0.5,
   },
   confirmText: {
     fontSize: 14,

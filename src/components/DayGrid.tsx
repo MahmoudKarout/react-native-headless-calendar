@@ -220,6 +220,7 @@ function DayCellComponent({ info, onSelect }: DayCellProps) {
       <Text
         style={[
           dayCellStyles.text,
+          // eslint-disable-next-line react-native/no-inline-styles
           {
             color: textColor,
             fontSize: theme.fontSize.day,
@@ -247,7 +248,10 @@ function DayCellComponent({ info, onSelect }: DayCellProps) {
  * `nativeDate` is intentionally not compared — it's a fresh `Date` instance
  * per render and never affects rendered output.
  */
-export const dayCellPropsEqual = (prev: DayCellProps, next: DayCellProps): boolean => {
+export const dayCellPropsEqual = (
+  prev: DayCellProps,
+  next: DayCellProps
+): boolean => {
   if (prev.onSelect !== next.onSelect) return false;
   const a = prev.info;
   const b = next.info;
@@ -499,7 +503,9 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
             );
           }
           if (renderDay) {
-            return <RenderDayAdapter key={k} renderer={renderDay} info={info} />;
+            return (
+              <RenderDayAdapter key={k} renderer={renderDay} info={info} />
+            );
           }
           if (SlotDayCell) {
             return <SlotDayCell info={info} key={k} onSelect={onSelect} />;
@@ -536,28 +542,26 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
               </Text>
             </View>
           )}
-          {cellInfos
-            .slice(rowIdx * COLS, rowIdx * COLS + COLS)
-            .map((info) => {
-              const k = info.nativeDate.toISOString();
-              if (!showOutsideDays && !info.isCurrentMonth) {
-                return (
-                  <View
-                    key={k}
-                    style={{ width: theme.cellSize, height: theme.cellSize }}
-                  />
-                );
-              }
-              if (renderDay) {
-                return <RenderDayAdapter key={k} renderer={renderDay} info={info} />;
-              }
-              if (SlotDayCell) {
-                return (
-                  <SlotDayCell info={info} key={k} onSelect={onSelect} />
-                );
-              }
-              return <DayCell info={info} key={k} onSelect={onSelect} />;
-            })}
+          {cellInfos.slice(rowIdx * COLS, rowIdx * COLS + COLS).map((info) => {
+            const k = info.nativeDate.toISOString();
+            if (!showOutsideDays && !info.isCurrentMonth) {
+              return (
+                <View
+                  key={k}
+                  style={{ width: theme.cellSize, height: theme.cellSize }}
+                />
+              );
+            }
+            if (renderDay) {
+              return (
+                <RenderDayAdapter key={k} renderer={renderDay} info={info} />
+              );
+            }
+            if (SlotDayCell) {
+              return <SlotDayCell info={info} key={k} onSelect={onSelect} />;
+            }
+            return <DayCell info={info} key={k} onSelect={onSelect} />;
+          })}
         </View>
       ))}
     </View>
@@ -1116,7 +1120,10 @@ const SwipeableDayGridComponent: React.FC<SwipeableDayGridProps> = ({
       }}
     >
       <WeekdayHeader showWeekNumbers={showWeekNumbers} />
-      <SwipeableMonthList renderDay={renderDay} showWeekNumbers={showWeekNumbers} />
+      <SwipeableMonthList
+        renderDay={renderDay}
+        showWeekNumbers={showWeekNumbers}
+      />
     </View>
   );
 };

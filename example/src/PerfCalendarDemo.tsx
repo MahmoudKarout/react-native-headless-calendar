@@ -19,13 +19,7 @@
  *    destroys every cell instance and starts all counts from 1.
  */
 import { memo, useRef, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
   Calendar,
@@ -72,7 +66,13 @@ const THEME: CalendarThemeOverride = {
   cellSize: CELL_SIZE,
   borderRadius: 6,
   fontSize: { day: 13, weekday: 11, header: 14 },
-  spacing: { xs: 4, sm: 6, md: 10, lg: 14, xl: 20 },
+  spacing: {
+    cellInnerGap: 4,
+    controlGap: 6,
+    controlPadding: 10,
+    monthGap: 14,
+    containerPadding: 20,
+  },
 };
 
 // ─── PerfDayCell ─────────────────────────────────────────────────────────────
@@ -126,7 +126,10 @@ const PerfDayCell: NonNullable<CalendarComponents['DayCell']> = memo(
           style={[
             styles.renderCount,
             hot && styles.renderCountHot,
-            info.isSelected && (hot ? styles.renderCountSelectedHot : styles.renderCountSelected),
+            info.isSelected &&
+              (hot
+                ? styles.renderCountSelectedHot
+                : styles.renderCountSelected),
           ]}
         >
           {count.current}×
@@ -134,7 +137,7 @@ const PerfDayCell: NonNullable<CalendarComponents['DayCell']> = memo(
       </Pressable>
     );
   },
-  dayCellPropsEqual,
+  dayCellPropsEqual
 );
 
 PerfDayCell.displayName = 'PerfDayCell';
@@ -178,19 +181,15 @@ export default function PerfCalendarDemo() {
   const [resetKey, setResetKey] = useState(0);
 
   return (
-    <ScrollView
-      style={styles.page}
-      contentContainerStyle={styles.pageContent}
-    >
+    <ScrollView style={styles.page} contentContainerStyle={styles.pageContent}>
       <View style={styles.card}>
         {/* card header */}
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>One tap. One re-render.</Text>
           <Text style={styles.cardDescription}>
-            Each cell is wrapped in{' '}
-            <Text style={styles.code}>React.memo</Text>. The counter shows how
-            many times it has rendered since mount. Select a range and watch
-            only the affected cells update.
+            Each cell is wrapped in <Text style={styles.code}>React.memo</Text>.
+            The counter shows how many times it has rendered since mount. Select
+            a range and watch only the affected cells update.
           </Text>
         </View>
 
@@ -198,7 +197,7 @@ export default function PerfCalendarDemo() {
         <View style={styles.hint}>
           <Text style={styles.hintText}>
             <Text style={styles.hintDim}>1×</Text>
-            <Text style={styles.hintSep}> initial render  ·  </Text>
+            <Text style={styles.hintSep}> initial render · </Text>
             <Text style={styles.hintHot}>2×+</Text>
             <Text style={styles.hintSep}> re-rendered</Text>
           </Text>

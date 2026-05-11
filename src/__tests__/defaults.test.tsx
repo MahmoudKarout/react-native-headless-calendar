@@ -10,7 +10,9 @@ describe('defaultTheme', () => {
 
   it('exposes the documented spacing tokens', () => {
     expect(defaultTheme.spacing.cellInnerGap).toBeGreaterThan(0);
-    expect(defaultTheme.spacing.containerPadding).toBeGreaterThan(defaultTheme.spacing.controlPadding);
+    expect(defaultTheme.spacing.containerPadding).toBeGreaterThan(
+      defaultTheme.spacing.controlPadding
+    );
   });
 
   it('uses a circular borderRadius for day cells', () => {

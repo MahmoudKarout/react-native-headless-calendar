@@ -37,8 +37,18 @@ interface CalendarDemoProps {
 }
 
 const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 const SUNDAY_WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -52,7 +62,9 @@ const startOfDay = (d: Date) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 const isoWeekNumber = (date: Date): number => {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const d = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  );
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
@@ -119,7 +131,7 @@ export default function CalendarDemo({
     if (mode === 'range') {
       return Boolean(
         (rangeStart && isSameDay(date, rangeStart)) ||
-          (rangeEnd && isSameDay(date, rangeEnd))
+        (rangeEnd && isSameDay(date, rangeEnd))
       );
     }
     return selectedDates.some((d) => isSameDay(date, d));
@@ -212,9 +224,8 @@ export default function CalendarDemo({
       nextEnd = rangeStart;
     }
 
-    const days = Math.round(
-      (nextEnd.getTime() - nextStart.getTime()) / 86400000
-    ) + 1;
+    const days =
+      Math.round((nextEnd.getTime() - nextStart.getTime()) / 86400000) + 1;
     if (minRangeDays && days < minRangeDays) {
       setErrorMessage(`Minimum ${minRangeDays} days required`);
       return;

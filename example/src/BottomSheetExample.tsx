@@ -419,8 +419,6 @@ function RangeDatePickerSheet({
             maxDate={maxDate}
             maxRangeDays={maxRangeDays}
             onConfirm={handleConfirm}
-            showHeader
-            showFooter
             swipeable
             style={styles.calendarInSheet}
           />

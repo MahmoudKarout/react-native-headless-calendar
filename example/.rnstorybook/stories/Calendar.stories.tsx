@@ -68,7 +68,6 @@ export const Arabic: StoryObj = {
 // ---------------------------------------------------------------------------
 
 export const BottomSheet: StoryObj = {
-  name: 'Bottom Sheet',
   render: () => (
     <View style={{ flex: 1 }}>
       <BottomSheetCalendarDemo />

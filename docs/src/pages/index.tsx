@@ -76,8 +76,17 @@ const FEATURES: FeatureProps[] = [
     description:
       'Bring your own UI. Hooks expose exactly the state you need, when you need it.',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h10" />
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M4 7h16M4 12h16M4 17h10"
+        />
       </svg>
     ),
   },
@@ -86,8 +95,17 @@ const FEATURES: FeatureProps[] = [
     description:
       'Tap a day and only that day re-renders. Header, footer, and pickers stay still.',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13 2 3 14h8l-1 8 10-12h-8l1-8Z" />
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M13 2 3 14h8l-1 8 10-12h-8l1-8Z"
+        />
       </svg>
     ),
   },
@@ -96,9 +114,18 @@ const FEATURES: FeatureProps[] = [
     description:
       'Gregorian, Hijri, and Jalali built-in. Plug in any custom system you like.',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      >
         <circle cx="12" cy="12" r="9" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"
+        />
       </svg>
     ),
   },
@@ -107,9 +134,18 @@ const FEATURES: FeatureProps[] = [
     description:
       'Every prop, hook, and slot is fully typed with discriminated unions you can lean on.',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      >
         <rect x="3" y="3" width="18" height="18" rx="2" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 9h6M12 9v8M16 13c1.5 0 2.5 1 2.5 2.2 0 1.4-1.2 1.8-2.5 1.8" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 9h6M12 9v8M16 13c1.5 0 2.5 1 2.5 2.2 0 1.4-1.2 1.8-2.5 1.8"
+        />
       </svg>
     ),
   },
@@ -118,9 +154,18 @@ const FEATURES: FeatureProps[] = [
     description:
       'Runs on iOS, Android, and web via React Native Web — including this very page.',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      >
         <rect x="2" y="4" width="20" height="14" rx="2" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 20h8M12 18v2" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M8 20h8M12 18v2"
+        />
       </svg>
     ),
   },
@@ -129,7 +174,12 @@ const FEATURES: FeatureProps[] = [
     description:
       'Replace DayCell, MonthCaption, WeekNumberCell, or the whole grid — keep state, swap UI.',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      >
         <rect x="3" y="3" width="7" height="7" rx="1" />
         <rect x="14" y="3" width="7" height="7" rx="1" />
         <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -212,15 +262,32 @@ export default function Home(): JSX.Element {
             <div className={styles.ctaRow}>
               <Link className={styles.ctaPrimary} to="/docs/intro">
                 Get started
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 5l7 7-7 7" />
+                <svg
+                  viewBox="0 0 24 24"
+                  width="14"
+                  height="14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 12h14M13 5l7 7-7 7"
+                  />
                 </svg>
               </Link>
               <Link
                 className={styles.ctaSecondary}
                 to="https://github.com/MahmoudKarout/react-native-fast-calendar"
               >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="14"
+                  height="14"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
                   <path
                     fillRule="evenodd"
                     clipRule="evenodd"
@@ -249,11 +316,7 @@ export default function Home(): JSX.Element {
                   Calendar.Root · mode="range"
                 </span>
               </div>
-              <CalendarDemo
-                mode="range"
-                minRangeDays={2}
-                maxRangeDays={14}
-              />
+              <CalendarDemo mode="range" minRangeDays={2} maxRangeDays={14} />
             </div>
           </div>
         </section>
@@ -283,8 +346,19 @@ export default function Home(): JSX.Element {
             <div className={styles.perfDemoWrapper}>
               <PerfCalendarDemo />
               <div className={styles.perfDemoCaption}>
-                <svg className={styles.perfDemoCaptionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 2 3 14h8l-1 8 10-12h-8l1-8Z" />
+                <svg
+                  className={styles.perfDemoCaptionIcon}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13 2 3 14h8l-1 8 10-12h-8l1-8Z"
+                  />
                 </svg>
                 <span>
                   Cells frozen at <strong>1×</strong> never re-rendered. Only
@@ -309,7 +383,9 @@ export default function Home(): JSX.Element {
                 <div key={feature.title} className={styles.featureCard}>
                   <div className={styles.featureIcon}>{feature.icon}</div>
                   <h3 className={styles.featureTitle}>{feature.title}</h3>
-                  <p className={styles.featureDescription}>{feature.description}</p>
+                  <p className={styles.featureDescription}>
+                    {feature.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -388,8 +464,19 @@ export default function Home(): JSX.Element {
                   </div>
                   <div className={styles.recipeCardCta}>
                     Read recipe
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 5l7 7-7 7" />
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 12h14M13 5l7 7-7 7"
+                      />
                     </svg>
                   </div>
                 </Link>
@@ -406,8 +493,8 @@ export default function Home(): JSX.Element {
                 Ship the calendar your design system deserves.
               </h2>
               <p className={styles.ctaDescription}>
-                Read the docs, copy a recipe, or drop in <code>SimpleCalendar</code>{' '}
-                and start picking dates.
+                Read the docs, copy a recipe, or drop in{' '}
+                <code>SimpleCalendar</code> and start picking dates.
               </p>
               <div className={styles.ctaRow}>
                 <Link className={styles.ctaPrimary} to="/docs/intro">

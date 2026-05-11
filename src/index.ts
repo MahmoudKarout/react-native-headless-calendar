@@ -132,7 +132,4 @@ export type {
 export type { CalendarRootProps } from './components/Root';
 
 // DayGrid prop types.
-export type {
-  DayGridProps,
-  SwipeableDayGridProps,
-} from './components/DayGrid';
+export type { DayGridProps, SwipeableDayGridProps } from './components/DayGrid';
