@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import styles from './styles.module.css';
 
 interface Modifier {
@@ -34,6 +34,8 @@ interface CalendarDemoProps {
   /** initial display date */
   initialDate?: Date;
   firstDayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  /** render an iOS-style drum-roll wheel date picker */
+  wheel?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -71,6 +73,194 @@ const isoWeekNumber = (date: Date): number => {
   return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 };
 
+// ─── Wheel Date Picker ───────────────────────────────────────────────────────
+
+const WHEEL_MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+const ITEM_H = 52;
+
+function wheelDaysInMonth(month: number, year: number) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function buildWheelDays(count: number) {
+  return Array.from({ length: count }, (_, i) =>
+    String(i + 1).padStart(2, '0')
+  );
+}
+
+function buildWheelYears(from: number, to: number) {
+  return Array.from({ length: to - from + 1 }, (_, i) => String(from + i));
+}
+
+interface WheelColumnProps {
+  items: string[];
+  initialIndex: number;
+  onIndexChange: (i: number) => void;
+  /** Fractional offset (0–1) for scale/opacity of each item as it scrolls */
+  scrollFraction?: number;
+}
+
+function WheelColumn({ items, initialIndex, onIndexChange }: WheelColumnProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(initialIndex * ITEM_H);
+  const rafRef = useRef<number>(0);
+  const snapTimerRef = useRef<ReturnType<typeof setTimeout>>(
+    null as unknown as ReturnType<typeof setTimeout>
+  );
+
+  // Scroll to initial index on mount without animation
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.scrollTop = initialIndex * ITEM_H;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When items shrink (e.g. Feb has fewer days), clamp position
+  useEffect(() => {
+    const maxScroll = (items.length - 1) * ITEM_H;
+    if (ref.current && ref.current.scrollTop > maxScroll) {
+      ref.current.scrollTop = maxScroll;
+    }
+  }, [items.length]);
+
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const st = e.currentTarget.scrollTop;
+
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => setScrollTop(st));
+
+      clearTimeout(snapTimerRef.current);
+      snapTimerRef.current = setTimeout(() => {
+        const idx = Math.max(
+          0,
+          Math.min(Math.round(st / ITEM_H), items.length - 1)
+        );
+        onIndexChange(idx);
+      }, 120);
+    },
+    [items.length, onIndexChange]
+  );
+
+  return (
+    <div ref={ref} className={styles.wheelColumn} onScroll={handleScroll}>
+      <div className={styles.wheelPad} />
+      {items.map((label, i) => {
+        const dist = Math.abs(scrollTop / ITEM_H - i);
+        const scale = Math.max(0.72, Math.min(1.14, 1.14 - dist * 0.21));
+        const opacity = Math.max(0.18, Math.min(1, 1 - dist * 0.41));
+        return (
+          <div
+            key={label}
+            className={styles.wheelItem}
+            style={{ transform: `scale(${scale})`, opacity }}
+            onClick={() => {
+              if (ref.current) {
+                ref.current.scrollTo({ top: i * ITEM_H, behavior: 'smooth' });
+              }
+            }}
+          >
+            {label}
+          </div>
+        );
+      })}
+      <div className={styles.wheelPad} />
+    </div>
+  );
+}
+
+function WheelDatePickerDemo() {
+  const now = new Date();
+  const MIN_YEAR = now.getFullYear() - 80;
+  const MAX_YEAR = now.getFullYear() + 20;
+
+  const [dayIdx, setDayIdx] = useState(now.getDate() - 1);
+  const [monthIdx, setMonthIdx] = useState(now.getMonth());
+  const [yearIdx, setYearIdx] = useState(now.getFullYear() - MIN_YEAR);
+
+  const years = buildWheelYears(MIN_YEAR, MAX_YEAR);
+  const numDays = wheelDaysInMonth(monthIdx, MIN_YEAR + yearIdx);
+  const days = buildWheelDays(numDays);
+
+  const clampedDay = Math.min(dayIdx, numDays - 1);
+
+  const selectedDate = new Date(MIN_YEAR + yearIdx, monthIdx, clampedDay + 1);
+
+  const handleDay = useCallback((i: number) => setDayIdx(i), []);
+
+  const handleMonth = useCallback(
+    (i: number) => {
+      setMonthIdx(i);
+      setDayIdx((d) =>
+        Math.min(d, wheelDaysInMonth(i, MIN_YEAR + yearIdx) - 1)
+      );
+    },
+    [yearIdx, MIN_YEAR]
+  );
+
+  const handleYear = useCallback(
+    (i: number) => {
+      setYearIdx(i);
+      setDayIdx((d) =>
+        Math.min(d, wheelDaysInMonth(monthIdx, MIN_YEAR + i) - 1)
+      );
+    },
+    [monthIdx, MIN_YEAR]
+  );
+
+  return (
+    <div className={styles.wheelWrapper}>
+      <div className={styles.wheelPicker}>
+        {/* selection indicator */}
+        <div className={styles.wheelSelector} />
+        <WheelColumn
+          items={days}
+          initialIndex={clampedDay}
+          onIndexChange={handleDay}
+        />
+        <WheelColumn
+          items={WHEEL_MONTHS}
+          initialIndex={monthIdx}
+          onIndexChange={handleMonth}
+        />
+        <WheelColumn
+          items={years}
+          initialIndex={yearIdx}
+          onIndexChange={handleYear}
+        />
+      </div>
+      <div className={styles.wheelResult}>
+        <div className={styles.wheelResultLabel}>Selected date</div>
+        <div className={styles.wheelResultValue}>
+          {selectedDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function CalendarDemo({
   mode = 'single',
   showFooter = true,
@@ -90,6 +280,7 @@ export default function CalendarDemo({
   cellStyle = 'default',
   initialDate,
   firstDayOfWeek = 0,
+  wheel = false,
 }: CalendarDemoProps) {
   const [currentDate, setCurrentDate] = useState(initialDate ?? new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -106,6 +297,9 @@ export default function CalendarDemo({
       ),
     [firstDayOfWeek]
   );
+
+  // All hooks are above this line — safe to return early.
+  if (wheel) return <WheelDatePickerDemo />;
 
   const isDateDisabled = (date: Date): boolean => {
     if (minDate && date < startOfDay(minDate)) return true;

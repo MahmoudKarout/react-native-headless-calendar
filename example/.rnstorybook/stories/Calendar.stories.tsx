@@ -7,6 +7,7 @@ import ArabicCalendarExample from '../../src/ArabicCalendarExample';
 import BottomSheetCalendarDemo from '../../src/BottomSheetExample';
 import FlightPriceExample from '../../src/FlightPriceExample';
 import VerticalCalendarDemo from '../../src/VerticalCalendarExample';
+import WheelDatePickerExample from '../../src/WheelDatePickerExample';
 import {
   VerticalRangeExample,
   VerticalMultipleExample,
@@ -173,6 +174,18 @@ export const VerticalImageCells: StoryObj = {
   render: () => (
     <View style={{ flex: 1 }}>
       <VerticalImageCellExample />
+    </View>
+  ),
+};
+
+// ---------------------------------------------------------------------------
+// Wheel Date Picker — iOS-style drum-roll picker
+// ---------------------------------------------------------------------------
+
+export const WheelDatePicker: StoryObj = {
+  render: () => (
+    <View style={{ flex: 1 }}>
+      <WheelDatePickerExample />
     </View>
   ),
 };

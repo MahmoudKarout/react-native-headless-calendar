@@ -105,6 +105,7 @@ const sidebars: SidebarsConfig = {
         'recipes/bottom-sheet-picker',
         'recipes/vertical-list',
         'recipes/flight-price-calendar',
+        'recipes/wheel-date-picker',
       ],
     },
     {

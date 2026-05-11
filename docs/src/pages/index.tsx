@@ -220,6 +220,11 @@ const RECIPES = [
     description: 'Mobile-first modal date picker.',
     href: '/docs/recipes/bottom-sheet-picker',
   },
+  {
+    title: 'Wheel Date Picker',
+    description: 'iOS drum-roll wheel — day, month, year columns.',
+    href: '/docs/recipes/wheel-date-picker',
+  },
 ];
 
 const STATS = [

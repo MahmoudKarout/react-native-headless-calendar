@@ -655,6 +655,119 @@
   border-bottom-color: hsl(0 0% 16%);
 }
 
+/* ─── Wheel Date Picker variant ─────────────────────────────────────────── */
+
+.wheelWrapper {
+  max-width: 360px;
+  margin: 0 auto 1.5rem;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+}
+
+.wheelPicker {
+  position: relative;
+  display: flex;
+  background: hsl(240 5% 14%);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid hsl(240 4% 22%);
+}
+
+/* Selection-row separator: two hairlines at ±1 item from center */
+.wheelSelector {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  right: 12px;
+  height: 52px;
+  transform: translateY(-50%);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.wheelColumn {
+  flex: 1;
+  height: 260px; /* 5 visible rows × 52 px */
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* CSS mask fades the edges — no extra elements needed */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.4) 18%,
+    black 36%,
+    black 64%,
+    rgba(0, 0, 0, 0.4) 82%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.4) 18%,
+    black 36%,
+    black 64%,
+    rgba(0, 0, 0, 0.4) 82%,
+    transparent 100%
+  );
+}
+
+.wheelColumn::-webkit-scrollbar {
+  display: none;
+}
+
+/* top/bottom padding so first/last item can reach center */
+.wheelPad {
+  height: 104px; /* 2 × 52 px */
+  flex-shrink: 0;
+}
+
+.wheelItem {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  font-size: 18px;
+  font-weight: 400;
+  color: hsl(240 5% 96%);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  user-select: none;
+  /* transitions animate programmatic jumps (e.g. clear / today) */
+  transition: opacity 0.08s linear;
+}
+
+.wheelResult {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: hsl(240 5% 14%);
+  border: 1px solid hsl(240 4% 22%);
+  border-radius: 10px;
+}
+
+.wheelResultLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(240 4% 52%);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.wheelResultValue {
+  font-size: 15px;
+  font-weight: 500;
+  color: hsl(240 5% 96%);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
 /* Demo badge (kept for backward compat with intro page) */
 .demoBadge {
   display: inline-flex;
