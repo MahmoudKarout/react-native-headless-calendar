@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
-import { DayCell, DayGrid } from '../../components/DayGrid';
+import { DayCell, DayGrid, SwipeableDayGrid } from '../../components/DayGrid';
 import { Root } from '../../components/Root';
 import { useCalendarStore, useCalendarSystemSwitcher } from '../../context';
 import type { CalendarStore } from '../../store';
@@ -1381,5 +1381,38 @@ describe('<Calendar.Root components />', () => {
     expect(taps).toEqual(['15']);
     // The slot is wired to the same selectDate path.
     expect(storeRef!.getSnapshot().selectedDate).toBeDefined();
+  });
+});
+
+describe('<Calendar.SwipeableDayGrid />', () => {
+  beforeEach(() => {
+    resetMockFlashList();
+  });
+
+  it('renders without week numbers (default)', () => {
+    const { queryByTestId } = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <SwipeableDayGrid />
+      </Root>
+    );
+    // Outer swipeable wrapper mounts immediately.
+    expect(queryByTestId('cal.calendar.swipeable')).toBeTruthy();
+  });
+
+  it('renders with week numbers enabled', () => {
+    const { queryByTestId } = render(
+      <Root
+        initialDate={new Date(2024, 4, 15)}
+        systems={[gregorianSystem]}
+        testID="cal"
+      >
+        <SwipeableDayGrid showWeekNumbers />
+      </Root>
+    );
+    expect(queryByTestId('cal.calendar.swipeable')).toBeTruthy();
   });
 });
