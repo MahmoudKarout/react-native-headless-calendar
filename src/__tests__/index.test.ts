@@ -88,9 +88,9 @@ describe('public surface — defaults & utilities', () => {
 // ---------------------------------------------------------------------------
 
 describe('Calendar namespace', () => {
-  it('contains exactly Root, DayGrid, and DayCell', () => {
+  it('contains exactly Root, DayGrid, DayCell, and SwipeableDayGrid', () => {
     expect(Object.keys(Calendar).sort()).toEqual(
-      ['DayCell', 'DayGrid', 'Root'].sort()
+      ['DayCell', 'DayGrid', 'Root', 'SwipeableDayGrid'].sort()
     );
   });
 

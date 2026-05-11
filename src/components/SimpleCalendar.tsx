@@ -7,7 +7,7 @@
  * - Swipeable day grid
  * - Optional confirm/clear footer
  */
-import { useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import {
   I18nManager,
   Pressable,
@@ -67,16 +67,6 @@ export interface SimpleCalendarProps {
    * Called when selection is cleared.
    */
   onClear?: OnClear;
-
-  /**
-   * Show header with month/year labels and navigation. Default: true.
-   */
-  showHeader?: boolean;
-
-  /**
-   * Show footer with confirm/clear actions. Default: true.
-   */
-  showFooter?: boolean;
 
   /**
    * Enable horizontal swipe to change months. Default: true.
@@ -330,17 +320,56 @@ function SimpleFooter() {
 }
 
 // =============================================================================
+// SimpleCalendarContent — the themed container, rendered inside Root so it
+// can access useCalendarTheme() for the background color.
+//
+// Accepts children instead of boolean flags so the caller explicitly composes
+// whatever header/footer/grid combination it needs. This makes the structure
+// visible at the call site rather than hidden behind `showHeader`/`showFooter`
+// booleans.
+// =============================================================================
+
+export interface SimpleCalendarContentProps {
+  children?: ReactNode;
+  style?: ViewStyle;
+}
+
+export function SimpleCalendarContent({
+  children,
+  style,
+}: SimpleCalendarContentProps) {
+  const theme = useCalendarTheme();
+
+  return (
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.background },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
+
+// =============================================================================
 // Main SimpleCalendar Component
 // =============================================================================
 
-export function SimpleCalendar({
+// SimpleCalendarBase intentionally keeps a handful of pass-through boolean
+// config flags (swipeable, showWeekNumbers, showOutsideDays, fixedWeeks,
+// allowSameDay) because it is an opinionated convenience wrapper around
+// Calendar.Root — each flag maps directly to a Root/DayGrid prop the
+// consumer would otherwise have to set individually. Layout customisation
+// (showing/hiding Header, Footer) is handled via the compound sub-components.
+// eslint-disable-next-line react-doctor/no-many-boolean-props
+function SimpleCalendarBase({
   mode = 'single',
   systems: systemsProp,
   onSelect,
   onConfirm,
   onClear,
-  showHeader = true,
-  showFooter = true,
   swipeable = true,
   numberOfMonths = 1,
   showWeekNumbers = false,
@@ -406,60 +435,46 @@ export function SimpleCalendar({
       onClear={onClear}
       testID={testID}
     >
-      <SimpleCalendarContent
-        showHeader={showHeader}
-        showFooter={showFooter}
-        swipeable={swipeable && numberOfMonths <= 1}
-        numberOfMonths={numberOfMonths}
-        showWeekNumbers={showWeekNumbers}
-        style={style}
-      />
+      <SimpleCalendarContent style={style}>
+        <SimpleHeader />
+        <Calendar.DayGrid
+          swipeable={swipeable && numberOfMonths <= 1}
+          numberOfMonths={numberOfMonths}
+          showWeekNumbers={showWeekNumbers}
+        />
+        <SimpleFooter />
+      </SimpleCalendarContent>
     </Root>
   );
 }
 
-// =============================================================================
-// SimpleCalendarContent — the themed container, rendered inside Root so it
-// can access useCalendarTheme() for the background color.
-// =============================================================================
-
-interface SimpleCalendarContentProps {
-  showHeader: boolean;
-  showFooter: boolean;
-  swipeable: boolean;
-  numberOfMonths: number;
-  showWeekNumbers: boolean;
-  style?: ViewStyle;
-}
-
-function SimpleCalendarContent({
-  showHeader,
-  showFooter,
-  swipeable,
-  numberOfMonths,
-  showWeekNumbers,
-  style,
-}: SimpleCalendarContentProps) {
-  const theme = useCalendarTheme();
-
-  return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.background },
-        style,
-      ]}
-    >
-      {showHeader && <SimpleHeader />}
-      <Calendar.DayGrid
-        swipeable={swipeable}
-        numberOfMonths={numberOfMonths}
-        showWeekNumbers={showWeekNumbers}
-      />
-      {showFooter && <SimpleFooter />}
-    </View>
-  );
-}
+/**
+ * SimpleCalendar — a zero-config, opinionated calendar for the 80% use case.
+ *
+ * **Simple usage** (batteries included):
+ * ```tsx
+ * <SimpleCalendar mode="single" onConfirm={({ date }) => console.log(date)} />
+ * ```
+ *
+ * **Compound usage** (custom layout, same themed primitives):
+ * ```tsx
+ * <Calendar.Root mode="range" onConfirm={onConfirm}>
+ *   <SimpleCalendar.Content>
+ *     <SimpleCalendar.Header />
+ *     <Calendar.DayGrid showWeekNumbers />
+ *     <SimpleCalendar.Footer />
+ *   </SimpleCalendar.Content>
+ * </Calendar.Root>
+ * ```
+ *
+ * `Header`, `Footer`, and `Content` must be descendants of a `<Calendar.Root>`
+ * because they read the calendar context.
+ */
+export const SimpleCalendar = Object.assign(SimpleCalendarBase, {
+  Header: SimpleHeader,
+  Footer: SimpleFooter,
+  Content: SimpleCalendarContent,
+});
 
 const styles = StyleSheet.create({
   container: {

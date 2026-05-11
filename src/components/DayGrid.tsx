@@ -22,7 +22,6 @@
  */
 
 import React, {
-  Fragment,
   memo,
   useCallback,
   useEffect,
@@ -149,6 +148,16 @@ export interface DayCellProps {
   onSelect: (date: CalendarDateValue) => void;
 }
 
+const dayCellStyles = StyleSheet.create({
+  pressable: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  text: {
+    fontVariant: ['tabular-nums'],
+  },
+});
+
 function DayCellComponent({ info, onSelect }: DayCellProps) {
   const theme = useCalendarTheme();
   const { testID } = useCalendarConfig();
@@ -188,19 +197,20 @@ function DayCellComponent({ info, onSelect }: DayCellProps) {
       }}
       disabled={info.isDisabled}
       onPress={onPress}
-      // eslint-disable-next-line react-native/no-inline-styles
-      style={{
-        width: theme.cellSize,
-        height: theme.cellSize,
-        boxSizing: 'border-box',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: bg,
-        borderRadius: radius,
-        borderWidth: info.isToday && !info.isSelected ? 1 : 0,
-        borderColor: theme.colors.todayBorder,
-        opacity: info.isDisabled ? 0.4 : 1,
-      }}
+      style={[
+        dayCellStyles.pressable,
+        // eslint-disable-next-line react-native/no-inline-styles
+        {
+          width: theme.cellSize,
+          height: theme.cellSize,
+          boxSizing: 'border-box',
+          backgroundColor: bg,
+          borderRadius: radius,
+          borderWidth: info.isToday && !info.isSelected ? 1 : 0,
+          borderColor: theme.colors.todayBorder,
+          opacity: info.isDisabled ? 0.4 : 1,
+        },
+      ]}
       testID={
         testID
           ? `${testID}.calendar.day.${info.nativeDate.toISOString().slice(0, 10)}`
@@ -208,12 +218,14 @@ function DayCellComponent({ info, onSelect }: DayCellProps) {
       }
     >
       <Text
-        style={{
-          color: textColor,
-          fontSize: theme.fontSize.day,
-          fontWeight: info.isSelected ? '600' : '400',
-          fontVariant: ['tabular-nums'],
-        }}
+        style={[
+          dayCellStyles.text,
+          {
+            color: textColor,
+            fontSize: theme.fontSize.day,
+            fontWeight: info.isSelected ? '600' : '400',
+          },
+        ]}
       >
         {info.label}
       </Text>
@@ -258,6 +270,24 @@ export const dayCellPropsEqual = (prev: DayCellProps, next: DayCellProps): boole
  */
 export const DayCell = memo(DayCellComponent, dayCellPropsEqual);
 DayCell.displayName = 'Calendar.DayCell';
+
+// ---------------------------------------------------------------------------
+// RenderDayAdapter — gives the consumer-supplied renderDay function a proper
+// component boundary so React reconciles its output through a stable fiber
+// node instead of treating the call as an inline function inside the grid's
+// render. This is the same principle as FlatList's renderItem receiving a
+// component type rather than being called directly.
+// ---------------------------------------------------------------------------
+
+function RenderDayAdapter({
+  renderer,
+  info,
+}: {
+  renderer: DayRenderer;
+  info: DayCellInfo;
+}) {
+  return <>{renderer(info)}</>;
+}
 
 // ---------------------------------------------------------------------------
 // MonthGrid — internal: 6×7 cells for ONE specific month.
@@ -469,7 +499,7 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
             );
           }
           if (renderDay) {
-            return <Fragment key={k}>{renderDay(info)}</Fragment>;
+            return <RenderDayAdapter key={k} renderer={renderDay} info={info} />;
           }
           if (SlotDayCell) {
             return <SlotDayCell info={info} key={k} onSelect={onSelect} />;
@@ -519,7 +549,7 @@ const MonthGridComponent: React.FC<MonthGridProps> = ({
                 );
               }
               if (renderDay) {
-                return <Fragment key={k}>{renderDay(info)}</Fragment>;
+                return <RenderDayAdapter key={k} renderer={renderDay} info={info} />;
               }
               if (SlotDayCell) {
                 return (
@@ -688,6 +718,8 @@ const SwipeableMonthListComponent: React.FC<SwipeableMonthListProps> = ({
   // on the second, skip the rebuild, and hand the list stale months
   // back. State resets to the same value on each invocation until React
   // commits the update — so both invocations agree the swap is fresh.
+  // See: https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  // eslint-disable-next-line react-doctor/rerender-state-only-in-handlers
   const [lastSystemId, setLastSystemId] = useState(system.id);
   let activeMonths = months;
   if (lastSystemId !== system.id) {
@@ -1046,3 +1078,48 @@ const DayGridComponent: React.FC<DayGridProps> = ({
 
 export const DayGrid = memo(DayGridComponent);
 DayGrid.displayName = 'Calendar.DayGrid';
+
+// ---------------------------------------------------------------------------
+// SwipeableDayGrid — explicit swipeable variant of DayGrid.
+//
+// Equivalent to <Calendar.DayGrid swipeable /> but self-documenting:
+// the component name itself signals the virtualised-FlashList rendering
+// strategy, removing the need for a boolean flag on the static DayGrid.
+//
+// Requires @shopify/flash-list to be installed.
+// ---------------------------------------------------------------------------
+
+export interface SwipeableDayGridProps {
+  /**
+   * Optional renderer for individual day cells. Same contract as
+   * `<Calendar.DayGrid renderDay>`.
+   */
+  renderDay?: DayRenderer;
+  /**
+   * Show a leading column of ISO week numbers. Default: false.
+   */
+  showWeekNumbers?: boolean;
+}
+
+const SwipeableDayGridComponent: React.FC<SwipeableDayGridProps> = ({
+  renderDay,
+  showWeekNumbers = false,
+}) => {
+  const theme = useCalendarTheme();
+
+  return (
+    <View
+      // eslint-disable-next-line react-native/no-inline-styles
+      style={{
+        gap: 8,
+        width: theme.cellSize * (showWeekNumbers ? 8 : 7),
+      }}
+    >
+      <WeekdayHeader showWeekNumbers={showWeekNumbers} />
+      <SwipeableMonthList renderDay={renderDay} showWeekNumbers={showWeekNumbers} />
+    </View>
+  );
+};
+
+export const SwipeableDayGrid = memo(SwipeableDayGridComponent);
+SwipeableDayGrid.displayName = 'Calendar.SwipeableDayGrid';

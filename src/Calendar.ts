@@ -38,13 +38,21 @@
  *     <MyConfirmBar />    // useCalendarActions()
  *   </Calendar.Root>
  */
-import { DayCell, DayGrid } from './components/DayGrid';
+import { DayCell, DayGrid, SwipeableDayGrid } from './components/DayGrid';
 import { Root } from './components/Root';
 
 export const Calendar = {
   Root,
   DayGrid,
   DayCell,
+  /**
+   * Explicit swipeable variant — equivalent to `<Calendar.DayGrid swipeable />`
+   * but self-documenting: the component name signals the virtualised-FlashList
+   * strategy without a boolean flag on the static grid.
+   *
+   * Requires `@shopify/flash-list` to be installed.
+   */
+  SwipeableDayGrid,
 } as const;
 
 export type CalendarNamespace = typeof Calendar;

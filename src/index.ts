@@ -17,13 +17,23 @@ export { Calendar } from './Calendar';
 export type { CalendarNamespace } from './Calendar';
 
 // SimpleCalendar — batteries-included calendar for quick usage.
+// Also a compound component: SimpleCalendar.Header, .Footer, .Content
+// for custom layouts that still use the themed primitives.
 export { SimpleCalendar } from './components/SimpleCalendar';
-export type { SimpleCalendarProps } from './components/SimpleCalendar';
+export type {
+  SimpleCalendarProps,
+  SimpleCalendarContentProps,
+} from './components/SimpleCalendar';
 
 // The two stable rendered components — also exported individually for
 // consumers that prefer named imports over the namespace.
 export { Root } from './components/Root';
-export { DayCell, DayGrid, dayCellPropsEqual } from './components/DayGrid';
+export {
+  DayCell,
+  DayGrid,
+  SwipeableDayGrid,
+  dayCellPropsEqual,
+} from './components/DayGrid';
 
 // Hooks — the headless surface. Compose into whatever UI you ship.
 export {
@@ -120,3 +130,9 @@ export type {
 
 // Root prop type — useful when wrapping <Calendar.Root> in a project preset.
 export type { CalendarRootProps } from './components/Root';
+
+// DayGrid prop types.
+export type {
+  DayGridProps,
+  SwipeableDayGridProps,
+} from './components/DayGrid';
