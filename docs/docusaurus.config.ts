@@ -7,6 +7,28 @@ const config: Config = {
   tagline: 'A headless, high-performance calendar library for React Native',
   favicon: 'img/logo.svg',
 
+  headTags: [
+    {
+      tagName: 'link',
+      attributes: { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'preconnect',
+        href: 'https://fonts.gstatic.com',
+        crossorigin: 'anonymous',
+      },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap',
+      },
+    },
+  ],
+
   url: 'https://your-docusaurus-site.example.com',
   baseUrl: '/',
 
@@ -14,7 +36,13 @@ const config: Config = {
   projectName: 'react-native-fast-calendar',
 
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
+  markdown: {
+    mdx1Compat: {
+      comments: false,
+      admonitions: false,
+      headingIds: false,
+    },
+  },
 
   i18n: {
     defaultLocale: 'en',
@@ -43,6 +71,7 @@ const config: Config = {
       logo: {
         alt: 'react-native-fast-calendar Logo',
         src: 'img/logo.svg',
+        srcDark: 'img/logo.svg',
       },
       items: [
         {
@@ -59,7 +88,7 @@ const config: Config = {
       ],
     },
     footer: {
-      style: 'dark',
+      style: 'light',
       links: [
         {
           title: 'Docs',

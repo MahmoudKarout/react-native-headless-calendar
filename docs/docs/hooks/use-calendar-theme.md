@@ -46,11 +46,16 @@ interface CalendarTheme {
     border: string;
   };
   spacing: {
-    xs: number;
-    sm: number;
-    md: number;
-    lg: number;
-    xl: number;
+    /** Gap between the day number and modifier dots inside a cell. Default: 4 */
+    cellInnerGap: number;
+    /** Gap between adjacent controls (nav buttons, system-switcher pills). Default: 8 */
+    controlGap: number;
+    /** Horizontal/vertical inset inside buttons and controls. Default: 12 */
+    controlPadding: number;
+    /** Gap between months in a multi-month layout (`numberOfMonths > 1`). Default: 16 */
+    monthGap: number;
+    /** Outer padding wrapping the entire calendar (card, bottom sheet, etc.). Default: 24 */
+    containerPadding: number;
   };
   cellSize: number;
   borderRadius: number;
@@ -74,7 +79,7 @@ function MyContainer() {
     <View
       style={{
         backgroundColor: theme.colors.background,
-        padding: theme.spacing.lg,
+        padding: theme.spacing.containerPadding,
         borderRadius: theme.borderRadius,
       }}
     >
@@ -109,22 +114,22 @@ function MyCell() {
 ### Selection States
 
 ```tsx
-function MySelectableCell({ isSelected, isInRange, isDisabled }) {
+function MySelectableCell({ info }) {
   const theme = useCalendarTheme();
 
   let backgroundColor = 'transparent';
   let textColor = theme.colors.text;
   let borderRadius = theme.borderRadius;
 
-  if (isSelected) {
+  if (info.isSelected) {
     backgroundColor = theme.colors.primary;
     textColor = theme.colors.onPrimary;
-  } else if (isInRange) {
+  } else if (info.inRange) {
     backgroundColor = theme.colors.rangeBackground;
     borderRadius = 0;
   }
 
-  if (isDisabled) {
+  if (info.isDisabled) {
     textColor = theme.colors.disabled;
   }
 
@@ -133,10 +138,10 @@ function MySelectableCell({ isSelected, isInRange, isDisabled }) {
       style={{
         backgroundColor,
         borderRadius,
-        opacity: isDisabled ? 0.4 : 1,
+        opacity: info.isDisabled ? 0.4 : 1,
       }}
     >
-      <Text style={{ color: textColor }}>{label}</Text>
+      <Text style={{ color: textColor }}>{info.label}</Text>
     </View>
   );
 }
@@ -159,10 +164,34 @@ function MyGridContainer({ showWeekNumbers }) {
 }
 ```
 
+### Control Row Spacing
+
+```tsx
+function MyControlRow() {
+  const theme = useCalendarTheme();
+
+  return (
+    <View style={{ flexDirection: 'row', gap: theme.spacing.controlGap }}>
+      <Pressable style={{ padding: theme.spacing.controlPadding }}>
+        <Text>Prev</Text>
+      </Pressable>
+      <Pressable style={{ padding: theme.spacing.controlPadding }}>
+        <Text>Next</Text>
+      </Pressable>
+    </View>
+  );
+}
+```
+
 ## Complete Example
 
 ```tsx
-import { Calendar, useCalendarTheme } from 'react-native-fast-calendar';
+import {
+  Calendar,
+  useCalendarTheme,
+  useCalendarSelector,
+  useCalendarActions,
+} from 'react-native-fast-calendar';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 
 function ThemeExample() {
@@ -171,8 +200,8 @@ function ThemeExample() {
       mode="single"
       theme={{
         colors: {
-          primary: '#7C3AED', // violet-600
-          rangeBackground: '#EDE9FE', // violet-100
+          primary: '#7928ca',        // --ds-violet
+          rangeBackground: '#d8ccf1', // --ds-violet-soft
         },
       }}
     >
@@ -197,7 +226,8 @@ function ThemedHeader() {
         styles.header,
         {
           backgroundColor: theme.colors.background,
-          padding: theme.spacing.md,
+          paddingHorizontal: theme.spacing.containerPadding,
+          paddingVertical: theme.spacing.controlPadding,
         },
       ]}
     >
@@ -225,7 +255,9 @@ function ThemedFooter() {
         {
           backgroundColor: theme.colors.background,
           borderTopColor: theme.colors.border,
-          padding: theme.spacing.md,
+          paddingHorizontal: theme.spacing.containerPadding,
+          paddingVertical: theme.spacing.controlPadding,
+          gap: theme.spacing.controlGap,
         },
       ]}
     >
@@ -237,8 +269,8 @@ function ThemedFooter() {
         disabled={!canConfirm}
         style={{
           backgroundColor: theme.colors.primary,
-          paddingHorizontal: theme.spacing.md,
-          paddingVertical: theme.spacing.sm,
+          paddingHorizontal: theme.spacing.controlPadding,
+          paddingVertical: theme.spacing.cellInnerGap,
           borderRadius: theme.borderRadius,
           opacity: canConfirm ? 1 : 0.5,
         }}
@@ -261,6 +293,21 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
 });
+```
+
+## Overriding Spacing Tokens
+
+`CalendarThemeOverride.spacing` is a partial — you only need to specify the tokens you want to change:
+
+```tsx
+<Calendar.Root
+  theme={{
+    spacing: {
+      containerPadding: 16, // tighter outer padding in a compact card
+      monthGap: 32,         // wider gap in a multi-month layout
+    },
+  }}
+>
 ```
 
 ## Design System Integration
@@ -287,10 +334,20 @@ function MyCalendar() {
           disabled: ds.colors.textDisabled,
           border: ds.colors.divider,
         },
-        spacing: ds.spacing,
+        spacing: {
+          cellInnerGap: ds.spacing[1],
+          controlGap: ds.spacing[2],
+          controlPadding: ds.spacing[3],
+          monthGap: ds.spacing[4],
+          containerPadding: ds.spacing[6],
+        },
         cellSize: ds.sizes.touchable,
-        borderRadius: ds.radii.full,
-        fontSize: ds.typography,
+        borderRadius: ds.radii.md,
+        fontSize: {
+          day: ds.typography.body,
+          weekday: ds.typography.caption,
+          header: ds.typography.subheading,
+        },
       }}
     >
       {/* ... */}

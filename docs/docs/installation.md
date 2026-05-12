@@ -69,6 +69,16 @@ The library is written in TypeScript and provides comprehensive type definitions
 
 The library works with React Native Web. No additional configuration is required.
 
+## AI Assistant Skill
+
+Install the `react-native-fast-calendar-recipes` skill to give your AI coding assistant (Cursor, Claude, etc.) full knowledge of the library API — all eleven recipes, every hook, the headless scaffold, theming, multi-calendar systems, and common pitfalls.
+
+```bash
+npx skills install react-native-fast-calendar-recipes --registry https://skills.sh
+```
+
+The skill activates automatically whenever you ask your AI for a calendar, date picker, range picker, or anything involving `<Calendar.Root>`, `<Calendar.DayGrid>`, `SimpleCalendar`, or the `useCalendar*` hooks.
+
 ## Next Steps
 
 Now that you have the library installed:

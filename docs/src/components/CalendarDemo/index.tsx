@@ -594,7 +594,26 @@ export default function CalendarDemo({
     setErrorMessage(null);
   };
 
-  const goToToday = () => setCurrentDate(new Date());
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentDate(today);
+
+    // Also select today's date based on the current mode
+    if (mode === 'single') {
+      setSelectedDate(today);
+    } else if (mode === 'range') {
+      // In range mode, set today as the start date
+      setRangeStart(today);
+      setRangeEnd(null);
+    } else if (mode === 'multiple') {
+      // In multiple mode, add today to selection (or toggle it)
+      const exists = selectedDates.some((d) => isSameDay(d, today));
+      if (!exists) {
+        setSelectedDates((prev) => [...prev, today]);
+      }
+    }
+    setErrorMessage(null);
+  };
   const prevMonth = () =>
     setCurrentDate(
       new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)

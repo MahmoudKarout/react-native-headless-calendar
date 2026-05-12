@@ -243,8 +243,8 @@ export default function Home(): JSX.Element {
       <main className={styles.page}>
         {/* HERO */}
         <section className={styles.hero}>
+          <div className={styles.heroBgMesh} aria-hidden="true" />
           <div className={styles.heroBgGrid} aria-hidden="true" />
-          <div className={styles.heroBgGlow} aria-hidden="true" />
 
           <div className={styles.heroInner}>
             <div className={styles.eyebrow}>
@@ -253,8 +253,7 @@ export default function Home(): JSX.Element {
             </div>
 
             <h1 className={styles.heroTitle}>
-              The headless calendar{' '}
-              <span className={styles.heroTitleAccent}>built for speed.</span>
+              The headless calendar built for speed.
             </h1>
 
             <p className={styles.heroSubtitle}>

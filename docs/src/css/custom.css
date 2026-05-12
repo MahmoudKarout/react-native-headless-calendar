@@ -1,68 +1,606 @@
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * Vercel-inspired brand system — DESIGN.md token mapping.
+ *
+ * Light  : stark white canvas, ink-near-black text, hairline borders.
+ * Dark   : near-black canvas, near-white text, dark hairline borders.
+ *
+ * Font   : Inter (geometric sans) loaded from Google Fonts.
+ *          font-feature-settings "ss01","ss02" enables geometric alternates
+ *          — the closest open-source match for Geist per DESIGN.md.
+ * Mono   : system monospace stack for code / technical labels.
+ *
+ * Surface ladder (must always go light→dark as you descend):
+ *   canvas-soft  > canvas  > canvas-soft-2  (light)
+ *   canvas-soft  < canvas  < canvas-soft-2  (dark — same ordering, deeper tones)
  */
 
-/* You can override the default Infima variables here. */
+/* ─── Brand token layer — light (default) ────────────────────────────────── */
 :root {
-  --ifm-color-primary: hsl(0, 0%, 9%);
-  --ifm-color-primary-dark: hsl(0, 0%, 6%);
-  --ifm-color-primary-darker: hsl(0, 0%, 4%);
-  --ifm-color-primary-darkest: hsl(0, 0%, 0%);
-  --ifm-color-primary-light: hsl(0, 0%, 20%);
-  --ifm-color-primary-lighter: hsl(0, 0%, 35%);
-  --ifm-color-primary-lightest: hsl(0, 0%, 52%);
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.08);
+  /* ── surfaces ── */
+  --ds-canvas:        #ffffff;
+  --ds-canvas-soft:   #fafafa;
+  --ds-canvas-soft-2: #f5f5f5;
+
+  /* ── text ── */
+  --ds-ink:        #171717;
+  --ds-body:       #4d4d4d;
+  --ds-mute:       #888888;
+  --ds-on-primary: #ffffff;
+
+  /* ── borders ── */
+  --ds-hairline:        #ebebeb;
+  --ds-hairline-strong: #a1a1a1;
+
+  /* ── brand primary ── */
+  --ds-primary:    #171717;
+  --ds-primary-fg: #ffffff;
+
+  /* ── semantic ── */
+  --ds-link:          #0070f3;
+  --ds-link-deep:     #0761d1;
+  --ds-link-bg-soft:  #d3e5ff;
+  --ds-success:       #0070f3;
+  --ds-error:         #ee0000;
+  --ds-error-soft:    #f7d4d6;
+  --ds-error-deep:    #c50000;
+  --ds-warning:       #f5a623;
+  --ds-warning-soft:  #ffefcf;
+  --ds-warning-deep:  #ab570a;
+
+  /* ── brand accents ── */
+  --ds-violet:         #7928ca;
+  --ds-violet-soft:    #d8ccf1;
+  --ds-violet-deep:    #4c2889;
+  --ds-cyan:           #50e3c2;
+  --ds-cyan-soft:      #aaffec;
+  --ds-cyan-deep:      #29bc9b;
+  --ds-highlight-pink: #ff0080;
+
+  /* ── brand gradient pair stops ── */
+  --ds-grad-dev-start:     #007cf0;
+  --ds-grad-dev-end:       #00dfd8;
+  --ds-grad-preview-start: #7928ca;
+  --ds-grad-preview-end:   #ff0080;
+  --ds-grad-ship-start:    #ff4d4d;
+  --ds-grad-ship-end:      #f9cb28;
+
+  /* ── mesh gradient (hero scale only — never miniaturise) ── */
+  --ds-mesh: linear-gradient(
+    135deg,
+    #007cf0 0%,
+    #00dfd8 25%,
+    #7928ca 50%,
+    #ff0080 75%,
+    #ff4d4d 88%,
+    #f9cb28 100%
+  );
+
+  /* ── typography ── */
+  --ds-font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  --ds-font-mono: ui-monospace, SFMono-Regular, 'Menlo', 'Monaco',
+    'Consolas', monospace;
+
+  /* ── spacing ── */
+  --ds-space-xxs: 4px;
+  --ds-space-xs:  8px;
+  --ds-space-sm:  12px;
+  --ds-space-md:  16px;
+  --ds-space-lg:  24px;
+  --ds-space-xl:  32px;
+  --ds-space-2xl: 40px;
+  --ds-space-3xl: 48px;
+  --ds-space-4xl: 64px;
+  --ds-space-5xl: 96px;
+
+  /* ── radii ── */
+  --ds-radius-none: 0px;
+  --ds-radius-xs:   4px;
+  --ds-radius-sm:   6px;
+  --ds-radius-md:   8px;
+  --ds-radius-lg:   12px;
+  --ds-radius-xl:   16px;
+  --ds-radius-pill: 100px;
+  --ds-radius-full: 9999px;
+
+  /* ── elevation shadows (stacked, no single heavy drop) ── */
+  --ds-shadow-1: 0 0 0 1px rgba(0,0,0,0.08);
+  --ds-shadow-2: 0px 1px 1px rgba(0,0,0,0.02),
+                 0px 2px 2px rgba(0,0,0,0.04),
+                 0 0 0 1px rgba(0,0,0,0.06);
+  --ds-shadow-3: 0px 2px 2px rgba(0,0,0,0.04),
+                 0px 8px 8px -8px rgba(0,0,0,0.04),
+                 0 0 0 1px rgba(0,0,0,0.06);
+  --ds-shadow-4: 0px 2px 2px rgba(0,0,0,0.04),
+                 0px 8px 16px -4px rgba(0,0,0,0.04),
+                 0 0 0 1px rgba(0,0,0,0.06);
+  --ds-shadow-5: 0px 1px 1px rgba(0,0,0,0.02),
+                 0px 8px 16px -4px rgba(0,0,0,0.04),
+                 0px 24px 32px -8px rgba(0,0,0,0.06),
+                 0 0 0 1px rgba(0,0,0,0.06);
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* ─── Brand token layer — dark ───────────────────────────────────────────── */
 [data-theme='dark'] {
-  --ifm-color-primary: hsl(0, 0%, 98%);
-  --ifm-color-primary-dark: hsl(0, 0%, 92%);
-  --ifm-color-primary-darker: hsl(0, 0%, 86%);
-  --ifm-color-primary-darkest: hsl(0, 0%, 75%);
-  --ifm-color-primary-light: hsl(0, 0%, 99%);
-  --ifm-color-primary-lighter: hsl(0, 0%, 100%);
-  --ifm-color-primary-lightest: hsl(0, 0%, 100%);
-  --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.08);
+  /* surfaces — corrected ladder: canvas-soft is darkest, canvas-soft-2 is mid */
+  --ds-canvas:        #111111;
+  --ds-canvas-soft:   #0a0a0a;
+  --ds-canvas-soft-2: #1a1a1a;
+
+  /* text */
+  --ds-ink:        #ededed;
+  --ds-body:       #a1a1a1;
+  --ds-mute:       #707070;
+  --ds-on-primary: #111111;
+
+  /* borders */
+  --ds-hairline:        #262626;
+  --ds-hairline-strong: #3d3d3d;
+
+  /* brand primary flipped to near-white in dark mode */
+  --ds-primary:    #ededed;
+  --ds-primary-fg: #111111;
+
+  /* semantic — slightly adjusted for dark surfaces */
+  --ds-link:         #3b82f6;
+  --ds-link-deep:    #60a5fa;
+  --ds-link-bg-soft: #1e3a5f;
+  --ds-error:        #ff4444;
+  --ds-error-soft:   #3b1111;
+  --ds-warning:      #f5a623;
+  --ds-warning-soft: #3b2a0a;
+
+  /* shadows — white-tint at very low opacity in dark mode */
+  --ds-shadow-1: 0 0 0 1px rgba(255,255,255,0.06);
+  --ds-shadow-2: 0px 1px 1px rgba(0,0,0,0.3),
+                 0px 2px 2px rgba(0,0,0,0.5),
+                 0 0 0 1px rgba(255,255,255,0.06);
+  --ds-shadow-3: 0px 2px 2px rgba(0,0,0,0.4),
+                 0px 8px 8px -8px rgba(0,0,0,0.5),
+                 0 0 0 1px rgba(255,255,255,0.06);
+  --ds-shadow-4: 0px 2px 2px rgba(0,0,0,0.4),
+                 0px 8px 16px -4px rgba(0,0,0,0.6),
+                 0 0 0 1px rgba(255,255,255,0.06);
+  --ds-shadow-5: 0px 1px 1px rgba(0,0,0,0.3),
+                 0px 8px 16px -4px rgba(0,0,0,0.6),
+                 0px 24px 32px -8px rgba(0,0,0,0.7),
+                 0 0 0 1px rgba(255,255,255,0.06);
 }
 
-/* Custom styles for the calendar documentation */
+/* ─── Infima overrides — all wired through --ds-* ────────────────────────── */
+:root {
+  /* primary colour (nav active, link hover, etc.) */
+  --ifm-color-primary:          var(--ds-ink);
+  --ifm-color-primary-dark:     #0f0f0f;
+  --ifm-color-primary-darker:   #080808;
+  --ifm-color-primary-darkest:  #000000;
+  --ifm-color-primary-light:    #2e2e2e;
+  --ifm-color-primary-lighter:  #555555;
+  --ifm-color-primary-lightest: #888888;
+
+  /* surfaces */
+  --ifm-background-color:         var(--ds-canvas-soft);
+  --ifm-background-surface-color: var(--ds-canvas);
+
+  /* typography */
+  --ifm-font-family-base:      var(--ds-font-sans);
+  --ifm-font-family-monospace: var(--ds-font-mono);
+  --ifm-font-size-base:        15px;
+  --ifm-line-height-base:      1.65;
+  --ifm-font-color-base:       var(--ds-body);
+  --ifm-heading-color:         var(--ds-ink);
+  --ifm-heading-font-weight:   600;
+
+  /* navbar */
+  --ifm-navbar-background-color: var(--ds-canvas);
+  --ifm-navbar-shadow:           0 0 0 1px var(--ds-hairline);
+  --ifm-navbar-height:           64px;
+  --ifm-navbar-padding-vertical: var(--ds-space-sm);
+  --ifm-navbar-padding-horizontal: var(--ds-space-lg);
+
+  /* footer */
+  --ifm-footer-background-color: var(--ds-canvas);
+  --ifm-footer-color:            var(--ds-body);
+  --ifm-footer-link-color:       var(--ds-body);
+  --ifm-footer-link-hover-color: var(--ds-ink);
+
+  /* links */
+  --ifm-link-color:       var(--ds-link);
+  --ifm-link-hover-color: var(--ds-link-deep);
+
+  /* code */
+  --ifm-code-font-size:      87.5%;
+  --ifm-code-background:     var(--ds-canvas-soft-2);
+  --ifm-code-border-radius:  var(--ds-radius-xs);
+
+  /* tables / dividers */
+  --ifm-toc-border-color:    var(--ds-hairline);
+  --ifm-hr-border-color:     var(--ds-hairline);
+  --ifm-table-border-color:  var(--ds-hairline);
+
+  /* code block highlight line */
+  --docusaurus-highlighted-code-line-bg: rgba(0,0,0,0.05);
+
+  /* sidebar */
+  --ifm-menu-color:                      var(--ds-body);
+  --ifm-menu-color-active:               var(--ds-ink);
+  --ifm-menu-color-background-active:    var(--ds-canvas-soft-2);
+  --ifm-menu-color-background-hover:     var(--ds-canvas-soft-2);
+  --ifm-menu-link-padding-horizontal:    var(--ds-space-sm);
+  --ifm-menu-link-padding-vertical:      6px;
+
+  /* breadcrumbs */
+  --ifm-breadcrumb-color-active:  var(--ds-ink);
+  --ifm-breadcrumb-item-background-active: var(--ds-canvas-soft-2);
+  --ifm-breadcrumb-separator-color: var(--ds-hairline-strong);
+
+  /* admonitions */
+  --ifm-color-info-contrast-background: #dbeafe;
+  --ifm-color-info-dark: #1d4ed8;
+  --ifm-color-warning-contrast-background: var(--ds-warning-soft);
+  --ifm-color-warning-dark: var(--ds-warning-deep);
+  --ifm-color-danger-contrast-background: var(--ds-error-soft);
+  --ifm-color-danger-dark: var(--ds-error-deep);
+
+  /* pagination */
+  --ifm-pagination-nav-border-radius: var(--ds-radius-md);
+
+  /* global border radius */
+  --ifm-global-radius: var(--ds-radius-sm);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary:          var(--ds-ink);
+  --ifm-color-primary-dark:     #d4d4d4;
+  --ifm-color-primary-darker:   #b3b3b3;
+  --ifm-color-primary-darkest:  #909090;
+  --ifm-color-primary-light:    #f5f5f5;
+  --ifm-color-primary-lighter:  #fafafa;
+  --ifm-color-primary-lightest: #ffffff;
+
+  --ifm-background-color:         var(--ds-canvas-soft);
+  --ifm-background-surface-color: var(--ds-canvas);
+
+  --ifm-font-color-base: var(--ds-body);
+  --ifm-heading-color:   var(--ds-ink);
+
+  --ifm-navbar-background-color: var(--ds-canvas);
+  --ifm-navbar-shadow:           0 0 0 1px var(--ds-hairline);
+
+  --ifm-footer-background-color: var(--ds-canvas);
+  --ifm-footer-color:            var(--ds-body);
+
+  --ifm-toc-border-color:   var(--ds-hairline);
+  --ifm-hr-border-color:    var(--ds-hairline);
+  --ifm-table-border-color: var(--ds-hairline);
+
+  --ifm-code-background: var(--ds-canvas-soft-2);
+
+  --docusaurus-highlighted-code-line-bg: rgba(255,255,255,0.06);
+
+  --ifm-menu-color:                      var(--ds-body);
+  --ifm-menu-color-active:               var(--ds-ink);
+  --ifm-menu-color-background-active:    var(--ds-canvas-soft-2);
+  --ifm-menu-color-background-hover:     var(--ds-canvas-soft-2);
+
+  --ifm-color-info-contrast-background: #1e3a5f;
+  --ifm-color-info-dark: #60a5fa;
+  --ifm-color-warning-contrast-background: var(--ds-warning-soft);
+  --ifm-color-warning-dark: var(--ds-warning);
+  --ifm-color-danger-contrast-background: var(--ds-error-soft);
+  --ifm-color-danger-dark: var(--ds-error);
+}
+
+/* ─── Global base ────────────────────────────────────────────────────────── */
+html {
+  font-optical-sizing: auto;
+  /* Enable geometric alternates — closest open-source match for Geist (DESIGN.md) */
+  font-feature-settings: "ss01", "ss02", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--ds-font-sans);
+  background-color: var(--ds-canvas-soft);
+  color: var(--ds-body);
+}
+
+/* Cap font-weight at 600 — DESIGN.md: "the geometric sans never appears at 700+" */
+h1, h2, h3, h4, h5, h6,
+.navbar__title,
+strong,
+b {
+  font-weight: 600;
+}
+
+/* ─── Navbar ─────────────────────────────────────────────────────────────── */
+.navbar {
+  border-bottom: 1px solid var(--ds-hairline);
+  box-shadow: none;
+}
+
+.navbar__title {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ds-ink);
+  font-feature-settings: "ss01", "ss02";
+}
+
+.navbar__link {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ds-body);
+  letter-spacing: -0.01em;
+  transition: color 0.12s ease;
+}
+
+.navbar__link:hover,
+.navbar__link--active {
+  color: var(--ds-ink);
+}
+
+/* ─── Sidebar ────────────────────────────────────────────────────────────── */
+.menu__link {
+  font-size: 14px;
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-body);
+  letter-spacing: -0.01em;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.menu__link:hover {
+  color: var(--ds-ink);
+  background: var(--ds-canvas-soft-2);
+}
+
+.menu__link--active {
+  color: var(--ds-ink);
+  font-weight: 500;
+}
+
+.menu__caret::before {
+  background-color: var(--ds-body);
+}
+
+.menu__list-item-collapsible:hover {
+  background: var(--ds-canvas-soft-2);
+}
+
+/* Sidebar category labels — caption-mono voice */
+.menu__list-item-collapsible > .menu__link,
+.menu__list > .menu__list-item--collapsed > .menu__link {
+  font-size: 11px;
+  font-family: var(--ds-font-mono);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ds-mute);
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────────────── */
+.footer,
+.footer--dark {
+  background-color: var(--ds-canvas) !important;
+  border-top: 1px solid var(--ds-hairline);
+}
+
+.footer__title {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ds-mute);
+  font-family: var(--ds-font-mono);
+}
+
+.footer__link-item {
+  font-size: 14px;
+  color: var(--ds-body);
+  transition: color 0.12s ease;
+}
+
+.footer__link-item:hover {
+  color: var(--ds-ink);
+  text-decoration: none;
+}
+
+.footer__copyright {
+  font-size: 12px;
+  color: var(--ds-mute);
+}
+
+/* ─── Docs content ───────────────────────────────────────────────────────── */
 .table-of-contents {
-  font-size: 0.85rem;
+  font-size: 13px;
 }
 
-.markdown h2 {
-  --ifm-h2-font-size: 1.75rem;
-  margin-top: 2rem;
+.table-of-contents__link {
+  color: var(--ds-body);
+  transition: color 0.12s ease;
 }
 
-.markdown h3 {
-  --ifm-h3-font-size: 1.4rem;
+.table-of-contents__link:hover,
+.table-of-contents__link--active {
+  color: var(--ds-ink);
 }
 
+article h1,
+article h2,
+article h3,
+article h4,
+article h5,
+article h6 {
+  font-family: var(--ds-font-sans);
+  color: var(--ds-ink);
+  font-feature-settings: "ss01", "ss02";
+}
+
+article h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+article h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin-top: 2.5rem;
+}
+
+article h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+article p {
+  color: var(--ds-body);
+  line-height: 1.7;
+}
+
+article a {
+  color: var(--ds-link);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.12s ease, color 0.12s ease;
+}
+
+article a:hover {
+  color: var(--ds-link-deep);
+  text-decoration-color: currentColor;
+}
+
+/* Code blocks */
+article pre,
+article code {
+  font-family: var(--ds-font-mono);
+  font-size: 13px;
+}
+
+/* Inline code — canvas-soft-2 surface with hairline border */
+article :not(pre) > code {
+  background: var(--ds-canvas-soft-2);
+  border: 1px solid var(--ds-hairline);
+  border-radius: var(--ds-radius-xs);
+  padding: 2px 5px;
+  font-size: 0.875em;
+  color: var(--ds-ink);
+}
+
+/* Tables — data-table-cell chrome from DESIGN.md */
 table {
-  font-size: 0.9rem;
+  font-size: 14px;
+  border-collapse: collapse;
+  width: 100%;
 }
 
-code {
-  font-size: 0.85em;
+th {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ds-mute);
+  font-family: var(--ds-font-mono);
+  background: var(--ds-canvas-soft-2);
+  border-bottom: 1px solid var(--ds-hairline);
+  padding: var(--ds-space-xs) var(--ds-space-sm);
 }
 
-/* Props table styling */
+td {
+  border-bottom: 1px solid var(--ds-hairline);
+  color: var(--ds-body);
+  padding: var(--ds-space-xs) var(--ds-space-sm);
+}
+
+tr:hover td {
+  background: var(--ds-canvas-soft-2);
+}
+
+/* Props table — first-column code token */
 .markdown table td:first-child code {
   font-weight: 600;
-  color: var(--ifm-font-color-base);
+  color: var(--ds-ink);
+  background: var(--ds-canvas-soft-2);
+  border: 1px solid var(--ds-hairline);
 }
 
-/* Method signatures */
-.markdown pre code {
-  border-radius: 0;
-}
-
-/* Admonition adjustments */
+/* ─── Admonitions ────────────────────────────────────────────────────────── */
 .alert {
-  font-size: 0.95rem;
+  font-size: 14px;
+  border-radius: var(--ds-radius-md);
+  border-left-width: 3px;
+}
+
+/* ─── Pagination links ───────────────────────────────────────────────────── */
+.pagination-nav__link {
+  border: 1px solid var(--ds-hairline);
+  border-radius: var(--ds-radius-md);
+  color: var(--ds-body);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pagination-nav__link:hover {
+  border-color: var(--ds-hairline-strong);
+  background: var(--ds-canvas-soft-2);
+  color: var(--ds-ink);
+  text-decoration: none;
+}
+
+.pagination-nav__label {
+  color: var(--ds-ink);
+  font-weight: 600;
+}
+
+/* ─── Code block chrome ──────────────────────────────────────────────────── */
+.theme-code-block {
+  border-radius: var(--ds-radius-md) !important;
+  box-shadow: var(--ds-shadow-2) !important;
+}
+
+[data-theme='dark'] .theme-code-block {
+  box-shadow: var(--ds-shadow-3) !important;
+}
+
+/* ─── Breadcrumbs ────────────────────────────────────────────────────────── */
+.breadcrumbs__item--active .breadcrumbs__link {
+  color: var(--ds-ink);
+  background: var(--ds-canvas-soft-2);
+}
+
+.breadcrumbs__link {
+  color: var(--ds-body);
+}
+
+/* ─── Scrollbar (WebKit) ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ds-hairline-strong);
+  border-radius: var(--ds-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ds-mute);
+}
+
+/* ─── Text selection ─────────────────────────────────────────────────────── */
+::selection {
+  background: #171717;
+  color: #f2f2f2;
+}
+
+[data-theme='dark'] ::selection {
+  background: #ededed;
+  color: #111111;
 }

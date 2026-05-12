@@ -159,7 +159,7 @@ function EventPlannerScreen() {
       <Text style={{ fontSize: 24, fontWeight: '600' }}>
         Select Event Dates
       </Text>
-      <Text style={{ color: '#6B7280', marginBottom: 16 }}>
+      <Text style={{ color: '#888888', marginBottom: 16 }}>
         Choose up to 5 dates for your event
       </Text>
 

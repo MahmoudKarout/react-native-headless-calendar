@@ -1,87 +1,87 @@
-/*
- * shadcn/ui-inspired calendar styling.
- * Design tokens are scoped to .calendarContainer so they only affect demos.
+/**
+ * CalendarDemo — Vercel-inspired brand tokens.
+ *
+ * All colour values read from the global --ds-* tokens (custom.css).
+ * Hard-coded hex values are intentional exceptions:
+ *   - Traffic-light dots (#ff5f57 / #febc2e / #28c840) — skeuomorphic Mac chrome
+ *   - Modifier dot colors passed directly via JavaScript (modifier.color prop)
+ *
+ * Surface ladder: canvas-soft (page bg) > canvas (card) > canvas-soft-2 (inset).
  */
+
+/* ─── Calendar container token mapping ──────────────────────────────────── */
 .calendarContainer {
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(0 0% 5%);
-  --muted: hsl(0 0% 96%);
-  --muted-foreground: hsl(0 0% 45%);
-  --accent: hsl(0 0% 96%);
-  --accent-foreground: hsl(0 0% 5%);
-  --primary: hsl(0 0% 9%);
-  --primary-foreground: hsl(0 0% 98%);
-  --border: hsl(0 0% 91%);
-  --ring: hsl(0 0% 5%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --radius: 0.5rem;
+  /* re-map global ds tokens to local component names */
+  --background:      var(--ds-canvas);
+  --background-soft: var(--ds-canvas-soft);
+  --background-soft-2: var(--ds-canvas-soft-2);
+  --foreground:      var(--ds-ink);
+  --body:            var(--ds-body);
+  --muted-foreground: var(--ds-mute);
+  --border:          var(--ds-hairline);
+  --border-strong:   var(--ds-hairline-strong);
+  --primary:         var(--ds-primary);
+  --primary-foreground: var(--ds-primary-fg);
+  --accent:          var(--ds-canvas-soft-2);
+  --accent-foreground: var(--ds-ink);
+  --destructive:     var(--ds-error);
+  --ring:            var(--ds-primary);
+  --radius:          var(--ds-radius-sm);
+  --shadow:          var(--ds-shadow-2);
 
   background: var(--background);
   color: var(--foreground);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--shadow);
+  padding: var(--ds-space-md);
   max-width: 320px;
   margin: 0 auto 1.5rem;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Roboto, sans-serif;
+  font-family: var(--ds-font-sans);
   font-size: 14px;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "ss02";
+  color-scheme: light dark;
 }
 
 .calendarWide {
   max-width: 640px;
 }
 
-[data-theme='dark'] .calendarContainer {
-  --background: hsl(0 0% 5%);
-  --foreground: hsl(0 0% 98%);
-  --muted: hsl(0 0% 12%);
-  --muted-foreground: hsl(0 0% 65%);
-  --accent: hsl(0 0% 15%);
-  --accent-foreground: hsl(0 0% 98%);
-  --primary: hsl(0 0% 98%);
-  --primary-foreground: hsl(0 0% 9%);
-  --border: hsl(0 0% 16%);
-  --ring: hsl(0 0% 85%);
-  --destructive: hsl(0 62.8% 30.6%);
-  --destructive-foreground: hsl(0 0% 98%);
-}
-
-/* Header */
+/* ─── Header ─────────────────────────────────────────────────────────────── */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
   position: relative;
 }
 
+/* Nav buttons — icon-button-circular style with hairline border */
 .navButton {
   height: 28px;
   width: 28px;
   border: 1px solid var(--border);
   background: transparent;
-  border-radius: calc(var(--radius) - 2px);
+  border-radius: var(--radius);
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--foreground);
-  opacity: 0.7;
+  color: var(--body);
   transition:
-    background-color 0.15s ease,
-    opacity 0.15s ease,
-    border-color 0.15s ease;
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
 }
 
 .navButton:hover {
   background: var(--accent);
-  color: var(--accent-foreground);
-  opacity: 1;
+  color: var(--foreground);
+  border-color: var(--border-strong);
 }
 
 .navButton:focus-visible {
@@ -89,11 +89,13 @@
   outline-offset: 2px;
 }
 
+/* Month / year label — body-sm-strong */
 .monthYear {
   display: flex;
   gap: 6px;
   font-weight: 500;
   font-size: 14px;
+  letter-spacing: -0.02em;
   color: var(--foreground);
 }
 
@@ -102,7 +104,7 @@
   cursor: default;
 }
 
-/* Multi-month layout */
+/* ─── Multi-month layout ─────────────────────────────────────────────────── */
 .singleMonth {
   display: block;
 }
@@ -110,13 +112,11 @@
 .multiMonthRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: var(--ds-space-lg);
 }
 
 @media (max-width: 640px) {
-  .multiMonthRow {
-    grid-template-columns: 1fr;
-  }
+  .multiMonthRow { grid-template-columns: 1fr; }
 }
 
 .monthBlock {
@@ -128,11 +128,12 @@
   text-align: center;
   font-weight: 500;
   font-size: 13px;
+  letter-spacing: -0.01em;
   color: var(--foreground);
-  margin-bottom: 8px;
+  margin-bottom: var(--ds-space-xs);
 }
 
-/* Weekdays row */
+/* ─── Weekday row ────────────────────────────────────────────────────────── */
 .weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -141,17 +142,19 @@
 
 .weekdaysWithNumbers {
   grid-template-columns: 28px repeat(7, 1fr);
-  gap: 0;
 }
 
 .weekday {
   text-align: center;
-  font-size: 12px;
-  font-weight: 400;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--muted-foreground);
   padding: 6px 0;
   width: 36px;
   margin: 0 auto;
+  font-family: var(--ds-font-mono);
 }
 
 .weekNumberHeader {
@@ -162,9 +165,10 @@
   padding: 6px 0;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  font-family: var(--ds-font-mono);
 }
 
-/* Days grid */
+/* ─── Days grid ──────────────────────────────────────────────────────────── */
 .daysGrid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -174,7 +178,6 @@
 .daysGridWithWeeks {
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
 .weekRow {
@@ -186,7 +189,6 @@
 .weekRowDays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 0;
 }
 
 .weekNumber {
@@ -195,9 +197,10 @@
   font-weight: 400;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+  font-family: var(--ds-font-mono);
 }
 
-/* Day cell wrapper — handles range background that flows edge-to-edge */
+/* ─── Day cell wrapper — range fill flows edge-to-edge ───────────────────── */
 .dayWrapper {
   position: relative;
   display: flex;
@@ -207,53 +210,48 @@
   padding: 2px 0;
 }
 
+/* Range fill — solid half-fill approach for better dark-mode contrast */
 .rangeMiddle {
   background: var(--accent);
-  color: var(--accent-foreground);
 }
 
 .rangeStart {
   background: linear-gradient(
     to right,
-    transparent 0%,
-    transparent 50%,
-    var(--accent) 50%,
-    var(--accent) 100%
+    transparent 0%, transparent 50%,
+    var(--accent) 50%, var(--accent) 100%
   );
 }
 
 .rangeEnd {
   background: linear-gradient(
     to right,
-    var(--accent) 0%,
-    var(--accent) 50%,
-    transparent 50%,
-    transparent 100%
+    var(--accent) 0%, var(--accent) 50%,
+    transparent 50%, transparent 100%
   );
 }
 
-/* Day cell — square, rounded, ghost-button style */
+/* ─── Day cell ───────────────────────────────────────────────────────────── */
 .day {
   position: relative;
   height: 36px;
   width: 36px;
   border: none;
   background: transparent;
-  border-radius: calc(var(--radius) - 2px);
+  border-radius: var(--radius);
   cursor: pointer;
   font-size: 13px;
   font-weight: 400;
   color: var(--foreground);
+  font-variant-numeric: tabular-nums;
   transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    opacity 0.15s ease;
+    background-color 0.12s ease,
+    color 0.12s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   font-family: inherit;
-  font-variant-numeric: tabular-nums;
 }
 
 .day:hover:not(:disabled) {
@@ -268,28 +266,27 @@
 
 .outsideMonth {
   color: var(--muted-foreground);
-  opacity: 0.5;
+  opacity: 0.35;
   cursor: default;
   pointer-events: none;
 }
 
 .disabled {
   color: var(--muted-foreground);
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
   text-decoration: line-through;
 }
 
-.disabled:hover:not(:disabled) {
-  background: transparent;
-}
-
+/* Today indicator — subtle accent fill with border */
 .day.today {
   background: var(--accent);
-  color: var(--accent-foreground);
+  color: var(--foreground);
   font-weight: 500;
+  border: 1px solid var(--border-strong);
 }
 
+/* Selected — primary fill */
 .day.selected,
 .day.selected:hover:not(:disabled) {
   background: var(--primary);
@@ -297,8 +294,7 @@
   font-weight: 500;
 }
 
-
-/* Modifier dots under the day number */
+/* ─── Modifier dots ──────────────────────────────────────────────────────── */
 .modifierDots {
   position: absolute;
   bottom: 3px;
@@ -321,7 +317,7 @@
   background: var(--primary-foreground) !important;
 }
 
-/* Price cell variant */
+/* ─── Price cell variant ─────────────────────────────────────────────────── */
 .priceCell {
   flex-direction: column;
   height: 52px;
@@ -339,14 +335,15 @@
   font-size: 11px;
   color: var(--muted-foreground);
   font-weight: 400;
+  font-family: var(--ds-font-mono);
 }
 
 .selected .priceValue {
   color: var(--primary-foreground) !important;
-  opacity: 0.85;
+  opacity: 0.8;
 }
 
-/* Status cell variant */
+/* ─── Status cell variant ────────────────────────────────────────────────── */
 .statusCell {
   flex-direction: column;
   height: 52px;
@@ -364,21 +361,23 @@
   text-transform: uppercase;
   font-weight: 500;
   color: var(--muted-foreground);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  font-family: var(--ds-font-mono);
 }
 
-/* Footer */
+/* ─── Footer ─────────────────────────────────────────────────────────────── */
 .footer {
-  margin-top: 16px;
-  padding-top: 12px;
+  margin-top: var(--ds-space-md);
+  padding-top: 14px;
   border-top: 1px solid var(--border);
 }
 
 .selectionInfo {
   font-size: 13px;
   color: var(--muted-foreground);
-  margin-bottom: 12px;
+  margin-bottom: var(--ds-space-sm);
   min-height: 18px;
+  letter-spacing: -0.01em;
 }
 
 .errorText {
@@ -388,80 +387,78 @@
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--ds-space-xs);
   justify-content: flex-end;
   flex-wrap: wrap;
 }
 
-/* shadcn-style buttons */
+/* Buttons — brand pill-sm style (6px radius for UI scale) */
 .clearButton,
 .todayButton,
 .confirmButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: calc(var(--radius) - 2px);
+  height: 30px;
+  padding: 0 var(--ds-space-sm);
+  border-radius: var(--radius);
   font-family: inherit;
   font-size: 13px;
   font-weight: 500;
+  letter-spacing: -0.01em;
   cursor: pointer;
   transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
+    background-color 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
   border: 1px solid transparent;
 }
 
-/* outline variant */
 .clearButton {
   background: transparent;
   border-color: var(--border);
-  color: var(--foreground);
+  color: var(--body);
 }
 
 .clearButton:hover {
   background: var(--accent);
-  color: var(--accent-foreground);
+  color: var(--foreground);
+  border-color: var(--border-strong);
 }
 
-/* secondary/ghost variant for "Today" */
 .todayButton {
-  background: var(--muted);
+  background: var(--background-soft-2);
   color: var(--foreground);
-  border-color: transparent;
+  border-color: var(--border);
 }
 
 .todayButton:hover {
   background: var(--accent);
-  color: var(--accent-foreground);
+  color: var(--foreground);
 }
 
-/* primary variant */
 .confirmButton {
   background: var(--primary);
   color: var(--primary-foreground);
-  border-color: transparent;
 }
 
 .confirmButton:hover:not(:disabled) {
-  opacity: 0.9;
+  opacity: 0.85;
 }
 
 .confirmButton:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-/* Legend */
+/* ─── Legend ─────────────────────────────────────────────────────────────── */
 .legend {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--ds-space-sm);
   font-size: 12px;
   color: var(--muted-foreground);
 }
@@ -478,7 +475,7 @@
   border-radius: 50%;
 }
 
-/* Bottom-sheet variant — input "trigger" matches shadcn Input */
+/* ─── Bottom-sheet variant ───────────────────────────────────────────────── */
 .sheetTriggerWrapper {
   max-width: 320px;
   margin: 0 auto 1.5rem;
@@ -489,37 +486,25 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  height: 36px;
-  padding: 0 12px;
-  background: hsl(0 0% 100%);
-  border: 1px solid hsl(0 0% 91%);
-  border-radius: 0.5rem;
+  height: 40px;
+  padding: 0 14px;
+  background: var(--ds-canvas);
+  border: 1px solid var(--ds-hairline);
+  border-radius: var(--ds-radius-sm);
   cursor: pointer;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: inherit;
   font-size: 14px;
-  color: hsl(0 0% 45%);
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  color: var(--ds-mute);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .sheetTriggerInput:hover {
-  border-color: hsl(0 0% 5%);
+  border-color: var(--ds-hairline-strong);
 }
 
 .sheetTriggerInput:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px hsl(0 0% 5%);
-}
-
-[data-theme='dark'] .sheetTriggerInput {
-  background: hsl(0 0% 5%);
-  border-color: hsl(0 0% 16%);
-  color: hsl(0 0% 65%);
-}
-
-[data-theme='dark'] .sheetTriggerInput:hover {
-  border-color: hsl(0 0% 85%);
+  box-shadow: 0 0 0 2px var(--ds-primary);
 }
 
 .sheetTriggerLabel {
@@ -528,24 +513,20 @@
 
 .sheetTriggerIcon {
   font-size: 16px;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .sheetTriggerHelper {
   margin-top: 6px;
   font-size: 12px;
-  color: hsl(0 0% 45%);
+  color: var(--ds-mute);
   text-align: center;
-}
-
-[data-theme='dark'] .sheetTriggerHelper {
-  color: hsl(0 0% 65%);
 }
 
 .sheetOverlay {
   position: relative;
-  background: hsla(0, 0%, 5%, 0.5);
-  border-radius: 0.5rem;
+  background: rgba(0,0,0,0.45);
+  border-radius: var(--ds-radius-md);
   padding: 36px 12px 0;
   min-height: 460px;
   display: flex;
@@ -555,64 +536,60 @@
   max-width: 420px;
 }
 
+[data-theme='dark'] .sheetOverlay {
+  background: rgba(0,0,0,0.72);
+}
+
 .sheetContainer {
   width: 100%;
-  background: hsl(0 0% 100%);
-  border: 1px solid hsl(0 0% 91%);
+  background: var(--ds-canvas);
+  border: 1px solid var(--ds-hairline);
   border-bottom: none;
-  border-radius: 0.75rem 0.75rem 0 0;
+  border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
   padding: 12px 0 0;
-  box-shadow: 0 -4px 12px hsla(0, 0%, 0%, 0.08);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
 }
 
 [data-theme='dark'] .sheetContainer {
-  background: hsl(0 0% 5%);
-  border-color: hsl(0 0% 16%);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.5);
 }
 
 .sheetHandle {
-  width: 32px;
+  width: 36px;
   height: 4px;
   border-radius: 2px;
-  background: hsl(0 0% 91%);
-  margin: 0 auto 8px;
-}
-
-[data-theme='dark'] .sheetHandle {
-  background: hsl(0 0% 16%);
+  background: var(--ds-hairline-strong);
+  margin: 0 auto 10px;
 }
 
 .sheetContainer .calendarContainer {
   border: none;
+  box-shadow: none;
   margin: 0;
   border-radius: 0;
   max-width: 100%;
-  padding: 8px 16px 16px;
+  padding: 8px var(--ds-space-md) var(--ds-space-md);
 }
 
-/* Vertical (infinite) variant */
+/* ─── Vertical (infinite) variant ───────────────────────────────────────── */
 .verticalContainer {
-  background: var(--background, hsl(0 0% 100%));
-  border: 1px solid hsl(0 0% 91%);
-  border-radius: 0.5rem;
+  background: var(--ds-canvas);
+  border: 1px solid var(--ds-hairline);
+  border-radius: var(--ds-radius-md);
   max-width: 320px;
   margin: 0 auto 1.5rem;
   overflow: hidden;
-}
-
-[data-theme='dark'] .verticalContainer {
-  background: hsl(0 0% 5%);
-  border-color: hsl(0 0% 16%);
+  box-shadow: var(--ds-shadow-2);
 }
 
 .verticalScroll {
   max-height: 440px;
   overflow-y: auto;
-  padding: 12px;
+  padding: var(--ds-space-sm);
 }
 
 .verticalScroll::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .verticalScroll::-webkit-scrollbar-track {
@@ -620,16 +597,12 @@
 }
 
 .verticalScroll::-webkit-scrollbar-thumb {
-  background: hsl(0 0% 85%);
-  border-radius: 4px;
-}
-
-[data-theme='dark'] .verticalScroll::-webkit-scrollbar-thumb {
-  background: hsl(0 0% 22%);
+  background: var(--ds-hairline-strong);
+  border-radius: var(--ds-radius-full);
 }
 
 .verticalMonth {
-  margin-bottom: 16px;
+  margin-bottom: var(--ds-space-md);
 }
 
 .verticalMonth:last-child {
@@ -639,41 +612,37 @@
 .verticalMonthCaption {
   position: sticky;
   top: -12px;
-  background: hsl(0 0% 100%);
+  background: var(--ds-canvas);
   font-weight: 500;
-  font-size: 14px;
-  color: hsl(0 0% 5%);
+  font-size: 13px;
+  letter-spacing: -0.02em;
+  color: var(--ds-ink);
   padding: 8px 0;
   margin-bottom: 4px;
-  border-bottom: 1px solid hsl(0 0% 91%);
+  border-bottom: 1px solid var(--ds-hairline);
   z-index: 1;
 }
 
-[data-theme='dark'] .verticalMonthCaption {
-  background: hsl(0 0% 5%);
-  color: hsl(0 0% 98%);
-  border-bottom-color: hsl(0 0% 16%);
-}
-
-/* ─── Wheel Date Picker variant ─────────────────────────────────────────── */
-
+/* ─── Wheel Date Picker variant ──────────────────────────────────────────── */
 .wheelWrapper {
   max-width: 360px;
   margin: 0 auto 1.5rem;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Roboto, sans-serif;
+  font-family: var(--ds-font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Wheel picker — canvas surface, brand hairline border, stacked shadow */
 .wheelPicker {
   position: relative;
   display: flex;
-  background: hsl(240 5% 14%);
-  border-radius: 14px;
+  background: var(--ds-canvas);
+  border-radius: var(--ds-radius-lg);
   overflow: hidden;
-  border: 1px solid hsl(240 4% 22%);
+  border: 1px solid var(--ds-hairline);
+  box-shadow: var(--ds-shadow-4);
 }
 
-/* Selection-row separator: two hairlines at ±1 item from center */
+/* Selection-row indicator */
 .wheelSelector {
   position: absolute;
   top: 50%;
@@ -681,37 +650,43 @@
   right: 12px;
   height: 52px;
   transform: translateY(-50%);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
+  border-top: 1px solid var(--ds-hairline);
+  border-bottom: 1px solid var(--ds-hairline);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-canvas-soft-2);
   pointer-events: none;
   z-index: 2;
 }
 
+[data-theme='dark'] .wheelSelector {
+  border-top-color: var(--ds-hairline-strong);
+  border-bottom-color: var(--ds-hairline-strong);
+  background: rgba(255,255,255,0.05);
+}
+
 .wheelColumn {
   flex: 1;
-  height: 260px; /* 5 visible rows × 52 px */
+  height: 260px;
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  /* CSS mask fades the edges — no extra elements needed */
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(0, 0, 0, 0.4) 18%,
+    rgba(0,0,0,0.4) 18%,
     black 36%,
     black 64%,
-    rgba(0, 0, 0, 0.4) 82%,
+    rgba(0,0,0,0.4) 82%,
     transparent 100%
   );
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(0, 0, 0, 0.4) 18%,
+    rgba(0,0,0,0.4) 18%,
     black 36%,
     black 64%,
-    rgba(0, 0, 0, 0.4) 82%,
+    rgba(0,0,0,0.4) 82%,
     transparent 100%
   );
 }
@@ -720,12 +695,13 @@
   display: none;
 }
 
-/* top/bottom padding so first/last item can reach center */
+/* Top / bottom padding so first/last item can center */
 .wheelPad {
-  height: 104px; /* 2 × 52 px */
+  height: 104px;
   flex-shrink: 0;
 }
 
+/* Wheel items — use global ink token */
 .wheelItem {
   height: 52px;
   display: flex;
@@ -735,56 +711,53 @@
   scroll-snap-stop: always;
   font-size: 18px;
   font-weight: 400;
-  color: hsl(240 5% 96%);
-  letter-spacing: 0.02em;
+  color: var(--ds-ink);
+  letter-spacing: -0.01em;
   cursor: pointer;
   user-select: none;
-  /* transitions animate programmatic jumps (e.g. clear / today) */
   transition: opacity 0.08s linear;
 }
 
+/* Result panel */
 .wheelResult {
-  margin-top: 14px;
-  padding: 14px 16px;
-  background: hsl(240 5% 14%);
-  border: 1px solid hsl(240 4% 22%);
-  border-radius: 10px;
+  margin-top: 12px;
+  padding: 14px 18px;
+  background: var(--ds-canvas);
+  border: 1px solid var(--ds-hairline);
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-1);
 }
 
+/* Result label — caption-mono */
 .wheelResultLabel {
   font-size: 11px;
-  font-weight: 600;
-  color: hsl(240 4% 52%);
+  font-weight: 500;
+  color: var(--ds-mute);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   margin-bottom: 4px;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--ds-font-mono);
 }
 
+/* Result value */
 .wheelResultValue {
   font-size: 15px;
   font-weight: 500;
-  color: hsl(240 5% 96%);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: var(--ds-ink);
+  letter-spacing: -0.02em;
 }
 
-/* Demo badge (kept for backward compat with intro page) */
+/* ─── Demo badge ─────────────────────────────────────────────────────────── */
 .demoBadge {
   display: inline-flex;
   align-items: center;
   height: 22px;
   padding: 0 10px;
-  background: hsl(0 0% 96%);
-  color: hsl(0 0% 9%);
-  border-radius: 999px;
+  background: var(--ds-canvas-soft-2);
+  color: var(--ds-ink);
+  border-radius: var(--ds-radius-full);
   font-size: 12px;
   font-weight: 500;
-  margin-bottom: 16px;
-  border: 1px solid hsl(0 0% 91%);
-}
-
-[data-theme='dark'] .demoBadge {
-  background: hsl(0 0% 15%);
-  color: hsl(0 0% 98%);
-  border-color: hsl(0 0% 16%);
+  margin-bottom: var(--ds-space-md);
+  border: 1px solid var(--ds-hairline);
 }

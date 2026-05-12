@@ -88,13 +88,38 @@ function MonthView({ month, onSelect }) {
   const monthName = system.monthLabels()[system.month(month)];
   const year = system.year(month);
 
+// Brand-aligned typography from DESIGN.md
+const TYPOGRAPHY = {
+  monthCaption: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.02,  // Brand negative tracking
+    color: '#171717',      // --ds-ink
+  },
+  dayCell: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#4d4d4d',      // --ds-body
+  },
+  dayCellOutside: {
+    opacity: 0.35,
+  },
+};
+
+const DARK_TYPOGRAPHY = {
+  monthCaption: {
+    ...TYPOGRAPHY.monthCaption,
+    color: '#ededed',      // --ds-ink (dark)
+  },
+  dayCell: {
+    ...TYPOGRAPHY.dayCell,
+    color: '#888888',      // --ds-body (dark)
+  },
+};
+
   return (
     <View style={{ width: SCREEN_WIDTH, padding: 16 }}>
-      <Text style={{
-        fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 12,
-      }}>
+      <Text style={TYPOGRAPHY.monthCaption}>
         {monthName} {year}
       </Text>
 
@@ -103,6 +128,8 @@ function MonthView({ month, onSelect }) {
           <Pressable
             key={cell.index}
             onPress={() => onSelect(cell.date)}
+            accessibilityLabel={system.formatDay(cell.date)}
+            accessibilityHint="Double tap to select date"
             style={{
               width: CELL_SIZE,
               height: CELL_SIZE,
@@ -111,7 +138,10 @@ function MonthView({ month, onSelect }) {
               opacity: cell.isCurrentMonth ? 1 : 0.3,
             }}
           >
-            <Text style={{ fontSize: 14 }}>
+            <Text style={[
+              TYPOGRAPHY.dayCell,
+              !cell.isCurrentMonth && TYPOGRAPHY.dayCellOutside,
+            ]}>
               {system.formatDay(cell.date)}
             </Text>
           </Pressable>

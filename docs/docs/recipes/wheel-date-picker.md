@@ -10,7 +10,7 @@ import CalendarDemo from '@site/src/components/CalendarDemo';
 
 ## Interactive Demo
 
-Drag any column up or down to spin it. The selected item scales up and the rows towards the edges fade out. Spring physics snap the column to the nearest value on release.
+Drag any column up or down to spin it. The selected item scales up and the rows towards the edges fade out. Spring physics snap the column to the nearest value on release…
 
 <CalendarDemo wheel />
 
@@ -95,6 +95,13 @@ function daysInMonth(month: number, year: number) {
 Each row reads from the column's shared `offset` value to independently scale and fade:
 
 ```tsx
+// Brand-aligned wheel surface colors (code-editor-mockup dark theme)
+const WHEEL_COLORS = {
+  surface: '#111111',      // Dark canvas
+  text: 'rgba(255, 255, 255, 0.9)',  // Primary on-dark
+  selector: 'rgba(255, 255, 255, 0.12)',  // Subtle divider
+};
+
 const WheelItem = memo(function WheelItem({ label, index, offset }) {
   const animStyle = useAnimatedStyle(() => {
     const dist = Math.abs(offset.value - index * ITEM_H);
@@ -107,8 +114,12 @@ const WheelItem = memo(function WheelItem({ label, index, offset }) {
   });
 
   return (
-    <Animated.View style={[{ height: ITEM_H, alignItems: 'center', justifyContent: 'center' }, animStyle]}>
-      <Text style={{ fontSize: 19, color: '#FAFAFA' }}>{label}</Text>
+    <Animated.View
+      style={[{ height: ITEM_H, alignItems: 'center', justifyContent: 'center' }, animStyle]}
+      accessibilityLabel={label}
+      accessibilityRole="adjustable"
+    >
+      <Text style={{ fontSize: 19, color: WHEEL_COLORS.text }}>{label}</Text>
     </Animated.View>
   );
 });
@@ -119,11 +130,16 @@ const WheelItem = memo(function WheelItem({ label, index, offset }) {
 Stacking thin `View` layers with increasing opacity approximates a `LinearGradient`:
 
 ```tsx
+// Brand-aligned wheel surface for fade overlay
+const WHEEL_SURFACE = '#111111';  // Dark canvas matching code-editor-mockup
+
 function FadeOverlay({ edge, color }) {
   const STEPS = 10;
   return (
     <View
       pointerEvents="none"
+      accessibilityElementsHidden={true}
+      importantForAccessibility="no-hide-descendants"
       style={{
         position: 'absolute',
         [edge]: 0,
@@ -141,7 +157,7 @@ function FadeOverlay({ edge, color }) {
         return (
           <View
             key={i}
-            style={{ flex: 1, backgroundColor: color, opacity: t ** 1.6 }}
+            style={{ flex: 1, backgroundColor: color ?? WHEEL_SURFACE, opacity: t ** 1.6 }}
           />
         );
       })}
@@ -201,15 +217,17 @@ function WheelColumn({ items, selectedIndex, onIndexChange, width }) {
   return (
     <GestureDetector gesture={gesture}>
       <View style={{ height: WHEEL_H, overflow: 'hidden', flex: 1, ...(width ? { width } : {}) }}>
-        {/* Selection separator lines */}
+        {/* Selection separator lines — decorative, not interactive */}
         <View
           pointerEvents="none"
+          accessibilityElementsHidden={true}
+          importantForAccessibility="no-hide-descendants"
           style={{
             position: 'absolute',
             top: CENTER, left: 10, right: 10, height: ITEM_H,
             borderTopWidth: StyleSheet.hairlineWidth,
             borderBottomWidth: StyleSheet.hairlineWidth,
-            borderColor: 'rgba(250,250,250,0.1)',
+            borderColor: WHEEL_COLORS.selector,
             zIndex: 5,
           }}
         />
@@ -219,8 +237,8 @@ function WheelColumn({ items, selectedIndex, onIndexChange, width }) {
             <WheelItem key={`${label}-${i}`} label={label} index={i} offset={offset} />
           ))}
         </Animated.View>
-        <FadeOverlay edge="top"    color="#27272A" />
-        <FadeOverlay edge="bottom" color="#27272A" />
+        <FadeOverlay edge="top" />
+        <FadeOverlay edge="bottom" />
       </View>
     </GestureDetector>
   );
@@ -267,7 +285,14 @@ function WheelDatePicker({ value, onChange, minYear = 1924, maxYear = 2124 }) {
   }, [dayIdx, monthIdx, emit, minYear]);
 
   return (
-    <View style={{ flexDirection: 'row', backgroundColor: '#27272A', borderRadius: 16, overflow: 'hidden' }}>
+    <View style={{
+      flexDirection: 'row',
+      backgroundColor: WHEEL_COLORS.surface,
+      borderRadius: 14,              // --ds-radius-lg
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: '#262626',      // --ds-hairline (dark)
+    }}>
       <WheelColumn items={days}         selectedIndex={clampedDay} onIndexChange={handleDay}   width={64} />
       <WheelColumn items={MONTH_LABELS} selectedIndex={monthIdx}   onIndexChange={handleMonth} />
       <WheelColumn items={years}        selectedIndex={yearIdx}    onIndexChange={handleYear}  width={72} />

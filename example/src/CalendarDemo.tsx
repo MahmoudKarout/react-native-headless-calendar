@@ -501,9 +501,20 @@ function TodayButton() {
   const store = useCalendarStore();
   return (
     <Button
-      onPress={() => store.selectDate(store.getSnapshot().system.today())}
-      size="sm"
-      variant="ghost"
+      onPress={() => {
+        const snapshot = store.getSnapshot();
+        const today = snapshot.system.today();
+        const todayYear = snapshot.system.year(today);
+        const todayMonth = snapshot.system.month(today);
+
+        // Navigate to today's year and month, then select the date
+        // This ensures we switch back to day view if in month/year picker
+        store.goToYear(todayYear);
+        store.goToMonth(todayMonth);
+        store.selectDate(today);
+      }}
+      size="md"
+      variant="primary"
     >
       Today
     </Button>
@@ -529,7 +540,7 @@ function SingleExample() {
         systems={SINGLE_GREGORIAN}
         theme={SHADCN_THEME}
       >
-        <CalendarShell>
+        {/* <CalendarShell>
           <CalendarHeader />
           <CalendarView swipeable />
           <Separator />
@@ -541,7 +552,7 @@ function SingleExample() {
             </Badge>
           </View>
           <ActionBar />
-        </CalendarShell>
+        </CalendarShell> */}
       </Calendar.Root>
     </Card>
   );

@@ -10,7 +10,7 @@ import CalendarDemo from '@site/src/components/CalendarDemo';
 
 ## Interactive Demo
 
-Tap the input below to expand the bottom sheet — once a date is selected, **Done** dismisses it just like the `BottomSheet` `close()` call in the snippets:
+Tap the input below to expand the bottom sheet — once a date is selected, **Done** dismisses it just like the `BottomSheet` `close()` call in the snippets…
 
 <CalendarDemo mode="single" bottomSheet />
 
@@ -129,10 +129,13 @@ function DateInput() {
     <View>
       <Pressable
         onPress={() => setPickerVisible(true)}
+        accessibilityLabel={date ? `Selected date: ${date.toDateString()}` : 'Select a date'}
+        accessibilityHint="Double tap to open date picker"
+        accessibilityRole="button"
         style={styles.input}
       >
         <Text>
-          {date ? date.toDateString() : 'Select date...'}
+          {date ? date.toDateString() : 'Select date…'}
         </Text>
       </Pressable>
 

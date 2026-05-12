@@ -14,17 +14,17 @@ This demo uses **custom day cells** with modifier dots for booked dates (red), h
 
 export const customCellModifiers = {
   booked: {
-    color: '#ef4444',
+    color: '#ee0000',    // --ds-error: destructive/blocked (brand-aligned)
     label: 'Booked',
     predicate: (date) => [3, 7, 12, 18, 24].includes(date.getDate()),
   },
   holiday: {
-    color: '#f59e0b',
+    color: '#f5a623',    // --ds-warning: pending/caution (brand-aligned)
     label: 'Holiday',
     predicate: (date) => [1, 15, 25].includes(date.getDate()),
   },
   weekend: {
-    color: '#3b82f6',
+    color: '#0070f3',    // --ds-link: interactive/active (brand-aligned)
     label: 'Weekend',
     predicate: (date) => date.getDay() === 0 || date.getDay() === 6,
   },
@@ -67,14 +67,29 @@ Replace the day cell across your entire app:
 ### Dot Indicators
 
 ```tsx
+// Brand-aligned semantic colors
+const MODIFIER_COLORS = {
+  booked: '#ee0000',   // --ds-error: blocked/unavailable
+  holiday: '#f5a623',  // --ds-warning: special dates
+  weekend: '#0070f3',  // --ds-link: interactive emphasis
+};
+
 function DotCell({ info }) {
   const store = useCalendarStore();
   const theme = useCalendarTheme();
+
+  const modifiers = [];
+  if (info.modifiers.booked) modifiers.push('booked');
+  if (info.modifiers.holiday) modifiers.push('holiday');
+  if (info.modifiers.weekend) modifiers.push('weekend');
 
   return (
     <Pressable
       onPress={() => store.selectDate(info.date)}
       disabled={info.isDisabled}
+      accessibilityLabel={`${info.label}${modifiers.length > 0 ? ', ' + modifiers.join(', ') : ''}`}
+      accessibilityHint={info.isDisabled ? 'Date is not selectable' : 'Double tap to select date'}
+      accessibilityState={{ selected: info.isSelected, disabled: info.isDisabled }}
       style={{
         width: theme.cellSize,
         height: theme.cellSize,
@@ -96,13 +111,16 @@ function DotCell({ info }) {
         {info.label}
       </Text>
 
-      {/* Dot indicators */}
+      {/* Modifier dot indicators — decorative, not interactive */}
       <View style={{ flexDirection: 'row', gap: 2, marginTop: 2 }}>
         {info.modifiers.booked && (
-          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: 'red' }} />
+          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: MODIFIER_COLORS.booked }} />
         )}
         {info.modifiers.holiday && (
-          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: 'gold' }} />
+          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: MODIFIER_COLORS.holiday }} />
+        )}
+        {info.modifiers.weekend && (
+          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: MODIFIER_COLORS.weekend }} />
         )}
       </View>
     </Pressable>
@@ -132,26 +150,36 @@ function ImageCell({ info }) {
 ### Status Cell
 
 ```tsx
+// Brand-aligned semantic status colors
+const STATUS_COLORS = {
+  available: '#0070f3',  // --ds-link: available/interactive
+  booked: '#ee0000',     // --ds-error: blocked/unavailable
+  pending: '#f5a623',    // --ds-warning: pending/caution
+  closed: '#888888',     // --ds-mute: inactive
+};
+
 function StatusCell({ info }) {
   const status = getDateStatus(info.nativeDate);
-
-  const statusColors = {
-    available: '#22C55E',
-    booked: '#EF4444',
-    pending: '#F59E0B',
-    closed: '#9CA3AF',
-  };
+  const statusLabel = {
+    available: 'Available',
+    booked: 'Booked',
+    pending: 'Pending',
+    closed: 'Closed',
+  }[status];
 
   return (
     <Pressable
       disabled={status === 'booked'}
+      accessibilityLabel={`${info.label}, ${statusLabel}`}
+      accessibilityHint={status === 'booked' ? 'Date is booked and not selectable' : 'Double tap to select date'}
+      accessibilityState={{ disabled: status === 'booked' }}
       style={{
         borderLeftWidth: 3,
-        borderLeftColor: statusColors[status],
+        borderLeftColor: STATUS_COLORS[status],
       }}
     >
       <Text>{info.label}</Text>
-      <Text style={{ fontSize: 10, color: statusColors[status] }}>
+      <Text style={{ fontSize: 10, color: STATUS_COLORS[status] }}>
         {status}
       </Text>
     </Pressable>
@@ -231,6 +259,13 @@ function CustomCalendarScreen() {
   );
 }
 
+// Brand-aligned accent colors for custom cells
+const CELL_ACCENT_COLORS = {
+  holidayBg: 'rgba(245, 166, 35, 0.15)',  // --ds-warning with opacity
+  holidayDot: '#f5a623',                   // --ds-warning
+  weekendText: '#ee0000',                    // --ds-error for weekend emphasis
+};
+
 function CustomDayCell({ info }: { info: DayCellInfo }) {
   const store = useCalendarStore();
   const theme = useCalendarTheme();
@@ -238,10 +273,17 @@ function CustomDayCell({ info }: { info: DayCellInfo }) {
   const isWeekend = info.modifiers.weekend;
   const isHoliday = info.modifiers.holiday;
 
+  const modifiers = [];
+  if (isHoliday) modifiers.push('holiday');
+  if (isWeekend) modifiers.push('weekend');
+
   return (
     <Pressable
       onPress={() => store.selectDate(info.date)}
       disabled={info.isDisabled}
+      accessibilityLabel={`${info.label}${modifiers.length > 0 ? ', ' + modifiers.join(', ') : ''}`}
+      accessibilityHint={info.isDisabled ? 'Date is not selectable' : 'Double tap to select date'}
+      accessibilityState={{ selected: info.isSelected, disabled: info.isDisabled }}
       style={[
         styles.cell,
         {
@@ -250,7 +292,7 @@ function CustomDayCell({ info }: { info: DayCellInfo }) {
             : info.inRange
               ? theme.colors.rangeBackground
               : isHoliday
-                ? '#FEE2E2'
+                ? CELL_ACCENT_COLORS.holidayBg
                 : 'transparent',
           borderWidth: info.isToday ? 2 : 0,
           borderColor: theme.colors.todayBorder,
@@ -265,7 +307,7 @@ function CustomDayCell({ info }: { info: DayCellInfo }) {
             color: info.isSelected
               ? theme.colors.onPrimary
               : isWeekend
-                ? '#DC2626'
+                ? CELL_ACCENT_COLORS.weekendText
                 : theme.colors.text,
           },
         ]}
@@ -275,7 +317,7 @@ function CustomDayCell({ info }: { info: DayCellInfo }) {
 
       {/* Status dots */}
       <View style={styles.dots}>
-        {isHoliday && <View style={[styles.dot, { backgroundColor: '#F59E0B' }]} />}
+        {isHoliday && <View style={[styles.dot, { backgroundColor: CELL_ACCENT_COLORS.holidayDot }]} />}
       </View>
     </Pressable>
   );

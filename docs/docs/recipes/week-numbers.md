@@ -163,6 +163,12 @@ function WeekNumberColumn() {
   );
 }
 
+// Brand-aligned text colors from DESIGN.md
+const TEXT_COLORS = {
+  weekday: '#888888',   // --ds-mute
+  weekNumber: '#666666', // --ds-mute (slightly dimmer for secondary info)
+};
+
 const styles = StyleSheet.create({
   container: {
     padding: 16,
@@ -178,7 +184,7 @@ const styles = StyleSheet.create({
   },
   label: {
     textAlign: 'center',
-    color: '#6B7280',
+    color: TEXT_COLORS.weekday,
     fontSize: 12,
   },
   weekColumn: {
@@ -190,7 +196,7 @@ const styles = StyleSheet.create({
   },
   weekText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: TEXT_COLORS.weekNumber,
     fontVariant: ['tabular-nums'],
   },
 });

@@ -10,7 +10,7 @@ import CalendarDemo from '@site/src/components/CalendarDemo';
 
 ## Interactive Demo
 
-Click a departure date, then a return date. Each cell shows the fare for that day, and the picker enforces a **maximum 30-day** trip window.
+Click a departure date, then a return date. Each cell shows the fare for that day, and the picker enforces a **maximum 30-day** trip window…
 
 <CalendarDemo mode="range" cellStyle="price" minRangeDays={1} maxRangeDays={30} />
 
@@ -145,20 +145,26 @@ Pass a `theme` to `<Calendar.Root>` to switch the built-in surfaces (range backg
 ```tsx
 import type { CalendarThemeOverride } from 'react-native-fast-calendar';
 
+// Brand-aligned dark theme using DESIGN.md tokens
 const FLIGHT_THEME: CalendarThemeOverride = {
   colors: {
-    background: '#000000',
-    primary: '#FAFAFA',
-    onPrimary: '#0A0A0A',
-    text: '#F5F5F5',
-    textMuted: '#9CA3AF',
-    todayBorder: '#F5F5F5',
-    rangeBackground: '#1F1F1F',
-    disabled: '#3F3F46',
-    border: '#262626',
+    // Surfaces — dark mode equivalents of brand canvas tokens
+    background: '#0a0a0a',      // --ds-canvas-soft (dark)
+    primary: '#ededed',         // --ds-ink (dark primary)
+    onPrimary: '#111111',       // --ds-on-primary (dark)
+
+    // Text
+    text: '#ededed',            // --ds-ink
+    textMuted: '#888888',       // --ds-mute
+
+    // Accents
+    todayBorder: '#ededed',     // --ds-ink
+    rangeBackground: '#1a1a1a', // --ds-accent (dark)
+    disabled: '#666666',        // --ds-mute
+    border: '#262626',          // --ds-hairline (dark)
   },
   cellSize: 48,
-  borderRadius: 8,
+  borderRadius: 6,              // --ds-radius-sm (brand UI scale)
 };
 
 <Calendar.Root mode="range" theme={FLIGHT_THEME}>

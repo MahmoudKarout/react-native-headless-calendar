@@ -68,6 +68,16 @@ Understanding the library's architecture will help you use it effectively:
 | L3 | Selection readout | `useCalendarSelector`, `useCalendarSelectedDates` |
 | L4 | Action bar | `useCalendarActions`, `useCalendarLabels` |
 
+## AI Assistant Skill
+
+If you use an AI coding assistant (Cursor, Claude, etc.), there is a dedicated skill that teaches it the full `react-native-fast-calendar` API — all eleven recipes, every hook, the headless scaffold, theming, multi-system pickers, and common pitfalls. Install it once and your AI will reach for the right pattern automatically instead of guessing.
+
+```bash
+npx skills install react-native-fast-calendar-recipes --registry https://skills.sh
+```
+
+Once installed the skill activates whenever you ask for a calendar, date picker, range picker, booking calendar, scheduling UI, or anything involving `<Calendar.Root>`, `<Calendar.DayGrid>`, `SimpleCalendar`, or the `useCalendar*` hooks — even if you don't mention the library by name.
+
 ## What's Next?
 
 - [Installation](./installation) — Get the library set up in your project
