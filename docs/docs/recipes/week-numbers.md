@@ -4,200 +4,72 @@ sidebar_position: 7
 
 # Week Numbers
 
-Display ISO 8601 week numbers alongside the calendar grid.
+`useCalendarDays()` gives you the cells in row-major order (`ROWS × COLS`). Derive the ISO 8601 week number for each row from any cell's `nativeDate`.
 
 import CalendarDemo from '@site/src/components/CalendarDemo';
 
-## Interactive Demo
+<CalendarDemo mode="single" showWeekNumbers />
 
-ISO 8601 week numbers are shown in the leftmost column, with **Monday** as the first day of the week — what you get from `<SimpleCalendar showWeekNumbers firstDayOfWeek={1} />`:
-
-<CalendarDemo mode="single" showWeekNumbers firstDayOfWeek={1} />
-
-## Quick Start
+## Implementation
 
 ```tsx
-import { SimpleCalendar } from 'react-native-fast-calendar';
-
-<SimpleCalendar
-  mode="single"
-  showWeekNumbers
-  firstDayOfWeek={1} // Monday start for ISO weeks
-/>
-```
-
-## With DayGrid
-
-```tsx
-<Calendar.DayGrid showWeekNumbers />
-```
-
-## Custom Week Number Cell
-
-```tsx
-<Calendar.Root
-  components={{
-    WeekNumberCell: MyWeekNumberCell,
-  }}
->
-  <Calendar.DayGrid showWeekNumbers />
-</Calendar.Root>
-
-function MyWeekNumberCell({ weekNumber }) {
-  const theme = useCalendarTheme();
-
-  return (
-    <View style={{
-      width: theme.cellSize,
-      height: theme.cellSize,
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
-      <Text style={{
-        color: theme.colors.textMuted,
-        fontSize: theme.fontSize.weekday,
-        fontVariant: ['tabular-nums'],
-      }}>
-        W{weekNumber}
-      </Text>
-    </View>
-  );
-}
-```
-
-## UseCalendarWeekNumbers Hook
-
-Build custom week number layouts:
-
-```tsx
-import { useCalendarWeekNumbers, useCalendarTheme } from 'react-native-fast-calendar';
-
-function WeekNumberSidebar() {
-  const weekNumbers = useCalendarWeekNumbers();
-  const theme = useCalendarTheme();
-
-  return (
-    <View style={styles.sidebar}>
-      {weekNumbers.map((week, index) => (
-        <View
-          key={index}
-          style={[styles.cell, { height: theme.cellSize }]}
-        >
-          <Text style={styles.weekText}>W{week}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-```
-
-## ISO Week Reference
-
-Week numbers are computed from the Thursday of each row:
-
-- Week 1 is the week containing the first Thursday of the year
-- Thursday is the canonical day for ISO weeks
-- This ensures correct week numbering even with different `firstDayOfWeek` values
-
-## Complete Example
-
-```tsx
+import { Text, View } from 'react-native';
 import {
-  Calendar,
-  useCalendarWeekNumbers,
-  useCalendarWeekdayLabels,
-  useCalendarTheme,
+  CalendarProvider,
+  useCalendarDays,
 } from 'react-native-fast-calendar';
-import { View, Text, StyleSheet } from 'react-native';
 
-function WeekNumberCalendar() {
-  return (
-    <Calendar.Root mode="single" firstDayOfWeek={1}>
-      <View style={styles.container}>
-        <View style={styles.row}>
-          <View style={styles.corner} />
-          <WeekdayHeader />
-        </View>
-        <View style={styles.row}>
-          <WeekNumberColumn />
-          <Calendar.DayGrid showWeekNumbers={false} />
-        </View>
-      </View>
-    </Calendar.Root>
+const COLS = 7;
+
+function isoWeekNumber(date: Date): number {
+  const d = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
   );
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
 }
 
-function WeekdayHeader() {
-  const labels = useCalendarWeekdayLabels();
-  const theme = useCalendarTheme();
+function Grid() {
+  const days = useCalendarDays();
+  const rows = days.cells.length / COLS;
 
   return (
-    <View style={styles.header}>
-      {labels.map((label, index) => (
-        <Text
-          key={index}
-          style={[styles.label, { width: theme.cellSize }]}
-        >
-          {label}
-        </Text>
-      ))}
+    <View>
+      {Array.from({ length: rows }).map((_, r) => {
+        const rowCells = days.cells.slice(r * COLS, (r + 1) * COLS);
+        const ref = rowCells[0]!;
+        return (
+          <View key={r} style={{ flexDirection: 'row' }}>
+            <Text style={{ width: 40, textAlign: 'center' }}>
+              {isoWeekNumber(ref.nativeDate)}
+            </Text>
+            {rowCells.map((cell) => (
+              <Text
+                key={cell.nativeDate.toISOString()}
+                style={{ width: 40, textAlign: 'center' }}
+              >
+                {cell.label}
+              </Text>
+            ))}
+          </View>
+        );
+      })}
     </View>
   );
 }
 
-function WeekNumberColumn() {
-  const weekNumbers = useCalendarWeekNumbers();
-  const theme = useCalendarTheme();
-
+export default function Screen() {
   return (
-    <View style={styles.weekColumn}>
-      {weekNumbers.map((week, index) => (
-        <View
-          key={index}
-          style={[styles.weekCell, { height: theme.cellSize }]}
-        >
-          <Text style={styles.weekText}>W{week}</Text>
-        </View>
-      ))}
-    </View>
+    <CalendarProvider mode="single" firstDayOfWeek={1}>
+      <Grid />
+    </CalendarProvider>
   );
 }
-
-// Brand-aligned text colors from DESIGN.md
-const TEXT_COLORS = {
-  weekday: '#888888',   // --ds-mute
-  weekNumber: '#666666', // --ds-mute (slightly dimmer for secondary info)
-};
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  corner: {
-    width: 40,
-  },
-  header: {
-    flexDirection: 'row',
-  },
-  label: {
-    textAlign: 'center',
-    color: TEXT_COLORS.weekday,
-    fontSize: 12,
-  },
-  weekColumn: {
-    width: 40,
-  },
-  weekCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  weekText: {
-    fontSize: 12,
-    color: TEXT_COLORS.weekNumber,
-    fontVariant: ['tabular-nums'],
-  },
-});
 ```
+
+## Notes
+
+- `firstDayOfWeek={1}` aligns the visual week to ISO 8601 (Monday-first). The week number itself doesn't depend on this — the helper computes the week the row's Thursday falls in.
+- The library re-exports `isoWeekNumber` from its grid utilities (`import { isoWeekNumber } from 'react-native-fast-calendar'`) if you'd rather not inline it.

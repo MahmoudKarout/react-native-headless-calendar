@@ -1,19 +1,20 @@
 /**
- * Two contexts, decoupled on purpose:
+ * Hooks-only public surface.
  *
- *   1. CalendarStoreContext — holds the store INSTANCE (never changes
- *      reference). Compound parts subscribe to slices via
- *      `useCalendarSelector` and only re-render when those slices change.
+ * This module wires the underlying CalendarStore into the five hooks that
+ * make up the entire library API:
  *
- *   2. CalendarConfigContext — holds primitives, theme, labels, callbacks,
- *      and the systems list. Updates infrequently. Splitting it from the
- *      store means a date tap doesn't propagate any context change at all.
+ *   - useCalendarSelector   — granular subscription to any store slice
+ *   - useCalendarDays       — day grid data + actions for a custom UI
+ *   - useCalendarMonths     — 12-cell month chooser data + actions
+ *   - useCalendarYears      — paginated year chooser data + actions
+ *   - useCalendarActions    — confirm / clear / canConfirm
  *
- * The library is intentionally **headless** beyond `<Calendar.Root>` and
- * `<Calendar.DayGrid>`. Everything else — system switcher, prev/next
- * buttons, month/year header labels, month picker, year picker — is
- * exposed as a hook so the consumer can render their own UI on top of the
- * same store. See the `useCalendar*` hooks below.
+ * Two contexts are kept internal to this module:
+ *
+ *   1. CalendarStoreContext  — the store INSTANCE (stable identity).
+ *   2. CalendarConfigContext — primitives (`firstDayOfWeek`, `modifiers`,
+ *                              `onConfirm`, `onClear`, `onSelectHaptic`).
  */
 import {
   createContext,
@@ -22,45 +23,65 @@ import {
   useMemo,
   useSyncExternalStore,
 } from 'react';
-import { I18nManager } from 'react-native';
 
 import type { CalendarStore, CalendarSnapshot } from './store';
 import type {
-  CalendarComponents,
-  CalendarLabels,
+  CalendarDateValue,
+  DayCellInfo,
   CalendarModifiers,
-  CalendarSystem,
-  CalendarTheme,
   OnConfirm,
   OnClear,
-  OnSystemChange,
   Weekday,
 } from './types';
 import {
-  COLS,
-  ROWS,
   YEAR_PAGE_SIZE,
   buildMonthGrid,
   getYearPage,
-  isoWeekNumber,
+  isBetween,
+  isExplicitlyDisabled,
+  matchDate,
   rotateWeekdayLabels,
 } from './utils/grid';
 
 // ---------------------------------------------------------------------------
-// Store context
+// Internal contexts — not exported from the package entry point. Consumers
+// only ever interact with the five hooks below.
 // ---------------------------------------------------------------------------
 
 export const CalendarStoreContext = createContext<CalendarStore | null>(null);
 
-export function useCalendarStore(): CalendarStore {
+function useCalendarStore(): CalendarStore {
   const store = use(CalendarStoreContext);
   if (!store) {
-    throw new Error(
-      '[Calendar] useCalendarStore must be used within <Calendar.Root>'
-    );
+    throw new Error('[Calendar] hooks must be used within <CalendarProvider>');
   }
   return store;
 }
+
+export interface CalendarConfig {
+  /** Which weekday occupies the first column of the day grid. */
+  firstDayOfWeek: Weekday;
+  /** Named modifiers — see CalendarProviderProps.modifiers. */
+  modifiers?: CalendarModifiers;
+  onConfirm?: OnConfirm;
+  onClear?: OnClear;
+  /** Optional haptic hook fired on day selection. */
+  onSelectHaptic?: () => void;
+}
+
+export const CalendarConfigContext = createContext<CalendarConfig | null>(null);
+
+function useCalendarConfig(): CalendarConfig {
+  const config = use(CalendarConfigContext);
+  if (!config) {
+    throw new Error('[Calendar] hooks must be used within <CalendarProvider>');
+  }
+  return config;
+}
+
+// ---------------------------------------------------------------------------
+// useCalendarSelector — subscribe to any slice of state.
+// ---------------------------------------------------------------------------
 
 /**
  * Subscribe to a slice of calendar state.
@@ -79,193 +100,25 @@ export function useCalendarSelector<T>(
 }
 
 // ---------------------------------------------------------------------------
-// Config context — primitives, theme, labels, external callbacks.
-// ---------------------------------------------------------------------------
-
-export interface CalendarConfig {
-  theme: CalendarTheme;
-  labels: CalendarLabels;
-  systems: readonly CalendarSystem[];
-  /**
-   * Which weekday occupies the first column of the day grid.
-   * 0 = Sunday (US default), 1 = Monday (most of Europe), 6 = Saturday
-   * (common in MENA), etc. Defaults to `0`.
-   */
-  firstDayOfWeek: Weekday;
-  /**
-   * Render days from the previous / next month in the leading and
-   * trailing rows of the grid. When `false`, the cells are kept as
-   * invisible placeholders so the column layout is preserved.
-   */
-  showOutsideDays: boolean;
-  /**
-   * Always render 6 rows in the day grid. When `false`, trailing
-   * all-outside rows are collapsed.
-   */
-  fixedWeeks: boolean;
-  /** Named modifiers — see CalendarRootProps.modifiers. */
-  modifiers?: CalendarModifiers;
-  /**
-   * Replaceable component slots. Each slot has a typed prop contract;
-   * the built-in implementation is used for any slot left unset.
-   */
-  components?: CalendarComponents;
-  onConfirm?: OnConfirm;
-  onClear?: OnClear;
-  onSystemChange?: OnSystemChange;
-  /** Optional haptic hook fired on day selection. */
-  onSelectHaptic?: () => void;
-  testID?: string;
-}
-
-export const CalendarConfigContext = createContext<CalendarConfig | null>(null);
-
-export function useCalendarConfig(): CalendarConfig {
-  const config = use(CalendarConfigContext);
-  if (!config) {
-    throw new Error(
-      '[Calendar] useCalendarConfig must be used within <Calendar.Root>'
-    );
-  }
-  return config;
-}
-
-/** Convenience helpers — common slices. */
-
-export const useCalendarTheme = (): CalendarTheme => useCalendarConfig().theme;
-
-export const useCalendarLabels = (): CalendarLabels =>
-  useCalendarConfig().labels;
-
-/**
- * Active first-day-of-week from `<Calendar.Root firstDayOfWeek={...}>`.
- *
- * Defaults to Sunday (`0`) when the prop is omitted. Useful when building a
- * custom day grid alongside `useCalendarWeekdayLabels` so the columns match.
- */
-export const useCalendarFirstDayOfWeek = (): Weekday =>
-  useCalendarConfig().firstDayOfWeek;
-
-/**
- * Weekday labels for the active calendar system, rotated so the column
- * order matches the grid's `firstDayOfWeek`.
- *
- *   const labels = useCalendarWeekdayLabels();
- *   // ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']  when firstDayOfWeek=1
- *
- * The rotation is memoised on the underlying labels array + offset, so
- * consumers can use the result as a stable dependency.
- */
-export function useCalendarWeekdayLabels(): readonly string[] {
-  const baseLabels = useCalendarSelector((s) => s.system.weekdayLabels());
-  const firstDayOfWeek = useCalendarFirstDayOfWeek();
-  return useMemo(
-    () => rotateWeekdayLabels(baseLabels, firstDayOfWeek),
-    [baseLabels, firstDayOfWeek]
-  );
-}
-
-/**
- * Component slots passed to `<Calendar.Root components={...}>`.
- *
- * Returns an empty object when no slots are configured. Use this hook
- * inside a custom day grid (or any consumer-built sub-component) when
- * you want to honour the same slot overrides the built-in
- * `<Calendar.DayGrid>` does.
- */
-export function useCalendarComponents(): NonNullable<
-  CalendarConfig['components']
-> {
-  return useCalendarConfig().components ?? {};
-}
-
-/**
- * Multiple-mode selection slice. Returns `selectedDates` from the store
- * directly — order matches tap order, identity changes only when the
- * underlying array changes (after a tap or `store.clear()`).
- *
- * In single / range mode this returns `[]`.
- */
-export function useCalendarSelectedDates<T = unknown>(): readonly T[] {
-  return useCalendarSelector((s) => s.selectedDates as readonly T[]);
-}
-
-/**
- * Per-row ISO 8601 week numbers for the displayed month, lined up with
- * the rows produced by `buildMonthGrid`.
- *
- * Implementation prefers the active system's own `weekNumber()` when
- * available (Gregorian implements it natively); otherwise falls back to
- * deriving an ISO week from `system.toNativeDate(d)` so the result still
- * works for Gregorian-aligned visual layouts.
- *
- *   const weekNumbers = useCalendarWeekNumbers();
- *   //  -> [18, 19, 20, 21, 22, 23] for May 2024
- *
- * Re-renders only when the displayed month or active system change.
- */
-export function useCalendarWeekNumbers(): readonly number[] {
-  const system = useCalendarSelector((s) => s.system);
-  const displayed = useCalendarSelector((s) => s.displayed);
-  const firstDayOfWeek = useCalendarFirstDayOfWeek();
-  return useMemo(() => {
-    const cells = buildMonthGrid(system, displayed, firstDayOfWeek);
-    const out = new Array<number>(ROWS);
-    const compute = (d: unknown): number =>
-      system.weekNumber
-        ? system.weekNumber(d as never)
-        : isoWeekNumber(system.toNativeDate(d as never));
-    // ISO weeks are Mon-based with Thursday as the canonical day-in-the-week.
-    // Picking the Thursday cell of each row gives the correct ISO week
-    // regardless of the column the row starts on (Sun / Mon / Sat / …).
-    const thursdayCol = (4 - firstDayOfWeek + 7) % 7;
-    for (let r = 0; r < ROWS; r += 1) {
-      const idx = r * COLS + thursdayCol;
-      const cell = cells[idx];
-      /* istanbul ignore next — buildMonthGrid always returns ROWS*COLS
-       * cells, so `cell` is defined for every row. */
-      out[r] = cell ? compute(cell.date) : 0;
-    }
-    return out;
-  }, [system, displayed, firstDayOfWeek]);
-}
-
-// ---------------------------------------------------------------------------
-// useCalendarActions — confirm + clear exposed as plain functions so the
-// consumer can wire them to whatever button (or shortcut, or gesture, …)
-// they want. The package ships no opinion on what an action button looks
-// like.
-//
-//   const { confirm, clear, canConfirm } = useCalendarActions();
-//
-//   <MyPrimaryButton disabled={!canConfirm} onPress={confirm}>
-//     Done
-//   </MyPrimaryButton>
-//   <MyGhostButton onPress={clear}>Reset</MyGhostButton>
+// useCalendarActions — confirm / clear / canConfirm.
 // ---------------------------------------------------------------------------
 
 export interface CalendarActions {
   /**
-   * Fire the configured `onConfirm` (passed to <Calendar.Root>) with the
-   * current selection payload. Reads the latest snapshot at call time, so
-   * the function identity is stable across renders.
-   *
-   * No-op when `onConfirm` was not provided on <Calendar.Root>.
+   * Fire the configured `onConfirm` (passed to <CalendarProvider>) with
+   * the current selection payload. No-op when `onConfirm` was not given.
    */
   confirm: () => void;
   /**
-   * Wipe all selection state (single date + range endpoints) and fire the
-   * configured `onClear` callback if one was provided. Stable identity.
+   * Wipe all selection state (single date, range endpoints, and multi
+   * list) and fire the configured `onClear` callback.
    */
   clear: () => void;
   /**
    * `true` when the current selection is confirmable:
-   *   - single mode: a date is selected.
-   *   - range mode:  both endpoints are selected.
-   *
-   * Subscribed via a granular selector — toggling between two valid
-   * selections doesn't cause this to change, so consumers that pass it to
-   * a memoised button will skip re-renders.
+   *   - single   mode: a date is selected.
+   *   - multiple mode: at least one date is selected.
+   *   - range    mode: both endpoints are selected.
    */
   canConfirm: boolean;
 }
@@ -303,227 +156,181 @@ export function useCalendarActions(): CalendarActions {
 }
 
 // ---------------------------------------------------------------------------
-// useCalendarNavigation — view-aware, RTL-aware "go previous / go next"
-// shortcuts for whatever pair of buttons the consumer renders.
-//
-//   const { goPrev, goNext } = useCalendarNavigation();
-//
-//   <MyChevronLeft  onPress={goPrev} />
-//   <MyChevronRight onPress={goNext} />
-//
-// Stepping rules (match the original built-in header):
-//   - day view   → step 1 month
-//   - month view → step 1 year
-//   - year view  → step 1 page (YEAR_PAGE_SIZE years)
-// In RTL, prev/next are swapped so the visual chevrons match reading order.
+// useCalendarDays — everything required to render a day grid.
 // ---------------------------------------------------------------------------
 
-export interface CalendarNavigation {
-  /** Step backward one month / year / year-page depending on the active view. */
-  goPrev: () => void;
-  /** Step forward one month / year / year-page depending on the active view. */
-  goNext: () => void;
+export interface CalendarDays {
+  /** Weekday labels rotated to the active `firstDayOfWeek`. */
+  weekdayLabels: readonly string[];
+  /** Cells for the displayed month grid (length = ROWS * COLS). */
+  cells: readonly DayCellInfo[];
+  /** Localised month name for the displayed month. */
+  displayedMonthLabel: string;
+  /** Year of the displayed month, as a string. */
+  displayedYearLabel: string;
+  /** Step the displayed month one back. */
+  goPrevMonth: () => void;
+  /** Step the displayed month one forward. */
+  goNextMonth: () => void;
+  /** Jump the displayed month to the given date. */
+  setDisplayedDate: (date: CalendarDateValue) => void;
+  /** Tap a day — behaviour depends on `mode`. */
+  selectDate: (date: CalendarDateValue) => void;
 }
 
-const stepForView = (
-  store: CalendarStore,
-  direction: 1 | -1,
-  rtl: boolean
-): void => {
-  const visualStep = rtl ? -direction : direction;
-  const s = store.getSnapshot();
-  if (s.view === 'day') store.changeMonth(visualStep);
-  else if (s.view === 'month') store.changeYear(visualStep);
-  else store.changeYear(visualStep * YEAR_PAGE_SIZE);
-};
-
-export function useCalendarNavigation(): CalendarNavigation {
+export function useCalendarDays(): CalendarDays {
   const store = useCalendarStore();
-  const goPrev = useCallback(
-    () => stepForView(store, -1, I18nManager.isRTL),
-    [store]
+  const { firstDayOfWeek, modifiers, onSelectHaptic } = useCalendarConfig();
+  const system = useCalendarSelector((s) => s.system);
+  const displayed = useCalendarSelector((s) => s.displayed);
+  const mode = useCalendarSelector((s) => s.mode);
+  const selectedDate = useCalendarSelector((s) => s.selectedDate);
+  const selectedDates = useCalendarSelector((s) => s.selectedDates);
+  const rangeStart = useCalendarSelector((s) => s.rangeStart);
+  const rangeEnd = useCalendarSelector((s) => s.rangeEnd);
+  const minDate = useCalendarSelector((s) => s.minDate);
+  const maxDate = useCalendarSelector((s) => s.maxDate);
+  const disabledDates = useCalendarSelector((s) => s.disabledDates);
+  const disabledRanges = useCalendarSelector((s) => s.disabledRanges);
+  const disabledPredicate = useCalendarSelector((s) => s.disabled);
+  const monthLabels = useCalendarSelector((s) => s.system.monthLabels());
+  const displayedYear = useCalendarSelector((s) => s.system.year(s.displayed));
+
+  const weekdayLabels = useMemo(
+    () => rotateWeekdayLabels(system.weekdayLabels(), firstDayOfWeek),
+    [system, firstDayOfWeek]
   );
-  const goNext = useCallback(
-    () => stepForView(store, 1, I18nManager.isRTL),
-    [store]
-  );
-  return { goPrev, goNext };
-}
 
-// ---------------------------------------------------------------------------
-// useCalendarMonthLabel — header "month name" affordance.
-//
-//   const { label, isVisible, toggle } = useCalendarMonthLabel();
-//
-//   {isVisible && (
-//     <MyButton onPress={toggle}>
-//       <MyText>{label}</MyText>
-//     </MyButton>
-//   )}
-//
-// `toggle` swaps between the day grid and the month picker. The label is
-// hidden when the year picker is open (matching the original header) so
-// the consumer doesn't have to special-case it.
-// ---------------------------------------------------------------------------
+  const cells = useMemo<readonly DayCellInfo[]>(() => {
+    const grid = buildMonthGrid(system, displayed, firstDayOfWeek);
+    const today = system.today();
+    const modifierEntries = modifiers ? Object.entries(modifiers) : null;
+    return grid.map((c) => {
+      const isStart = !!rangeStart && system.isSame(c.date, rangeStart);
+      const isEnd = !!rangeEnd && system.isSame(c.date, rangeEnd);
+      const isSingle =
+        mode === 'single' &&
+        !!selectedDate &&
+        system.isSame(c.date, selectedDate);
+      const isMulti =
+        mode === 'multiple' &&
+        selectedDates.some((d) => system.isSame(d, c.date));
+      const inRange =
+        mode === 'range' && isBetween(system, c.date, rangeStart, rangeEnd);
+      const nativeDate = system.toNativeDate(c.date);
+      let isDisabled =
+        (!!minDate && system.isBefore(c.date, minDate)) ||
+        (!!maxDate && system.isAfter(c.date, maxDate)) ||
+        isExplicitlyDisabled(system, c.date, disabledDates, disabledRanges);
+      if (!isDisabled && disabledPredicate) {
+        try {
+          if (disabledPredicate(nativeDate)) isDisabled = true;
+        } catch {
+          // Be permissive — never crash consumers for buggy predicates.
+        }
+      }
 
-export interface CalendarMonthLabel {
-  /** Localised month name for the displayed month, in the active system. */
-  label: string;
-  /**
-   * `false` while the year picker is open — the original header hid the
-   * month label there because it would jump confusingly per page.
-   */
-  isVisible: boolean;
-  /** Switch the active view between `'day'` and `'month'`. */
-  toggle: () => void;
-}
+      const cellModifiers: Record<string, boolean> = {};
+      if (modifierEntries) {
+        for (const [name, matcher] of modifierEntries) {
+          if (matchDate(system, c.date, matcher)) cellModifiers[name] = true;
+        }
+      }
 
-export function useCalendarMonthLabel(): CalendarMonthLabel {
-  const store = useCalendarStore();
-  // Two granular slices — both return primitives so consumers don't
-  // re-render on unrelated state changes (date taps in single mode, etc).
-  const label = useCalendarSelector(
-    (s) => s.system.monthLabels()[s.system.month(s.displayed)] ?? ''
-  );
-  const isVisible = useCalendarSelector((s) => s.view !== 'year');
-  const toggle = useCallback(() => {
-    const s = store.getSnapshot();
-    store.setView(s.view === 'month' ? 'day' : 'month');
-  }, [store]);
-  return { label, isVisible, toggle };
-}
+      return {
+        date: c.date,
+        nativeDate,
+        label: system.formatDay(c.date),
+        isCurrentMonth: c.isCurrentMonth,
+        isToday: system.isSame(c.date, today),
+        isSelected: isSingle || isMulti || isStart || isEnd,
+        inRange: inRange && !isStart && !isEnd,
+        isRangeStart: isStart,
+        isRangeEnd: isEnd,
+        isDisabled,
+        modifiers: cellModifiers,
+      };
+    });
+  }, [
+    system,
+    displayed,
+    firstDayOfWeek,
+    modifiers,
+    mode,
+    selectedDate,
+    selectedDates,
+    rangeStart,
+    rangeEnd,
+    minDate,
+    maxDate,
+    disabledDates,
+    disabledRanges,
+    disabledPredicate,
+  ]);
 
-// ---------------------------------------------------------------------------
-// useCalendarYearLabel — header "year (or year range)" affordance.
-//
-//   const { label, toggle } = useCalendarYearLabel();
-//
-//   <MyButton onPress={toggle}>
-//     <MyText>{label}</MyText>
-//   </MyButton>
-//
-// In year-picker mode, `label` reads as the inclusive page span
-// (e.g. "2016 - 2027"). Otherwise it's the displayed year as a string.
-// ---------------------------------------------------------------------------
-
-export interface CalendarYearLabel {
-  /** Single year string in day/month view, "YYYY - YYYY" in year view. */
-  label: string;
-  /** Switch the active view between `'day'` and `'year'`. */
-  toggle: () => void;
-}
-
-export function useCalendarYearLabel(): CalendarYearLabel {
-  const store = useCalendarStore();
-  // Compute the label fully inside the selector so it returns a stable
-  // primitive — prevents re-renders on date taps that don't move the year.
-  const label = useCalendarSelector((s) => {
-    const year = s.system.year(s.displayed);
-    if (s.view !== 'year') return String(year);
-    const page = getYearPage(year);
-    return `${page[0]} - ${page[page.length - 1]}`;
-  });
-  const toggle = useCallback(() => {
-    const s = store.getSnapshot();
-    store.setView(s.view === 'year' ? 'day' : 'year');
-  }, [store]);
-  return { label, toggle };
-}
-
-// ---------------------------------------------------------------------------
-// useCalendarSystemSwitcher — list of configured systems + active id +
-// setter. Render whatever segmented control / dropdown / radio group fits
-// your design.
-//
-//   const { systems, activeId, setActive } = useCalendarSystemSwitcher();
-//
-//   if (systems.length < 2) return null;
-//   return systems.map((s) => (
-//     <MyPill
-//       key={s.id}
-//       active={s.id === activeId}
-//       onPress={() => setActive(s.id)}
-//     >
-//       {s.label}
-//     </MyPill>
-//   ));
-// ---------------------------------------------------------------------------
-
-export interface CalendarSystemSwitcher {
-  /** All systems configured on `<Calendar.Root systems={...}>`. */
-  systems: readonly CalendarSystem[];
-  /** `id` of the currently active system. */
-  activeId: string;
-  /**
-   * Activate a different system. Silently ignored when `systemId` is not
-   * one of the configured ids. Fires the `onSystemChange` callback if one
-   * was provided to `<Calendar.Root>`.
-   */
-  setActive: (systemId: string) => void;
-}
-
-export function useCalendarSystemSwitcher(): CalendarSystemSwitcher {
-  const store = useCalendarStore();
-  const { systems, onSystemChange } = useCalendarConfig();
-  const activeId = useCalendarSelector((s) => s.system.id);
-
-  const setActive = useCallback(
-    (systemId: string) => {
-      const idx = systems.findIndex((s) => s.id === systemId);
-      const next = idx >= 0 ? systems[idx] : undefined;
-      if (!next || idx < 0) return;
-      store.replaceSystem(next, idx);
-      onSystemChange?.(systemId);
+  const goPrevMonth = useCallback(() => store.changeMonth(-1), [store]);
+  const goNextMonth = useCallback(() => store.changeMonth(1), [store]);
+  const setDisplayedDate = useCallback(
+    (date: CalendarDateValue) => {
+      const next = system.from(date);
+      const currentYear = system.year(displayed);
+      const nextYear = system.year(next);
+      if (currentYear !== nextYear) store.changeYear(nextYear - currentYear);
+      const currentMonth = system.month(store.getSnapshot().displayed);
+      const nextMonth = system.month(next);
+      if (currentMonth !== nextMonth)
+        store.changeMonth(nextMonth - currentMonth);
     },
-    [store, systems, onSystemChange]
+    [store, system, displayed]
+  );
+  const selectDate = useCallback(
+    (date: CalendarDateValue) => {
+      store.selectDate(system.from(date));
+      onSelectHaptic?.();
+    },
+    [store, system, onSelectHaptic]
   );
 
-  return { systems, activeId, setActive };
+  const monthIndex = system.month(displayed);
+  const displayedMonthLabel = monthLabels[monthIndex] ?? String(monthIndex + 1);
+
+  return {
+    weekdayLabels,
+    cells,
+    displayedMonthLabel,
+    displayedYearLabel: String(displayedYear),
+    goPrevMonth,
+    goNextMonth,
+    setDisplayedDate,
+    selectDate,
+  };
 }
 
 // ---------------------------------------------------------------------------
-// useCalendarMonthPicker — data + actions for a 12-cell month chooser.
-//
-//   const { months, activeMonth, selectMonth } = useCalendarMonthPicker();
-//
-//   return (
-//     <MyGrid>
-//       {months.map((m) => (
-//         <MyCell
-//           key={m.index}
-//           active={m.index === activeMonth}
-//           onPress={() => selectMonth(m.index)}
-//         >
-//           {m.label}
-//         </MyCell>
-//       ))}
-//     </MyGrid>
-//   );
-//
-// `months` is identity-stable while the active system doesn't change.
-// Selecting a month jumps the displayed date and switches back to day view.
+// useCalendarMonths — 12-cell month chooser data + actions.
 // ---------------------------------------------------------------------------
 
-export interface CalendarMonthPickerEntry {
+export interface CalendarMonthEntry {
   /** 0-based month index expected by `selectMonth`. */
   index: number;
   /** Localised name for that month, in the active system. */
   label: string;
 }
 
-export interface CalendarMonthPicker {
-  months: readonly CalendarMonthPickerEntry[];
+export interface CalendarMonths {
+  /** All 12 months for the active system, identity-stable per system. */
+  months: readonly CalendarMonthEntry[];
   /** 0-based index of the currently displayed month. */
   activeMonth: number;
-  /** Jump to the given month and switch back to the day view. */
+  /** Jump to the given month (index 0..11). */
   selectMonth: (index: number) => void;
 }
 
-export function useCalendarMonthPicker(): CalendarMonthPicker {
+export function useCalendarMonths(): CalendarMonths {
   const store = useCalendarStore();
   const monthLabels = useCalendarSelector((s) => s.system.monthLabels());
   const activeMonth = useCalendarSelector((s) => s.system.month(s.displayed));
-  const months = useMemo<readonly CalendarMonthPickerEntry[]>(
+  const months = useMemo<readonly CalendarMonthEntry[]>(
     () => monthLabels.map((label, index) => ({ index, label })),
     [monthLabels]
   );
@@ -535,39 +342,23 @@ export function useCalendarMonthPicker(): CalendarMonthPicker {
 }
 
 // ---------------------------------------------------------------------------
-// useCalendarYearPicker — data + actions for a 12-cell paginated year grid.
-//
-//   const { years, activeYear, selectYear } = useCalendarYearPicker();
-//
-//   return (
-//     <MyGrid>
-//       {years.map((y) => (
-//         <MyCell
-//           key={y}
-//           active={y === activeYear}
-//           onPress={() => selectYear(y)}
-//         >
-//           {y}
-//         </MyCell>
-//       ))}
-//     </MyGrid>
-//   );
-//
-// Pagination (forward / backward across pages) is driven by
-// `useCalendarNavigation()` which is automatically year-page aware when
-// the active view is `'year'`.
+// useCalendarYears — paginated year chooser data + actions.
 // ---------------------------------------------------------------------------
 
-export interface CalendarYearPicker {
-  /** 12 years aligned to the YEAR_PAGE_SIZE window containing `activeYear`. */
+export interface CalendarYears {
+  /** Years on the page containing `activeYear` (length = YEAR_PAGE_SIZE). */
   years: readonly number[];
-  /** Year currently displayed (and centred-ish in `years`). */
+  /** Currently displayed year. */
   activeYear: number;
-  /** Jump to the given year and switch back to the day view. */
+  /** Jump to the given year. */
   selectYear: (year: number) => void;
+  /** Step backward one full year-page. */
+  goPrevPage: () => void;
+  /** Step forward one full year-page. */
+  goNextPage: () => void;
 }
 
-export function useCalendarYearPicker(): CalendarYearPicker {
+export function useCalendarYears(): CalendarYears {
   const store = useCalendarStore();
   const activeYear = useCalendarSelector((s) => s.system.year(s.displayed));
   const years = useMemo<readonly number[]>(
@@ -578,52 +369,13 @@ export function useCalendarYearPicker(): CalendarYearPicker {
     (year: number) => store.goToYear(year),
     [store]
   );
-  return { years, activeYear, selectYear };
-}
-
-// ---------------------------------------------------------------------------
-// useCalendarHeader — convenience hook combining month/year labels + navigation.
-//
-//   const {
-//     monthLabel, yearLabel, isMonthVisible,
-//     toggleMonthPicker, toggleYearPicker,
-//     goPrev, goNext
-//   } = useCalendarHeader();
-//
-// This is a compound of useCalendarMonthLabel + useCalendarYearLabel +
-// useCalendarNavigation for consumers building a standard header without
-// importing and wiring three separate hooks.
-// ---------------------------------------------------------------------------
-
-export interface CalendarHeader {
-  /** Localised month name for the displayed month. */
-  monthLabel: string;
-  /** Single year string in day/month view, "YYYY - YYYY" in year view. */
-  yearLabel: string;
-  /** False while year picker is open (month label should hide). */
-  isMonthVisible: boolean;
-  /** Switch between day and month views. */
-  toggleMonthPicker: () => void;
-  /** Switch between day and year views. */
-  toggleYearPicker: () => void;
-  /** Step backward (month/year/year-page depending on view). RTL-aware. */
-  goPrev: () => void;
-  /** Step forward (month/year/year-page depending on view). RTL-aware. */
-  goNext: () => void;
-}
-
-export function useCalendarHeader(): CalendarHeader {
-  const month = useCalendarMonthLabel();
-  const year = useCalendarYearLabel();
-  const nav = useCalendarNavigation();
-
-  return {
-    monthLabel: month.label,
-    yearLabel: year.label,
-    isMonthVisible: month.isVisible,
-    toggleMonthPicker: month.toggle,
-    toggleYearPicker: year.toggle,
-    goPrev: nav.goPrev,
-    goNext: nav.goNext,
-  };
+  const goPrevPage = useCallback(
+    () => store.changeYear(-YEAR_PAGE_SIZE),
+    [store]
+  );
+  const goNextPage = useCallback(
+    () => store.changeYear(YEAR_PAGE_SIZE),
+    [store]
+  );
+  return { years, activeYear, selectYear, goPrevPage, goNextPage };
 }

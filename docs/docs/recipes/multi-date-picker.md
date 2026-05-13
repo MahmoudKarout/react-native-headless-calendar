@@ -4,186 +4,83 @@ sidebar_position: 3
 
 # Multi-Date Picker
 
-Selecting multiple individual dates — useful for booking multiple appointments, selecting event dates, or choosing available days.
+`mode="multiple"` with `maxSelected` and named `modifiers`. Tapping a date toggles it in `selectedDates`.
 
 import CalendarDemo from '@site/src/components/CalendarDemo';
 
-## Interactive Demo
-
-Tap dates to toggle them on/off. This demo caps selection at **5 dates** — the 6th tap will surface an error message just like `maxSelected` does in the headless store:
-
 <CalendarDemo mode="multiple" maxSelected={5} />
 
-## Quick Start
+## Implementation
 
 ```tsx
-import { SimpleCalendar } from 'react-native-fast-calendar';
-
-function MultiPickerScreen() {
-  return (
-    <SimpleCalendar
-      mode="multiple"
-      maxSelected={5}
-      onConfirm={({ dates }) => {
-        console.log('Selected dates:', dates);
-      }}
-    />
-  );
-}
-```
-
-## With Maximum Selection
-
-```tsx
-<SimpleCalendar
-  mode="multiple"
-  maxSelected={5}
-  onConfirm={({ dates }) => {
-    console.log(`Selected ${dates.length} dates`);
-  }}
-/>
-```
-
-:::info
-When `maxSelected` is reached, additional selections are silently ignored. Use `onSelectHaptic` to provide feedback.
-:::
-
-## Headless Implementation
-
-```tsx
+import { Pressable, Text, View } from 'react-native';
 import {
-  Calendar,
-  useCalendarSelectedDates,
-  useCalendarActions,
+  CalendarProvider,
+  useCalendarDays,
+  useCalendarSelector,
 } from 'react-native-fast-calendar';
 
-function CustomMultiPicker() {
-  return (
-    <Calendar.Root
-      mode="multiple"
-      maxSelected={5}
-      onConfirm={({ dates }) => console.log(dates)}
-    >
-      <View>
-        <SelectedChips />
-        <Calendar.DayGrid />
-        <MultiActions />
-      </View>
-    </Calendar.Root>
-  );
-}
+const MODIFIER_STYLES = {
+  booked:  { borderColor: '#dc2626', borderWidth: 2 },
+  holiday: { backgroundColor: '#fef3c7' },
+  weekend: { backgroundColor: '#fafafa' },
+};
 
-function SelectedChips() {
-  const selectedDates = useCalendarSelectedDates();
-  const system = useCalendarSelector(s => s.system);
-  const store = useCalendarStore();
-
-  return (
-    <View style={styles.chips}>
-      {selectedDates.map((date, index) => (
-        <Pressable
-          key={index}
-          onPress={() => store.toggleDate(date)} // Toggle to remove
-          style={styles.chip}
-        >
-          <Text>{system.formatDay(date)}</Text>
-          <Text>×</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-function MultiActions() {
-  const { confirm, clear } = useCalendarActions();
-  const selectedDates = useCalendarSelectedDates();
+function Grid() {
+  const days = useCalendarDays();
+  const count = useCalendarSelector((s) => s.selectedDates.length);
 
   return (
     <View>
-      <Text>{selectedDates.length} dates selected</Text>
-      <Button onPress={clear} title="Clear All" />
-      <Button onPress={confirm} title="Confirm" />
+      <Text>Selected: {count}</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {days.cells.map((cell) => {
+          const modStyles = Object.entries(cell.modifiers)
+            .filter(([, v]) => v)
+            .map(([k]) => MODIFIER_STYLES[k as keyof typeof MODIFIER_STYLES]);
+          return (
+            <Pressable
+              key={cell.nativeDate.toISOString()}
+              disabled={cell.isDisabled}
+              onPress={() => days.selectDate(cell.date)}
+              style={[
+                {
+                  width: 40,
+                  height: 40,
+                  backgroundColor: cell.isSelected ? '#0f172a' : 'transparent',
+                },
+                ...modStyles,
+              ]}
+            >
+              <Text>{cell.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
-```
 
-## Appointment Booking
-
-```tsx
-function AppointmentPicker({ availableSlots }) {
-  const [selectedSlots, setSelectedSlots] = useState<Date[]>([]);
-
+export default function Screen() {
   return (
-    <Calendar.Root
+    <CalendarProvider
       mode="multiple"
-      maxSelected={3}
-      disabled={(date) => !availableSlots.includes(date.toISOString())}
-      onConfirm={({ dates }) => setSelectedSlots(dates)}
+      maxSelected={5}
+      modifiers={{
+        booked: [new Date(2024, 4, 5), new Date(2024, 4, 12)],
+        holiday: [new Date(2024, 11, 25)],
+        weekend: (d) => d.getDay() === 0 || d.getDay() === 6,
+      }}
+      onConfirm={({ dates }) => console.log(dates)}
     >
-      <Calendar.DayGrid
-        renderDay={(info) => (
-          <Pressable
-            disabled={info.isDisabled}
-            onPress={() => store.selectDate(info.date)}
-            style={[
-              styles.cell,
-              info.isSelected && styles.selected,
-              info.isDisabled && styles.disabled,
-            ]}
-          >
-            <Text>{info.label}</Text>
-            {!info.isDisabled && (
-              <Text style={styles.slots}>3 slots</Text>
-            )}
-          </Pressable>
-        )}
-      />
-    </Calendar.Root>
+      <Grid />
+    </CalendarProvider>
   );
 }
 ```
 
-## Complete Example: Event Planning
+## Notes
 
-```tsx
-import { useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
-import { SimpleCalendar } from 'react-native-fast-calendar';
-
-function EventPlannerScreen() {
-  const [eventDates, setEventDates] = useState<Date[]>([]);
-
-  return (
-    <ScrollView style={{ padding: 16 }}>
-      <Text style={{ fontSize: 24, fontWeight: '600' }}>
-        Select Event Dates
-      </Text>
-      <Text style={{ color: '#888888', marginBottom: 16 }}>
-        Choose up to 5 dates for your event
-      </Text>
-
-      <SimpleCalendar
-        mode="multiple"
-        maxSelected={5}
-        minDate={new Date()}
-        onConfirm={({ dates }) => setEventDates(dates)}
-      />
-
-      {eventDates.length > 0 && (
-        <View style={{ marginTop: 16 }}>
-          <Text style={{ fontWeight: '600', marginBottom: 8 }}>
-            Selected Dates ({eventDates.length}):
-          </Text>
-          {eventDates.map((date, index) => (
-            <Text key={index}>
-              {index + 1}. {date.toDateString()}
-            </Text>
-          ))}
-        </View>
-      )}
-    </ScrollView>
-  );
-}
-```
-
+- `selectedDates` order matches tap order. Read it with `useCalendarSelector((s) => s.selectedDates)`.
+- Picks beyond `maxSelected` are silently ignored (no LRU eviction); call `useCalendarActions().clear()` to reset.
+- `modifiers` runs on every visible cell — keep predicates cheap.

@@ -98,12 +98,12 @@ const config: Config = {
               to: '/docs/intro',
             },
             {
-              label: 'Components',
-              to: '/docs/components/simple-calendar',
+              label: 'Recipes',
+              to: '/docs/recipes/single-date-picker',
             },
             {
               label: 'Hooks',
-              to: '/docs/hooks/use-calendar-store',
+              to: '/docs/hooks/use-calendar-days',
             },
           ],
         },

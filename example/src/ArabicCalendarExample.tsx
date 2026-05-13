@@ -1,150 +1,82 @@
 /**
- * Arabic copy for month names / weekday captions + RTL-friendly Saturday-first grid.
- *
- * Same pattern everywhere: swap the bundled `*_System` instances for
- * `createGregorianSystem` / `createHijriSystem` / `createJalaliSystem` options.
+ * Arabic / Hijri calendar — switches the active calendar system at
+ * runtime by changing the `<CalendarProvider key>` and re-rendering with
+ * a different `initialSystemId`. RTL-style layout via `firstDayOfWeek=6`
+ * (Saturday-first).
  */
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { CalendarSystem } from 'react-native-fast-calendar';
-import { SimpleCalendar } from 'react-native-fast-calendar';
-import { createGregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
-import { createHijriSystem } from 'react-native-fast-calendar/systems/hijri';
-import { createJalaliSystem } from 'react-native-fast-calendar/systems/jalali';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-/** Library order: Sun (0) → Sat (6). `firstDayOfWeek` on Root rotates presentation. */
-const AR_WEEKDAYS_SUN_FIRST = Object.freeze([
-  'أحد',
-  'اثنين',
-  'ثلاثاء',
-  'أربعاء',
-  'خميس',
-  'جمعة',
-  'سبت',
-]);
+import { CalendarProvider } from 'react-native-fast-calendar';
+import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
+import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
 
-const gregorianArabic = createGregorianSystem({
-  label: 'ميلادي',
-  monthLabels: [
-    'يناير',
-    'فبراير',
-    'مارس',
-    'أبريل',
-    'مايو',
-    'يونيو',
-    'يوليو',
-    'أغسطس',
-    'سبتمبر',
-    'أكتوبر',
-    'نوفمبر',
-    'ديسمبر',
-  ],
-  weekdayLabels: AR_WEEKDAYS_SUN_FIRST,
-});
+import { HooksCalendar, tokens } from './HooksCalendar';
 
-const hijriArabic = createHijriSystem({
-  label: 'هجري',
-  monthLabels: [
-    'محرم',
-    'صفر',
-    'ربيع الأول',
-    'ربيع الآخر',
-    'جمادى الأولى',
-    'جمادى الآخرة',
-    'رجب',
-    'شعبان',
-    'رمضان',
-    'شوال',
-    'ذو القعدة',
-    'ذو الحجة',
-  ],
-  weekdayLabels: AR_WEEKDAYS_SUN_FIRST,
-});
-
-/** Persian solar months — Arabic-script spellings commonly used in Arabic locales. */
-const jalaliArabic = createJalaliSystem({
-  label: 'جلالي',
-  monthLabels: [
-    'فروردين',
-    'أرديبهشت',
-    'خرداد',
-    'تير',
-    'مرداد',
-    'شهريور',
-    'مهر',
-    'آبان',
-    'آذر',
-    'دي',
-    'بهمن',
-    'إسفند',
-  ],
-  weekdayLabels: AR_WEEKDAYS_SUN_FIRST,
-});
-
-const SYSTEMS_AR: readonly CalendarSystem[] = [
-  gregorianArabic,
-  hijriArabic,
-  jalaliArabic,
-];
-
-const LABELS_AR = Object.freeze({
-  confirm: 'تأكيد',
-  clear: 'مسح',
-  prev: 'السابق',
-  next: 'التالي',
-  selectMonth: 'اختر الشهر',
-  selectYear: 'اختر السنة',
-});
+type SystemId = 'gregorian' | 'hijri';
 
 export default function ArabicCalendarExample() {
+  const [activeSystemId, setActiveSystemId] = useState<SystemId>('hijri');
+  const systems = useMemo(() => [gregorianSystem, hijriSystem], []);
+
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      <View style={styles.intro}>
-        <Text style={styles.introTitle}>Arabic systems</Text>
-        <Text style={styles.introBody}>
-          Gregorian, Hijri, and Jalali month names plus weekdays come from{' '}
-          createGregorianSystem / createHijriSystem / createJalaliSystem. Footer
-          and nav strings use SimpleCalendar labels overrides. Switch the
-          segmented control above the grid to change calendars. This screen uses{' '}
-          firstDayOfWeek=6 (Saturday-first), common in Gulf layouts; use 0–6 for
-          your locale.
-        </Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.tabs}>
+        {(['gregorian', 'hijri'] as const).map((id) => (
+          <Pressable
+            key={id}
+            onPress={() => setActiveSystemId(id)}
+            style={[styles.tab, activeSystemId === id && styles.tabActive]}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeSystemId === id && styles.tabTextActive,
+              ]}
+            >
+              {id}
+            </Text>
+          </Pressable>
+        ))}
       </View>
-      <SimpleCalendar
-        firstDayOfWeek={0}
-        labels={LABELS_AR}
-        swipeable
-        systems={SYSTEMS_AR}
-        testID="arabic-demo"
-      />
+
+      <CalendarProvider
+        key={activeSystemId}
+        systems={systems}
+        initialSystemId={activeSystemId}
+        firstDayOfWeek={6}
+        mode="single"
+      >
+        <HooksCalendar caption={`Active · ${activeSystemId}`} />
+      </CalendarProvider>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
+  container: { backgroundColor: tokens.muted, padding: 16 },
+  tabs: {
+    backgroundColor: tokens.background,
+    borderColor: tokens.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: 12,
+    padding: 2,
+  },
+  tab: {
+    borderRadius: 6,
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    paddingVertical: 8,
   },
-  content: {
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    gap: 12,
-    paddingBottom: 32,
-    alignItems: 'center',
+  tabActive: { backgroundColor: tokens.primary },
+  tabText: {
+    color: tokens.mutedForeground,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
-  intro: {
-    maxWidth: 360,
-    gap: 6,
-    marginBottom: 4,
-  },
-  introTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0A0A0A',
-  },
-  introBody: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#71717A',
-  },
+  tabTextActive: { color: tokens.primaryForeground },
 });

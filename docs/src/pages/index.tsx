@@ -7,60 +7,92 @@ import CalendarDemo from '@site/src/components/CalendarDemo';
 import PerfCalendarDemo from '@site/src/components/PerfCalendarDemo';
 import styles from './index.module.css';
 
-const SIMPLE_EXAMPLE = `import { SimpleCalendar } from 'react-native-fast-calendar';
+const SIMPLE_EXAMPLE = `import {
+  CalendarProvider,
+  useCalendarDays,
+  useCalendarActions,
+} from 'react-native-fast-calendar';
 
 export function BookingScreen() {
   return (
-    <SimpleCalendar
+    <CalendarProvider
       mode="range"
       minRangeDays={2}
       onConfirm={({ startDate, endDate }) => {
         console.log('Booked', startDate, endDate);
       }}
-    />
+    >
+      <Grid />
+    </CalendarProvider>
+  );
+}
+
+function Grid() {
+  const days = useCalendarDays();
+  const { confirm, canConfirm } = useCalendarActions();
+  return (
+    <View>
+      {/* render days.cells with your own components */}
+      <Button title="Done" onPress={confirm} disabled={!canConfirm} />
+    </View>
   );
 }`;
 
 const HEADLESS_EXAMPLE = `import {
-  Calendar,
+  CalendarProvider,
+  useCalendarDays,
   useCalendarSelector,
   useCalendarActions,
 } from 'react-native-fast-calendar';
 
 export function CustomCalendar() {
   return (
-    <Calendar.Root mode="range">
-      <Calendar.DayGrid swipeable />
+    <CalendarProvider mode="range">
+      <Grid />
       <Footer />
-    </Calendar.Root>
+    </CalendarProvider>
+  );
+}
+
+function Grid() {
+  const days = useCalendarDays();
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+      {days.cells.map((cell) => (
+        <Pressable
+          key={cell.nativeDate.toISOString()}
+          onPress={() => days.selectDate(cell.date)}
+        >
+          <Text>{cell.label}</Text>
+        </Pressable>
+      ))}
+    </View>
   );
 }
 
 function Footer() {
-  const range = useCalendarSelector((s) => s.rangeStart);
+  const start = useCalendarSelector((s) => s.rangeStart);
   const { confirm, canConfirm } = useCalendarActions();
   return (
     <View>
-      <Text>{range ? 'Pick checkout' : 'Pick check-in'}</Text>
+      <Text>{start ? 'Pick checkout' : 'Pick check-in'}</Text>
       <Button title="Done" onPress={confirm} disabled={!canConfirm} />
     </View>
   );
 }`;
 
-const SYSTEMS_EXAMPLE = `import {
-  Calendar,
-  hijriSystem,
-  jalaliSystem,
-  gregorianSystem,
-} from 'react-native-fast-calendar';
+const SYSTEMS_EXAMPLE = `import { CalendarProvider } from 'react-native-fast-calendar';
+import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
+import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
+import { jalaliSystem } from 'react-native-fast-calendar/systems/jalali';
 
 const systems = [gregorianSystem, hijriSystem, jalaliSystem];
 
 export function MultiSystemPicker() {
   return (
-    <Calendar.Root systems={systems} mode="single">
-      <Calendar.DayGrid />
-    </Calendar.Root>
+    <CalendarProvider systems={systems} mode="single">
+      <MyDayGrid />
+    </CalendarProvider>
   );
 }`;
 
@@ -170,9 +202,9 @@ const FEATURES: FeatureProps[] = [
     ),
   },
   {
-    title: 'Composable slots',
+    title: 'Hooks-only API',
     description:
-      'Replace DayCell, MonthCaption, WeekNumberCell, or the whole grid — keep state, swap UI.',
+      'Five hooks plus one provider. No DayGrid, no SimpleCalendar, no theming object — bring your own components.',
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -229,7 +261,7 @@ const RECIPES = [
 
 const STATS = [
   { value: '0', label: 'runtime deps in core' },
-  { value: '18+', label: 'composable hooks' },
+  { value: '5', label: 'public hooks' },
   { value: '60fps', label: 'on every day tap' },
   { value: '∞', label: 'calendar systems' },
 ];
@@ -317,7 +349,7 @@ export default function Home(): JSX.Element {
                 <span className={styles.heroDemoDot} />
                 <span className={styles.heroDemoDot} />
                 <span className={styles.heroDemoLabel}>
-                  Calendar.Root · mode="range"
+                  CalendarProvider · mode="range"
                 </span>
               </div>
               <CalendarDemo mode="range" minRangeDays={2} maxRangeDays={14} />
@@ -402,15 +434,15 @@ export default function Home(): JSX.Element {
             <SectionHeader
               eyebrow="Two layers, one library"
               title="Batteries-included or completely custom"
-              description="Start with SimpleCalendar for the 90% case. Drop down to the headless layer when you need pixel-level control."
+              description="Wrap your tree in CalendarProvider, then compose the calendar your design system actually needs from the five public hooks."
             />
 
             <div className={styles.codeGrid}>
               <div className={styles.codeCard}>
                 <div className={styles.codeCardHeader}>
-                  <div className={styles.codeCardTitle}>SimpleCalendar</div>
+                  <div className={styles.codeCardTitle}>Booking screen</div>
                   <div className={styles.codeCardSubtitle}>
-                    one component · sane defaults · ready in 30 seconds
+                    one provider · range mode · your own UI
                   </div>
                 </div>
                 <div className={styles.codeCardBody}>
@@ -420,9 +452,9 @@ export default function Home(): JSX.Element {
 
               <div className={styles.codeCard}>
                 <div className={styles.codeCardHeader}>
-                  <div className={styles.codeCardTitle}>Headless</div>
+                  <div className={styles.codeCardTitle}>Headless grid</div>
                   <div className={styles.codeCardSubtitle}>
-                    your UI · our state · pick the hooks you need
+                    useCalendarDays · useCalendarSelector · useCalendarActions
                   </div>
                 </div>
                 <div className={styles.codeCardBody}>
@@ -498,7 +530,7 @@ export default function Home(): JSX.Element {
               </h2>
               <p className={styles.ctaDescription}>
                 Read the docs, copy a recipe, or drop in{' '}
-                <code>SimpleCalendar</code> and start picking dates.
+                <code>CalendarProvider</code> and start picking dates.
               </p>
               <div className={styles.ctaRow}>
                 <Link className={styles.ctaPrimary} to="/docs/intro">

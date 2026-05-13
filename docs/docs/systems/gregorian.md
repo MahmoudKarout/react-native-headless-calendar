@@ -22,13 +22,13 @@ import {
 Use the pre-configured `gregorianSystem` for standard usage:
 
 ```tsx
-<Calendar.Root systems={[gregorianSystem]} />
+<CalendarProvider systems={[gregorianSystem]} />
 ```
 
 Or use the default (no import needed):
 
 ```tsx
-<Calendar.Root mode="single" />
+<CalendarProvider mode="single" />
 // Uses [gregorianSystem] by default
 ```
 
@@ -46,7 +46,7 @@ const frenchSystem = createGregorianSystem({
   weekdayLabels: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
 });
 
-<Calendar.Root systems={[frenchSystem]} />
+<CalendarProvider systems={[frenchSystem]} />
 ```
 
 ### Options
@@ -116,7 +116,7 @@ Combine with other calendar systems:
 import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
 import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
 
-<Calendar.Root
+<CalendarProvider
   systems={[gregorianSystem, hijriSystem]}
   initialSystemId="gregorian"
 >
@@ -125,7 +125,7 @@ import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
 ## Complete Example
 
 ```tsx
-import { SimpleCalendar } from 'react-native-fast-calendar';
+import { CalendarProvider } from 'react-native-fast-calendar';
 import { createGregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
 
 const spanishSystem = createGregorianSystem({
@@ -139,11 +139,13 @@ const spanishSystem = createGregorianSystem({
 
 function SpanishCalendar() {
   return (
-    <SimpleCalendar
+    <CalendarProvider
       systems={[spanishSystem]}
       mode="single"
       firstDayOfWeek={1}
-    />
+    >
+      {/* render your day grid with `useCalendarDays()` */}
+    </CalendarProvider>
   );
 }
 ```

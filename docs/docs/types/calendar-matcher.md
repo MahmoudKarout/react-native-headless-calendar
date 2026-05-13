@@ -1,146 +1,56 @@
 ---
-sidebar_position: 6
+sidebar_position: 4
 ---
 
 # CalendarMatcher
 
-The `CalendarMatcher` type defines how to match dates for disabling or modifiers. It supports three shapes: date arrays, range arrays, or predicate functions.
+Predicate or list of dates that selects a subset of the calendar's days. Used by `<CalendarProvider disabled>` and by every entry in `<CalendarProvider modifiers={…}>`.
 
-## Type Definition
+## Type
 
 ```ts
 type CalendarMatcher =
   | readonly DisabledDateInput[]
   | readonly DisabledDateRangeInput[]
   | ((nativeDate: Date) => boolean);
-
-type DisabledDateInput = unknown;
-
-interface DisabledDateRangeInput {
-  start: DisabledDateInput;
-  end: DisabledDateInput;
-}
 ```
 
-## Shapes
+Three shapes are supported uniformly:
 
-### Date Array
+| Shape | Match condition |
+| --- | --- |
+| `readonly DisabledDateInput[]` | any element is the same calendar day |
+| `readonly DisabledDateRangeInput[]` | any inclusive range covers the cell |
+| `(nativeDate: Date) => boolean` | predicate returns `true` |
 
-Match specific dates:
+Mixed arrays (dates + ranges in one matcher) are not supported — pick one shape per usage.
 
-```ts
-const matcher: CalendarMatcher = [
-  new Date('2024-06-15'),
-  new Date('2024-06-16'),
-  new Date('2024-06-20'),
-];
-```
+## Examples
 
-### Range Array
-
-Match inclusive date ranges:
-
-```ts
-const matcher: CalendarMatcher = [
-  { start: new Date('2024-07-01'), end: new Date('2024-08-15') },
-  { start: new Date('2024-12-20'), end: new Date('2024-12-31') },
-];
-```
-
-### Predicate Function
-
-Match based on dynamic logic:
-
-```ts
-const matcher: CalendarMatcher = (date) => {
-  return date.getDay() === 0 || date.getDay() === 6;
-};
-```
-
-## Input Normalization
-
-Date inputs are normalized through the active calendar system:
-
-```ts
-// These are all valid inputs
-const inputs = [
-  new Date('2024-06-15'),
-  '2024-06-15',                    // ISO string
-  1718409600000,                   // Timestamp
-  moment('2024-06-15'),            // Moment object
-  { y: 2024, m: 5, d: 15 },        // System-specific
-];
-```
-
-## Usage
-
-### For Disabled Dates
+### List of dates
 
 ```tsx
-<Calendar.Root
-  disabledDates={[new Date('2024-12-25')]}
-  disabledRanges={[{ start: new Date('2024-07-01'), end: new Date('2024-08-31') }]}
-  disabled={(date) => date.getDay() === 0 || date.getDay() === 6}
->
+<CalendarProvider
+  disabledDates={[new Date(2024, 4, 5), new Date(2024, 4, 12)]}
+/>
 ```
 
-### For Modifiers
+### List of inclusive ranges
 
 ```tsx
-<Calendar.Root
-  modifiers={{
-    holiday: [new Date('2024-12-25')],
-    vacation: [{ start: new Date('2024-07-01'), end: new Date('2024-07-15') }],
-    weekend: (date) => date.getDay() === 0 || date.getDay() === 6,
-  }}
->
+<CalendarProvider
+  disabledRanges={[
+    { start: new Date(2024, 4, 1), end: new Date(2024, 4, 7) },
+  ]}
+/>
 ```
 
-## Combining Matchers
-
-Multiple matchers compose with **OR** semantics:
+### Predicate
 
 ```tsx
-<Calendar.Root
-  disabledDates={[new Date('2024-12-25')]}
-  disabledRanges={[{ start: new Date('2024-07-01'), end: new Date('2024-07-31') }]}
-  disabled={(date) => date < new Date()}
->
+<CalendarProvider
+  disabled={(d) => d.getDay() === 0 || d.getDay() === 6}
+/>
 ```
 
-A date is disabled if:
-- It's December 25, 2024 **OR**
-- It's between July 1-31, 2024 **OR**
-- It's in the past
-
-## Predicate Safety
-
-Predicates that throw are handled gracefully (the date is treated as not matching):
-
-```tsx
-<Calendar.Root
-  disabled={(date) => {
-    // If this throws, the date won't be disabled
-    return someUnreliableFunction(date);
-  }}
->
-```
-
-## Array Discrimination
-
-The library discriminates date arrays from range arrays by inspecting the first element:
-
-```ts
-if (first !== null &&
-    typeof first === 'object' &&
-    'start' in first &&
-    'end' in first) {
-  // Treat as range array
-} else {
-  // Treat as date array
-}
-```
-
-This means:
-- Empty arrays are valid but match nothing
-- Arrays must be homogeneous (all dates or all ranges)
+Predicates are evaluated against the **native** `Date` representation regardless of the active calendar system, so the same matcher works for Gregorian, Hijri, Jalali, etc.

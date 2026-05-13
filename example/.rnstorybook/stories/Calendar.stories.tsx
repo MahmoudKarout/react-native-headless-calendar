@@ -2,190 +2,96 @@ import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
 import { View } from 'react-native';
 
-import CalendarDemo from '../../src/CalendarDemo';
 import ArabicCalendarExample from '../../src/ArabicCalendarExample';
-import BottomSheetCalendarDemo from '../../src/BottomSheetExample';
-import FlightPriceExample from '../../src/FlightPriceExample';
-import VerticalCalendarDemo from '../../src/VerticalCalendarExample';
+import BoundedSelectionExample from '../../src/BoundedSelectionExample';
+import BottomSheetPickerExample from '../../src/BottomSheetPickerExample';
+import CustomDayCellExample from '../../src/CustomDayCellExample';
+import DateRangePickerExample from '../../src/DateRangePickerExample';
+import FlightPriceCalendarExample from '../../src/FlightPriceCalendarExample';
+import MultiDatePickerExample from '../../src/MultiDatePickerExample';
+import MultiMonthGridExample from '../../src/MultiMonthGridExample';
+import PerfCalendarExample from '../../src/PerfCalendarExample';
+import SingleDatePickerExample from '../../src/SingleDatePickerExample';
+import VerticalListExample from '../../src/VerticalListExample';
+import WeekNumbersExample from '../../src/WeekNumbersExample';
 import WheelDatePickerExample from '../../src/WheelDatePickerExample';
-import {
-  VerticalRangeExample,
-  VerticalMultipleExample,
-  VerticalBoundedExample,
-  VerticalMultiMonthExample,
-  VerticalMultiSystemExample,
-  VerticalCustomSlotsExample,
-  VerticalLocalisedExample,
-  VerticalImageCellExample,
-} from '../../src/VerticalCalendarExamples';
 
-// ---------------------------------------------------------------------------
-// Decorators
-// ---------------------------------------------------------------------------
-
-/** Fills the screen — required for scroll-based and flex-based layouts. */
-const FullScreenDecorator = (Story: () => React.JSX.Element) => (
+const FullScreen = (Story: () => React.JSX.Element) => (
   <View style={{ flex: 1 }}>
     <Story />
   </View>
 );
 
-// ---------------------------------------------------------------------------
-// Standard / horizontal demos
-// ---------------------------------------------------------------------------
+const meta = {
+  title: 'Calendar/Recipes',
+  component: SingleDatePickerExample,
+  decorators: [FullScreen],
+} satisfies Meta<typeof SingleDatePickerExample>;
 
-const standardMeta = {
-  title: 'Calendar/Standard',
-  component: CalendarDemo,
-  decorators: [FullScreenDecorator],
-} satisfies Meta<typeof CalendarDemo>;
+export default meta;
 
-export default standardMeta;
+type Story = StoryObj<typeof meta>;
 
-type StandardStory = StoryObj<typeof standardMeta>;
-
-/**
- * Full feature showcase: single date, range, multi-select with modifiers,
- * bounded selection, multi-month, multi-system, custom slots, localisation,
- * and image cells — all nine recipes in one scrollable screen.
- */
-export const Standard: StandardStory = {};
-
-// ---------------------------------------------------------------------------
-// Arabic / RTL
-// ---------------------------------------------------------------------------
-
-export const Arabic: StoryObj = {
-  name: 'Arabic (RTL)',
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <ArabicCalendarExample />
-    </View>
-  ),
+export const SingleDate: Story = {
+  name: 'Single date picker',
 };
 
-// ---------------------------------------------------------------------------
-// Bottom sheet
-// ---------------------------------------------------------------------------
+export const DateRange: StoryObj = {
+  name: 'Date range picker',
+  render: () => <DateRangePickerExample />,
+};
+
+export const MultiDate: StoryObj = {
+  name: 'Multi-date picker (modifiers)',
+  render: () => <MultiDatePickerExample />,
+};
+
+export const Bounded: StoryObj = {
+  name: 'Bounded selection',
+  render: () => <BoundedSelectionExample />,
+};
+
+export const MultiMonth: StoryObj = {
+  name: 'Multi-month grid',
+  render: () => <MultiMonthGridExample />,
+};
+
+export const CustomCell: StoryObj = {
+  name: 'Custom day cell',
+  render: () => <CustomDayCellExample />,
+};
+
+export const WeekNumbers: StoryObj = {
+  name: 'Week numbers',
+  render: () => <WeekNumbersExample />,
+};
 
 export const BottomSheet: StoryObj = {
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <BottomSheetCalendarDemo />
-    </View>
-  ),
+  name: 'Bottom-sheet picker',
+  render: () => <BottomSheetPickerExample />,
 };
-
-// ---------------------------------------------------------------------------
-// Flight price calendar — dark themed, fare-aware range picker
-// ---------------------------------------------------------------------------
-
-export const FlightPrice: StoryObj = {
-  name: 'Flight Price (range + fares)',
-  render: () => (
-    <View style={{ flex: 1, backgroundColor: '#0a0a0f' }}>
-      <FlightPriceExample />
-    </View>
-  ),
-};
-
-// ---------------------------------------------------------------------------
-// Vertical (iOS-Calendar-style) — basic
-// ---------------------------------------------------------------------------
 
 export const Vertical: StoryObj = {
-  name: 'Vertical (infinite list)',
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <VerticalCalendarDemo />
-    </View>
-  ),
+  name: 'Vertical infinite list',
+  render: () => <VerticalListExample />,
 };
 
-// ---------------------------------------------------------------------------
-// Vertical — feature gallery
-// ---------------------------------------------------------------------------
-
-export const VerticalRange: StoryObj = {
-  name: 'Vertical · Range',
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <VerticalRangeExample />
-    </View>
-  ),
+export const FlightPrice: StoryObj = {
+  name: 'Flight price calendar',
+  render: () => <FlightPriceCalendarExample />,
 };
 
-export const VerticalMultiple: StoryObj = {
-  name: 'Vertical · Multi-select',
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <VerticalMultipleExample />
-    </View>
-  ),
+export const Arabic: StoryObj = {
+  name: 'Arabic / Hijri',
+  render: () => <ArabicCalendarExample />,
 };
 
-export const VerticalBounded: StoryObj = {
-  name: 'Vertical · Bounded',
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <VerticalBoundedExample />
-    </View>
-  ),
+export const Perf: StoryObj = {
+  name: 'Performance — render counters',
+  render: () => <PerfCalendarExample />,
 };
 
-export const VerticalWeekNumbers: StoryObj = {
-  name: 'Vertical · Week Numbers',
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <VerticalMultiMonthExample />
-    </View>
-  ),
-};
-
-export const VerticalMultiSystem: StoryObj = {
-  name: 'Vertical · Multi-system',
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <VerticalMultiSystemExample />
-    </View>
-  ),
-};
-
-export const VerticalCustomSlots: StoryObj = {
-  name: 'Vertical · Custom Slots',
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <VerticalCustomSlotsExample />
-    </View>
-  ),
-};
-
-export const VerticalLocalised: StoryObj = {
-  name: 'Vertical · Localised (FR)',
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <VerticalLocalisedExample />
-    </View>
-  ),
-};
-
-export const VerticalImageCells: StoryObj = {
-  name: 'Vertical · Image Cells',
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <VerticalImageCellExample />
-    </View>
-  ),
-};
-
-// ---------------------------------------------------------------------------
-// Wheel Date Picker — iOS-style drum-roll picker
-// ---------------------------------------------------------------------------
-
-export const WheelDatePicker: StoryObj = {
-  render: () => (
-    <View style={{ flex: 1 }}>
-      <WheelDatePickerExample />
-    </View>
-  ),
+export const Wheel: StoryObj = {
+  name: 'Wheel date picker',
+  render: () => <WheelDatePickerExample />,
 };
