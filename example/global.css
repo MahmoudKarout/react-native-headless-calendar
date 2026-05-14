@@ -1,0 +1,97 @@
+@import 'tailwindcss';
+@import 'uniwind';
+
+/*
+ * Make Tailwind scan our examples + storybook stories. global.css lives at the
+ * example/ root, so siblings such as src/ and .rnstorybook/ are already
+ * covered, but we list them explicitly so the Oxide scanner cannot miss them.
+ */
+@source './src';
+@source './.rnstorybook';
+
+/* ------------------------------------------------------------------ */
+/*  Design tokens                                                      */
+/* ------------------------------------------------------------------ */
+/*
+ * Shared palette used across every example. Mirrors the docs DESIGN.md so
+ * the example app, Storybook, and the documentation stay visually aligned.
+ */
+@layer theme {
+  :root {
+    @variant light {
+      /* Surfaces */
+      --color-background: #f8fafc;
+      --color-surface: #ffffff;
+      --color-surface-muted: #f1f5f9;
+      --color-card: #ffffff;
+
+      /* Ink */
+      --color-foreground: #0f172a;
+      --color-muted: #64748b;
+      --color-subtle: #94a3b8;
+
+      /* Lines */
+      --color-border: #e2e8f0;
+      --color-border-strong: #cbd5e1;
+
+      /* Brand */
+      --color-primary: #6366f1;
+      --color-primary-soft: #eef2ff;
+      --color-primary-strong: #4f46e5;
+      --color-on-primary: #ffffff;
+
+      /* Status */
+      --color-success: #10b981;
+      --color-success-soft: #d1fae5;
+      --color-warning: #f59e0b;
+      --color-warning-soft: #fef3c7;
+      --color-danger: #ef4444;
+      --color-danger-soft: #fee2e2;
+      --color-info: #3b82f6;
+      --color-info-soft: #dbeafe;
+    }
+
+    @variant dark {
+      --color-background: #0b1120;
+      --color-surface: #111827;
+      --color-surface-muted: #1f2937;
+      --color-card: #111827;
+
+      --color-foreground: #f8fafc;
+      --color-muted: #94a3b8;
+      --color-subtle: #64748b;
+
+      --color-border: #1f2937;
+      --color-border-strong: #334155;
+
+      --color-primary: #818cf8;
+      --color-primary-soft: #312e81;
+      --color-primary-strong: #a5b4fc;
+      --color-on-primary: #0b1120;
+
+      --color-success: #34d399;
+      --color-success-soft: #064e3b;
+      --color-warning: #fbbf24;
+      --color-warning-soft: #78350f;
+      --color-danger: #f87171;
+      --color-danger-soft: #7f1d1d;
+      --color-info: #60a5fa;
+      --color-info-soft: #1e3a8a;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Custom utilities                                                   */
+/* ------------------------------------------------------------------ */
+@utility border-hairline {
+  border-width: hairlineWidth();
+}
+
+@utility border-t-hairline {
+  border-top-width: hairlineWidth();
+}
+
+@utility border-b-hairline {
+  border-bottom-width: hairlineWidth();
+}

@@ -1,5 +1,11 @@
 ---
 sidebar_position: 1
+title: Single Date Picker
+description: Build a single-date picker in React Native with react-native-fast-calendar. Headless hooks, your own UI, zero re-renders on idle cells.
+keywords:
+  - react native single date picker
+  - react native calendar
+  - headless date picker
 ---
 
 # Single Date Picker
@@ -16,20 +22,24 @@ import CalendarDemo from '@site/src/components/CalendarDemo';
 import { Pressable, Text, View } from 'react-native';
 import {
   CalendarProvider,
-  useCalendarDays,
+  selectCanConfirm,
+  selectDays,
   useCalendarActions,
+  useCalendarSelector,
 } from 'react-native-fast-calendar';
 
 function Calendar() {
-  const days = useCalendarDays();
-  const { confirm, clear, canConfirm } = useCalendarActions();
+  const days = useCalendarSelector(selectDays);
+  const { selectDate, goPrevMonth, goNextMonth, confirm, clear } =
+    useCalendarActions();
+  const canConfirm = useCalendarSelector(selectCanConfirm);
 
   return (
     <View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Pressable onPress={days.goPrevMonth}><Text>‹</Text></Pressable>
+        <Pressable onPress={goPrevMonth}><Text>‹</Text></Pressable>
         <Text>{days.displayedMonthLabel} {days.displayedYearLabel}</Text>
-        <Pressable onPress={days.goNextMonth}><Text>›</Text></Pressable>
+        <Pressable onPress={goNextMonth}><Text>›</Text></Pressable>
       </View>
 
       <View style={{ flexDirection: 'row' }}>
@@ -42,16 +52,16 @@ function Calendar() {
         {days.cells.map((cell) => (
           <Pressable
             key={cell.nativeDate.toISOString()}
-            onPress={() => days.selectDate(cell.date)}
+            onPress={() => selectDate(cell.date)}
             disabled={cell.isDisabled}
             style={{
               width: 40,
               height: 40,
               opacity: cell.isCurrentMonth ? 1 : 0.4,
-              backgroundColor: cell.isSelected ? '#0f172a' : 'transparent',
+              backgroundColor: cell.isSelected ? '#171717' : 'transparent',
             }}
           >
-            <Text style={{ color: cell.isSelected ? '#fff' : '#0f172a' }}>
+            <Text style={{ color: cell.isSelected ? '#ffffff' : '#171717' }}>
               {cell.label}
             </Text>
           </Pressable>

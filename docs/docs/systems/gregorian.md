@@ -144,7 +144,7 @@ function SpanishCalendar() {
       mode="single"
       firstDayOfWeek={1}
     >
-      {/* render your day grid with `useCalendarDays()` */}
+      {/* render your day grid with `useCalendarSelector(selectDays)` */}
     </CalendarProvider>
   );
 }

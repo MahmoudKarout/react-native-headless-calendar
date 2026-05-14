@@ -1,44 +1,37 @@
 /**
  * HooksCalendar — shared shadcn-styled building block for every example.
  *
- * Built entirely from the five public hooks:
- *   - useCalendarDays
- *   - useCalendarMonths
- *   - useCalendarYears
- *   - useCalendarActions
- *   - useCalendarSelector
+ * Built on the two public hooks:
+ *   - useCalendarSelector(selector)  — universal narrow read primitive.
+ *   - useCalendarActions()           — every mutator, subscription-free.
  *
- * Visual language is modelled on shadcn/ui's Calendar primitive: a light
- * card with a hairline border, ghost icon chevrons, uppercase weekday
- * labels, square-rounded day cells, and a near-black "primary" accent.
+ * The bundled "data shapes" (day grid, month chooser, year page) live
+ * on the snapshot itself and are reached via the named selectors
+ * `selectDays / selectMonths / selectYears`.
+ *
+ * Visual language is modelled on shadcn/ui's Calendar primitive: a card
+ * with a hairline border, ghost icon chevrons, uppercase weekday labels,
+ * square-rounded day cells, and the design-system primary accent.
+ *
+ * Styling is fully driven by Uniwind utilities and CSS theme tokens
+ * (see `example/global.css`).
  */
 import { memo, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import {
+  selectCanConfirm,
+  selectDays,
+  selectMonths,
+  selectYears,
   useCalendarActions,
-  useCalendarDays,
-  useCalendarMonths,
   useCalendarSelector,
-  useCalendarYears,
+  type CalendarActions,
+  type CalendarDays,
+  type CalendarMonths,
+  type CalendarYears,
   type DayCellInfo,
 } from 'react-native-fast-calendar';
-
-// ─── shadcn-inspired palette ────────────────────────────────────────────────
-
-export const tokens = {
-  background: '#ffffff',
-  foreground: '#09090b',
-  muted: '#f4f4f5',
-  mutedForeground: '#71717a',
-  border: '#e4e4e7',
-  accent: '#f4f4f5',
-  accentForeground: '#18181b',
-  primary: '#18181b',
-  primaryForeground: '#fafafa',
-  ring: '#a1a1aa',
-  destructive: '#ef4444',
-} as const;
 
 type ViewKind = 'day' | 'month' | 'year';
 
@@ -47,8 +40,8 @@ export interface HooksCalendarProps {
   caption?: string;
   /** Override the per-cell renderer (e.g. flight prices, image cells). */
   renderDay?: (cell: DayCellInfo) => ReactNode;
-  /** Map of `modifierName -> style` merged onto matched cells. */
-  modifierStyles?: Record<string, object>;
+  /** Map of `modifierName -> className` applied to matched cells. */
+  modifierClassNames?: Record<string, string>;
   /** Hide the month / year picker tabs (single-purpose calendars). */
   hidePickers?: boolean;
   /** Hide the confirm / clear actions. */
@@ -60,79 +53,102 @@ export interface HooksCalendarProps {
 export function HooksCalendar({
   caption,
   renderDay,
-  modifierStyles,
+  modifierClassNames,
   hidePickers,
   hideActions,
   cellSize = 36,
 }: HooksCalendarProps) {
   const [view, setView] = useState<ViewKind>('day');
-  const days = useCalendarDays();
-  const months = useCalendarMonths();
-  const years = useCalendarYears();
+  const days = useCalendarSelector(selectDays);
+  const months = useCalendarSelector(selectMonths);
+  const years = useCalendarSelector(selectYears);
   const actions = useCalendarActions();
   const systemId = useCalendarSelector((s) => s.system.id);
+  const canConfirm = useCalendarSelector(selectCanConfirm);
 
   return (
-    <View style={styles.card}>
-      {caption ? <Text style={styles.caption}>{caption}</Text> : null}
+    <View className="bg-card border-hairline border-border rounded-xl p-4 shadow-sm">
+      {caption ? (
+        <Text className="text-muted text-[12px] font-medium tracking-wider uppercase mb-3">
+          {caption}
+        </Text>
+      ) : null}
 
-      <View style={styles.headerRow}>
-        <IconButton onPress={days.goPrevMonth} label="‹" />
+      <View className="flex-row items-center justify-between mb-2">
+        <IconButton onPress={actions.goPrevMonth} label="‹" />
         <Pressable
           onPress={() =>
             !hidePickers && setView((v) => (v === 'day' ? 'month' : 'day'))
           }
-          style={styles.headerLabels}
+          className="items-center"
         >
-          <Text style={styles.title}>
+          <Text className="text-foreground text-sm font-semibold">
             {days.displayedMonthLabel} {days.displayedYearLabel}
           </Text>
-          <Text style={styles.subtitle}>{systemId}</Text>
+          <Text className="text-muted text-[10px] font-medium tracking-widest uppercase mt-0.5">
+            {systemId}
+          </Text>
         </Pressable>
-        <IconButton onPress={days.goNextMonth} label="›" />
+        <IconButton onPress={actions.goNextMonth} label="›" />
       </View>
 
       {!hidePickers && (
-        <View style={styles.tabs}>
-          {(['day', 'month', 'year'] as const).map((tab) => (
-            <Pressable
-              key={tab}
-              onPress={() => setView(tab)}
-              style={[styles.tab, tab === view && styles.tabActive]}
-            >
-              <Text
-                style={[styles.tabText, tab === view && styles.tabTextActive]}
+        <View className="bg-surface-muted rounded-md flex-row p-0.5 mb-3">
+          {(['day', 'month', 'year'] as const).map((tab) => {
+            const active = tab === view;
+            return (
+              <Pressable
+                key={tab}
+                onPress={() => setView(tab)}
+                className={`flex-1 rounded py-1.5 ${active ? 'bg-card shadow-sm' : ''}`}
               >
-                {tab}
-              </Text>
-            </Pressable>
-          ))}
+                <Text
+                  className={`text-[11px] font-semibold tracking-wider text-center uppercase ${
+                    active ? 'text-foreground' : 'text-muted'
+                  }`}
+                >
+                  {tab}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       )}
 
       {view === 'day' && (
         <DayView
           days={days}
+          selectDate={actions.selectDate}
           renderDay={renderDay}
-          modifierStyles={modifierStyles}
+          modifierClassNames={modifierClassNames}
           cellSize={cellSize}
         />
       )}
 
       {!hidePickers && view === 'month' && (
-        <MonthView months={months} onPick={() => setView('day')} />
+        <MonthView
+          months={months}
+          selectMonth={actions.selectMonth}
+          onPick={() => setView('day')}
+        />
       )}
 
       {!hidePickers && view === 'year' && (
-        <YearView years={years} onPick={() => setView('day')} />
+        <YearView
+          years={years}
+          selectYear={actions.selectYear}
+          prevYearPage={actions.prevYearPage}
+          nextYearPage={actions.nextYearPage}
+          onPick={() => setView('day')}
+        />
       )}
 
       {!hideActions && (
-        <View style={styles.actionRow}>
+        <View className="flex-row gap-2 mt-4">
           <GhostButton onPress={actions.clear} label="Clear" />
           <PrimaryButton
             onPress={actions.confirm}
-            disabled={!actions.canConfirm}
+            disabled={!canConfirm}
             label="Confirm"
           />
         </View>
@@ -151,8 +167,13 @@ function IconButton({
   label: string;
 }) {
   return (
-    <Pressable onPress={onPress} style={styles.iconButton}>
-      <Text style={styles.iconButtonText}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      className="items-center justify-center w-7 h-7 rounded-md border-hairline border-border active:bg-surface-muted"
+    >
+      <Text className="text-foreground text-base font-medium leading-4">
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -165,8 +186,11 @@ function GhostButton({
   label: string;
 }) {
   return (
-    <Pressable onPress={onPress} style={styles.ghostButton}>
-      <Text style={styles.ghostButtonText}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      className="flex-1 items-center py-2.5 rounded-md border-hairline border-border active:bg-surface-muted"
+    >
+      <Text className="text-foreground text-[13px] font-medium">{label}</Text>
     </Pressable>
   );
 }
@@ -184,9 +208,9 @@ function PrimaryButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={[styles.primaryButton, disabled && styles.buttonDisabled]}
+      className="flex-1 items-center py-2.5 rounded-md bg-primary active:bg-primary-strong disabled:opacity-40"
     >
-      <Text style={styles.primaryButtonText}>{label}</Text>
+      <Text className="text-on-primary text-[13px] font-semibold">{label}</Text>
     </Pressable>
   );
 }
@@ -194,39 +218,46 @@ function PrimaryButton({
 // ─── views ──────────────────────────────────────────────────────────────────
 
 interface DayViewProps {
-  days: ReturnType<typeof useCalendarDays>;
+  days: CalendarDays;
+  selectDate: CalendarActions['selectDate'];
   renderDay?: (cell: DayCellInfo) => ReactNode;
-  modifierStyles?: Record<string, object>;
+  modifierClassNames?: Record<string, string>;
   cellSize: number;
 }
 
 const DayView = memo(function DayView({
   days,
+  selectDate,
   renderDay,
-  modifierStyles,
+  modifierClassNames,
   cellSize,
 }: DayViewProps) {
   // Lock the row to exactly 7 columns so the grid can never wrap into
-  // 8- or 9-cell rows on wider parents.
+  // 8- or 9-cell rows on wider parents. Width is dynamic per `cellSize`,
+  // so it's the one piece that must stay in an inline style.
   const rowWidth = cellSize * 7;
   return (
-    <View style={styles.daysWrapper}>
-      <View style={[styles.weekdays, { width: rowWidth }]}>
+    <View className="items-center">
+      <View className="flex-row mt-1 mb-1" style={{ width: rowWidth }}>
         {days.weekdayLabels.map((label) => (
-          <Text key={label} style={[styles.weekday, { width: cellSize }]}>
+          <Text
+            key={label}
+            className="text-muted text-[11px] font-medium tracking-widest text-center uppercase"
+            style={{ width: cellSize }}
+          >
             {label.slice(0, 2)}
           </Text>
         ))}
       </View>
-      <View style={[styles.grid, { width: rowWidth }]}>
+      <View className="flex-row flex-wrap" style={{ width: rowWidth }}>
         {days.cells.map((cell) => (
           <DayCell
             key={cell.nativeDate.toISOString()}
             cell={cell}
-            onPress={() => days.selectDate(cell.date)}
+            onPress={() => selectDate(cell.date)}
             cellSize={cellSize}
             renderDay={renderDay}
-            modifierStyles={modifierStyles}
+            modifierClassNames={modifierClassNames}
           />
         ))}
       </View>
@@ -239,7 +270,7 @@ interface DayCellProps {
   onPress: () => void;
   cellSize: number;
   renderDay?: (cell: DayCellInfo) => ReactNode;
-  modifierStyles?: Record<string, object>;
+  modifierClassNames?: Record<string, string>;
 }
 
 const DayCell = memo(function DayCell({
@@ -247,44 +278,51 @@ const DayCell = memo(function DayCell({
   onPress,
   cellSize,
   renderDay,
-  modifierStyles,
+  modifierClassNames,
 }: DayCellProps) {
-  const matchedModStyle = modifierStyles
+  const modifierClass = modifierClassNames
     ? Object.entries(cell.modifiers)
         .filter(([, v]) => v)
-        .map(([k]) => modifierStyles[k])
+        .map(([k]) => modifierClassNames[k])
         .filter(Boolean)
-    : null;
+        .join(' ')
+    : '';
 
-  // Range middle cells get a flat (non-rounded) background to form a pill
   const isRangeMiddle = cell.inRange && !cell.isRangeStart && !cell.isRangeEnd;
+
+  // Compose state classes (order matters: later wins on conflicts).
+  const stateClass = [
+    'items-center justify-center',
+    isRangeMiddle ? 'bg-surface-muted rounded-none' : 'rounded-md',
+    cell.isRangeStart && 'bg-primary rounded-r-none',
+    cell.isRangeEnd && 'bg-primary rounded-l-none',
+    cell.isSelected && 'bg-primary',
+    cell.isToday && !cell.isSelected && 'bg-surface-muted',
+    cell.isDisabled && 'opacity-40',
+    modifierClass,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <Pressable
       disabled={cell.isDisabled}
       onPress={onPress}
-      style={[
-        styles.day,
-        { width: cellSize, height: cellSize },
-        !cell.isCurrentMonth && styles.dayOutside,
-        isRangeMiddle && styles.dayInRange,
-        cell.isRangeStart && styles.dayRangeStart,
-        cell.isRangeEnd && styles.dayRangeEnd,
-        cell.isSelected && styles.daySelected,
-        cell.isToday && !cell.isSelected && styles.dayToday,
-        cell.isDisabled && styles.dayDisabled,
-        ...(matchedModStyle ?? []),
-      ]}
+      className={stateClass}
+      style={{ width: cellSize, height: cellSize }}
     >
       {renderDay ? (
         renderDay(cell)
       ) : (
         <Text
-          style={[
-            styles.dayText,
-            !cell.isCurrentMonth && styles.dayTextOutside,
-            cell.isSelected && styles.dayTextSelected,
-          ]}
+          className={[
+            'text-[13px] font-medium',
+            cell.isSelected
+              ? 'text-on-primary font-semibold'
+              : !cell.isCurrentMonth
+                ? 'text-muted opacity-50'
+                : 'text-foreground',
+          ].join(' ')}
         >
           {cell.label}
         </Text>
@@ -294,295 +332,90 @@ const DayCell = memo(function DayCell({
 });
 
 interface MonthViewProps {
-  months: ReturnType<typeof useCalendarMonths>;
+  months: CalendarMonths;
+  selectMonth: CalendarActions['selectMonth'];
   onPick: () => void;
 }
 
-const MonthView = memo(function MonthView({ months, onPick }: MonthViewProps) {
+const MonthView = memo(function MonthView({
+  months,
+  selectMonth,
+  onPick,
+}: MonthViewProps) {
   return (
-    <View style={styles.pickerGrid}>
-      {months.months.map((m) => (
-        <Pressable
-          key={m.index}
-          onPress={() => {
-            months.selectMonth(m.index);
-            onPick();
-          }}
-          style={[
-            styles.pickerCell,
-            m.index === months.activeMonth && styles.pickerCellActive,
-          ]}
-        >
-          <Text
-            style={[
-              styles.pickerText,
-              m.index === months.activeMonth && styles.pickerTextActive,
-            ]}
+    <View className="flex-row flex-wrap gap-1.5">
+      {months.months.map((m) => {
+        const active = m.index === months.activeMonth;
+        return (
+          <Pressable
+            key={m.index}
+            onPress={() => {
+              selectMonth(m.index);
+              onPick();
+            }}
+            className={`items-center py-3 rounded-md grow basis-[30%] border-hairline ${
+              active ? 'bg-primary border-primary' : 'border-border'
+            }`}
           >
-            {m.label.slice(0, 3)}
-          </Text>
-        </Pressable>
-      ))}
+            <Text
+              className={`text-[13px] ${active ? 'text-on-primary font-semibold' : 'text-foreground font-medium'}`}
+            >
+              {m.label.slice(0, 3)}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 });
 
 interface YearViewProps {
-  years: ReturnType<typeof useCalendarYears>;
+  years: CalendarYears;
+  selectYear: CalendarActions['selectYear'];
+  prevYearPage: CalendarActions['prevYearPage'];
+  nextYearPage: CalendarActions['nextYearPage'];
   onPick: () => void;
 }
 
-const YearView = memo(function YearView({ years, onPick }: YearViewProps) {
+const YearView = memo(function YearView({
+  years,
+  selectYear,
+  prevYearPage,
+  nextYearPage,
+  onPick,
+}: YearViewProps) {
   return (
     <View>
-      <View style={styles.headerRow}>
-        <IconButton onPress={years.goPrevPage} label="‹" />
-        <Text style={styles.title}>
+      <View className="flex-row items-center justify-between mb-2">
+        <IconButton onPress={prevYearPage} label="‹" />
+        <Text className="text-foreground text-sm font-semibold">
           {years.years[0]} – {years.years[years.years.length - 1]}
         </Text>
-        <IconButton onPress={years.goNextPage} label="›" />
+        <IconButton onPress={nextYearPage} label="›" />
       </View>
-      <View style={styles.pickerGrid}>
-        {years.years.map((y) => (
-          <Pressable
-            key={y}
-            onPress={() => {
-              years.selectYear(y);
-              onPick();
-            }}
-            style={[
-              styles.pickerCell,
-              y === years.activeYear && styles.pickerCellActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.pickerText,
-                y === years.activeYear && styles.pickerTextActive,
-              ]}
+      <View className="flex-row flex-wrap gap-1.5">
+        {years.years.map((y) => {
+          const active = y === years.activeYear;
+          return (
+            <Pressable
+              key={y}
+              onPress={() => {
+                selectYear(y);
+                onPick();
+              }}
+              className={`items-center py-3 rounded-md grow basis-[30%] border-hairline ${
+                active ? 'bg-primary border-primary' : 'border-border'
+              }`}
             >
-              {y}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                className={`text-[13px] ${active ? 'text-on-primary font-semibold' : 'text-foreground font-medium'}`}
+              >
+                {y}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
-});
-
-// ─── styles ─────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: tokens.background,
-    borderColor: tokens.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  caption: {
-    color: tokens.mutedForeground,
-    fontSize: 12,
-    fontWeight: '500',
-    letterSpacing: 0.2,
-    marginBottom: 12,
-    textTransform: 'uppercase',
-  },
-  headerRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  headerLabels: {
-    alignItems: 'center',
-  },
-  title: {
-    color: tokens.foreground,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  subtitle: {
-    color: tokens.mutedForeground,
-    fontSize: 10,
-    fontWeight: '500',
-    letterSpacing: 0.4,
-    marginTop: 2,
-    textTransform: 'uppercase',
-  },
-  iconButton: {
-    alignItems: 'center',
-    borderColor: tokens.border,
-    borderRadius: 6,
-    borderWidth: 1,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
-  iconButtonText: {
-    color: tokens.foreground,
-    fontSize: 16,
-    fontWeight: '500',
-    lineHeight: 16,
-  },
-  tabs: {
-    backgroundColor: tokens.muted,
-    borderRadius: 6,
-    flexDirection: 'row',
-    marginBottom: 12,
-    padding: 2,
-  },
-  tab: {
-    borderRadius: 4,
-    flex: 1,
-    paddingVertical: 6,
-  },
-  tabActive: {
-    backgroundColor: tokens.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  tabText: {
-    color: tokens.mutedForeground,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-  },
-  tabTextActive: {
-    color: tokens.foreground,
-  },
-  daysWrapper: {
-    alignItems: 'center',
-  },
-  weekdays: {
-    flexDirection: 'row',
-    marginBottom: 4,
-    marginTop: 4,
-  },
-  weekday: {
-    color: tokens.mutedForeground,
-    fontSize: 11,
-    fontWeight: '500',
-    letterSpacing: 0.4,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  day: {
-    alignItems: 'center',
-    borderRadius: 6,
-    justifyContent: 'center',
-  },
-  dayOutside: {
-    opacity: 1,
-  },
-  daySelected: {
-    backgroundColor: tokens.primary,
-  },
-  dayInRange: {
-    backgroundColor: tokens.muted,
-    borderRadius: 0,
-  },
-  dayRangeStart: {
-    backgroundColor: tokens.primary,
-    borderBottomRightRadius: 0,
-    borderTopRightRadius: 0,
-  },
-  dayRangeEnd: {
-    backgroundColor: tokens.primary,
-    borderBottomLeftRadius: 0,
-    borderTopLeftRadius: 0,
-  },
-  dayToday: {
-    backgroundColor: tokens.accent,
-  },
-  dayDisabled: {
-    opacity: 0.4,
-  },
-  dayText: {
-    color: tokens.foreground,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  dayTextOutside: {
-    color: tokens.mutedForeground,
-    opacity: 0.5,
-  },
-  dayTextSelected: {
-    color: tokens.primaryForeground,
-    fontWeight: '600',
-  },
-  pickerGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  pickerCell: {
-    alignItems: 'center',
-    borderColor: tokens.border,
-    borderRadius: 6,
-    borderWidth: 1,
-    flexBasis: '30%',
-    flexGrow: 1,
-    paddingVertical: 12,
-  },
-  pickerCellActive: {
-    backgroundColor: tokens.primary,
-    borderColor: tokens.primary,
-  },
-  pickerText: {
-    color: tokens.foreground,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  pickerTextActive: {
-    color: tokens.primaryForeground,
-    fontWeight: '600',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 16,
-  },
-  ghostButton: {
-    alignItems: 'center',
-    borderColor: tokens.border,
-    borderRadius: 6,
-    borderWidth: 1,
-    flex: 1,
-    paddingVertical: 10,
-  },
-  ghostButtonText: {
-    color: tokens.foreground,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  primaryButton: {
-    alignItems: 'center',
-    backgroundColor: tokens.primary,
-    borderRadius: 6,
-    flex: 1,
-    paddingVertical: 10,
-  },
-  primaryButtonText: {
-    color: tokens.primaryForeground,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
 });

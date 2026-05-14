@@ -1,5 +1,11 @@
 ---
 sidebar_position: 11
+title: Wheel Date Picker
+description: An iOS-style drum-roll date picker with day, month and year columns — backed by react-native-reanimated and react-native-gesture-handler.
+keywords:
+  - wheel date picker
+  - drum roll picker
+  - ios date picker react native
 ---
 
 # Wheel Date Picker
@@ -17,7 +23,7 @@ The wheel does not need a month grid, a selection store, or modifier matchers. I
 ## Dependencies
 
 ```bash
-npm install react-native-reanimated react-native-gesture-handler
+yarn add react-native-reanimated react-native-gesture-handler
 ```
 
 Wrap your root with `GestureHandlerRootView`:

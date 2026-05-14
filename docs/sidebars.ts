@@ -11,13 +11,13 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Hooks',
+      label: 'Hooks & Selectors',
       items: [
-        'hooks/use-calendar-days',
-        'hooks/use-calendar-months',
-        'hooks/use-calendar-years',
-        'hooks/use-calendar-actions',
         'hooks/use-calendar-selector',
+        'hooks/use-calendar-actions',
+        'hooks/select-days',
+        'hooks/select-months',
+        'hooks/select-years',
       ],
     },
     {

@@ -1,13 +1,13 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { CalendarProvider } from 'react-native-fast-calendar';
 
-import { HooksCalendar, tokens } from './HooksCalendar';
+import { HooksCalendar } from './HooksCalendar';
 
 const EMOJIS = ['🌞', '🌧', '⛅', '🌩', '❄️', '🌪', '🌈'];
 
 export default function CustomDayCellExample() {
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView className="bg-background" contentContainerClassName="p-4">
       <CalendarProvider mode="single">
         <HooksCalendar
           caption="Custom day cell"
@@ -15,13 +15,15 @@ export default function CustomDayCellExample() {
           renderDay={(cell) => {
             const emoji = EMOJIS[cell.nativeDate.getDate() % EMOJIS.length];
             return (
-              <View style={styles.cell}>
+              <View className="items-center justify-center">
                 <Text
-                  style={[styles.day, cell.isSelected && styles.daySelected]}
+                  className={`text-xs font-semibold ${
+                    cell.isSelected ? 'text-on-primary' : 'text-foreground'
+                  }`}
                 >
                   {cell.label}
                 </Text>
-                <Text style={styles.emoji}>{emoji}</Text>
+                <Text className="text-xs mt-px">{emoji}</Text>
               </View>
             );
           }}
@@ -30,15 +32,3 @@ export default function CustomDayCellExample() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: tokens.muted, padding: 16 },
-  cell: { alignItems: 'center', justifyContent: 'center' },
-  day: {
-    color: tokens.foreground,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  daySelected: { color: tokens.primaryForeground },
-  emoji: { fontSize: 12, marginTop: 1 },
-});

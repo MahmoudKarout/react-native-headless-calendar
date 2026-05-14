@@ -738,7 +738,11 @@ export default function CalendarDemo({
             return (
               <div key={i} className={styles.verticalMonth}>
                 <div className={styles.verticalMonthCaption}>
-                  {MONTH_NAMES[monthDate.getMonth()]} {monthDate.getFullYear()}
+                  <span className={styles.verticalMonthCaptionMonth}>
+                    {MONTH_NAMES[monthDate.getMonth()]}
+                  </span>
+                  <span aria-hidden="true">·</span>
+                  <span>{monthDate.getFullYear()}</span>
                 </div>
                 <div className={styles.weekdays}>
                   {weekdayNames.map((d) => (
@@ -751,28 +755,25 @@ export default function CalendarDemo({
                   {buildMonthCells(
                     monthDate.getFullYear(),
                     monthDate.getMonth()
-                  ).map((date) => {
-                    if (date.getMonth() !== monthDate.getMonth()) {
-                      return (
-                        <div
-                          key={date.toISOString()}
-                          className={`${styles.day} ${styles.outsideMonth}`}
-                        />
-                      );
-                    }
-                    return renderDayCell(date, monthDate.getMonth());
-                  })}
+                  ).map((date) =>
+                    renderDayCell(date, monthDate.getMonth())
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
-        {showFooter && hasSelection && (
+        {showFooter && (
           <div className={styles.footer}>
-            <div className={styles.selectionInfo}>{getSelectionText()}</div>
+            <div className={styles.selectionInfo}>
+              {hasSelection ? getSelectionText() : 'No date selected'}
+            </div>
             <div className={styles.actions}>
               <button className={styles.clearButton} onClick={clearSelection}>
                 Clear
+              </button>
+              <button className={styles.todayButton} onClick={goToToday}>
+                Today
               </button>
             </div>
           </div>
@@ -796,6 +797,10 @@ export default function CalendarDemo({
     <div
       className={`${styles.calendarContainer} ${
         numberOfMonths > 1 ? styles.calendarWide : ''
+      } ${
+        cellStyle === 'price' || cellStyle === 'status'
+          ? styles.calendarWideCells
+          : ''
       }`}
     >
       {calendarBody}

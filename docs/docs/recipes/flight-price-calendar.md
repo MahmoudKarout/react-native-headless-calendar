@@ -1,5 +1,12 @@
 ---
 sidebar_position: 10
+title: Flight Price Calendar
+description: A fare-aware range picker that paints per-day prices into custom cells — perfect for travel and airline apps.
+keywords:
+  - flight price calendar
+  - fare calendar
+  - travel date picker
+  - airline calendar react native
 ---
 
 # Flight Price Calendar
@@ -16,7 +23,8 @@ import CalendarDemo from '@site/src/components/CalendarDemo';
 import { Pressable, Text, View } from 'react-native';
 import {
   CalendarProvider,
-  useCalendarDays,
+  selectCanConfirm,
+  selectDays,
   useCalendarActions,
   useCalendarSelector,
   type DayCellInfo,
@@ -37,14 +45,14 @@ function PriceCell({ cell, onPress }: { cell: DayCellInfo; onPress: () => void }
         height: 52,
         alignItems: 'center',
         backgroundColor: cell.isSelected
-          ? '#3b82f6'
+          ? '#0070f3'
           : cell.inRange
-            ? '#1e3a8a'
+            ? 'rgba(0,112,243,0.18)'
             : 'transparent',
       }}
     >
-      <Text style={{ color: '#fff' }}>{cell.label}</Text>
-      <Text style={{ color: '#a3a3a3', fontSize: 10 }}>
+      <Text style={{ color: '#ffffff' }}>{cell.label}</Text>
+      <Text style={{ color: '#a1a1a1', fontSize: 10 }}>
         ${priceFor(cell.nativeDate)}
       </Text>
     </Pressable>
@@ -52,14 +60,15 @@ function PriceCell({ cell, onPress }: { cell: DayCellInfo; onPress: () => void }
 }
 
 function Calendar() {
-  const days = useCalendarDays();
-  const { confirm, canConfirm } = useCalendarActions();
+  const days = useCalendarSelector(selectDays);
+  const { selectDate, confirm } = useCalendarActions();
+  const canConfirm = useCalendarSelector(selectCanConfirm);
   const start = useCalendarSelector((s) => s.rangeStart);
   const end = useCalendarSelector((s) => s.rangeEnd);
 
   return (
     <View>
-      <Text style={{ color: '#fff' }}>
+      <Text style={{ color: '#ededed' }}>
         {days.displayedMonthLabel} {days.displayedYearLabel}
       </Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -67,15 +76,15 @@ function Calendar() {
           <PriceCell
             key={cell.nativeDate.toISOString()}
             cell={cell}
-            onPress={() => days.selectDate(cell.date)}
+            onPress={() => selectDate(cell.date)}
           />
         ))}
       </View>
-      <Text style={{ color: '#a1a1aa' }}>
+      <Text style={{ color: '#a1a1a1' }}>
         {start && end ? 'Range selected' : start ? 'Pick return' : 'Pick departure'}
       </Text>
       <Pressable onPress={confirm} disabled={!canConfirm}>
-        <Text style={{ color: '#fff' }}>Confirm</Text>
+        <Text style={{ color: '#ededed' }}>Confirm</Text>
       </Pressable>
     </View>
   );

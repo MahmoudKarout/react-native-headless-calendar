@@ -95,6 +95,12 @@ export interface CalendarSelectionPayload {
 
 export type OnConfirm = (payload: CalendarSelectionPayload) => void;
 export type OnClear = () => void;
+/**
+ * Fires whenever the selection changes (any successful `selectDate` or
+ * `clear`). Receives the full selection payload so consumers can wire it
+ * directly into form state without a separate `useCalendarSelector`.
+ */
+export type OnChange = (payload: CalendarSelectionPayload) => void;
 
 // ---------------------------------------------------------------------------
 // Disabled dates / matchers
@@ -124,13 +130,14 @@ export type CalendarMatcher =
 
 /**
  * Map of named modifiers, e.g. `{ booked: [...], holiday: (d) => ... }`.
- * `useCalendarDays` evaluates each matcher per cell and exposes the
- * resulting boolean flags on `DayCellInfo.modifiers`.
+ * The store evaluates each matcher per cell and exposes the resulting
+ * boolean flags on `DayCellInfo.modifiers` (reachable via
+ * `useCalendarSelector(selectDays).cells`).
  */
 export type CalendarModifiers = Readonly<Record<string, CalendarMatcher>>;
 
 // ---------------------------------------------------------------------------
-// Day cell metadata exposed by `useCalendarDays`.
+// Day cell metadata reachable via `useCalendarSelector(selectDays).cells`.
 // ---------------------------------------------------------------------------
 
 export interface DayCellInfo<T = CalendarDateValue> {

@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView } from 'react-native';
 import { CalendarProvider } from 'react-native-fast-calendar';
 
-import { HooksCalendar, tokens } from './HooksCalendar';
+import { HooksCalendar } from './HooksCalendar';
 
 export default function BoundedSelectionExample() {
   const today = useMemo(() => new Date(), []);
@@ -24,7 +24,7 @@ export default function BoundedSelectionExample() {
   );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView className="bg-background" contentContainerClassName="p-4">
       <CalendarProvider
         mode="single"
         minDate={minDate}
@@ -37,7 +37,3 @@ export default function BoundedSelectionExample() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: tokens.muted, padding: 16 },
-});

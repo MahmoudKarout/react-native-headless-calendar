@@ -1,51 +1,34 @@
 /**
- * Hooks-only public surface.
+ * Hooks-only public surface — *two* hooks, plus a small set of named
+ * selectors.
  *
- * This module wires the underlying CalendarStore into the five hooks that
- * make up the entire library API:
+ *   - useCalendarSelector(selector) — universal, narrow read primitive.
+ *     `Object.is` semantics on the selector output.
+ *   - useCalendarActions()          — every mutator. Subscription-free,
+ *     identity-stable for the lifetime of the provider.
  *
- *   - useCalendarSelector   — granular subscription to any store slice
- *   - useCalendarDays       — day grid data + actions for a custom UI
- *   - useCalendarMonths     — 12-cell month chooser data + actions
- *   - useCalendarYears      — paginated year chooser data + actions
- *   - useCalendarActions    — confirm / clear / canConfirm
- *
- * Two contexts are kept internal to this module:
- *
- *   1. CalendarStoreContext  — the store INSTANCE (stable identity).
- *   2. CalendarConfigContext — primitives (`firstDayOfWeek`, `modifiers`,
- *                              `onConfirm`, `onClear`, `onSelectHaptic`).
+ * Bundled "data shapes" (the day grid, the month chooser, the year page)
+ * live on the snapshot itself — see `CalendarSnapshot.days/months/years`
+ * — and are reached via the `selectDays / selectMonths / selectYears`
+ * selectors. Their references stay stable across commits that don't
+ * touch the underlying inputs, so consumers can pass them straight to
+ * `React.memo`'d children.
  */
-import {
-  createContext,
-  use,
-  useCallback,
-  useMemo,
-  useSyncExternalStore,
-} from 'react';
+import { createContext, use, useMemo } from 'react';
+import { useSyncExternalStore } from 'react';
 
-import type { CalendarStore, CalendarSnapshot } from './store';
 import type {
-  CalendarDateValue,
-  DayCellInfo,
-  CalendarModifiers,
-  OnConfirm,
-  OnClear,
-  Weekday,
-} from './types';
-import {
-  YEAR_PAGE_SIZE,
-  buildMonthGrid,
-  getYearPage,
-  isBetween,
-  isExplicitlyDisabled,
-  matchDate,
-  rotateWeekdayLabels,
-} from './utils/grid';
+  CalendarDays,
+  CalendarMonths,
+  CalendarSnapshot,
+  CalendarStore,
+  CalendarYears,
+} from './store';
+import type { CalendarDateValue } from './types';
 
 // ---------------------------------------------------------------------------
-// Internal contexts — not exported from the package entry point. Consumers
-// only ever interact with the five hooks below.
+// Internal context — the store instance. Not exported from the package
+// entry point. Consumers only ever interact with the two hooks below.
 // ---------------------------------------------------------------------------
 
 export const CalendarStoreContext = createContext<CalendarStore | null>(null);
@@ -58,38 +41,10 @@ function useCalendarStore(): CalendarStore {
   return store;
 }
 
-export interface CalendarConfig {
-  /** Which weekday occupies the first column of the day grid. */
-  firstDayOfWeek: Weekday;
-  /** Named modifiers — see CalendarProviderProps.modifiers. */
-  modifiers?: CalendarModifiers;
-  onConfirm?: OnConfirm;
-  onClear?: OnClear;
-  /** Optional haptic hook fired on day selection. */
-  onSelectHaptic?: () => void;
-}
-
-export const CalendarConfigContext = createContext<CalendarConfig | null>(null);
-
-function useCalendarConfig(): CalendarConfig {
-  const config = use(CalendarConfigContext);
-  if (!config) {
-    throw new Error('[Calendar] hooks must be used within <CalendarProvider>');
-  }
-  return config;
-}
-
 // ---------------------------------------------------------------------------
-// useCalendarSelector — subscribe to any slice of state.
+// useCalendarSelector — the universal read primitive.
 // ---------------------------------------------------------------------------
 
-/**
- * Subscribe to a slice of calendar state.
- *
- * The component re-renders only when the selector's return value differs
- * (Object.is). Prefer primitive returns (number, string, boolean) for
- * maximum stability — e.g. select `s.system.id` instead of `s.system`.
- */
 export function useCalendarSelector<T>(
   selector: (snapshot: CalendarSnapshot) => T
 ): T {
@@ -100,282 +55,86 @@ export function useCalendarSelector<T>(
 }
 
 // ---------------------------------------------------------------------------
-// useCalendarActions — confirm / clear / canConfirm.
+// Built-in selectors. All return identity-stable values across commits
+// that don't touch their inputs, so they're safe under `Object.is`.
 // ---------------------------------------------------------------------------
 
+/**
+ * Render-time predicate: `true` when the current selection is
+ * confirmable (single→date set, multiple→non-empty, range→both ends).
+ */
+export const selectCanConfirm = (s: CalendarSnapshot): boolean => {
+  if (s.mode === 'single') return !!s.selectedDate;
+  if (s.mode === 'multiple') return s.selectedDates.length > 0;
+  return !!(s.rangeStart && s.rangeEnd);
+};
+
+/** Day-grid view (cells, weekday labels, header labels). */
+export const selectDays = (s: CalendarSnapshot): CalendarDays => s.days;
+
+/** 12-cell month chooser view. */
+export const selectMonths = (s: CalendarSnapshot): CalendarMonths => s.months;
+
+/** Paginated year chooser view. */
+export const selectYears = (s: CalendarSnapshot): CalendarYears => s.years;
+
+// ---------------------------------------------------------------------------
+// useCalendarActions — every mutator, zero subscriptions.
+// ---------------------------------------------------------------------------
+
+/**
+ * Actions surface returned by `useCalendarActions`. Every method is a
+ * stable reference for the lifetime of the enclosing <CalendarProvider>,
+ * so it's safe to pass straight to memoised components, useEffect deps,
+ * or out-of-tree event handlers. The hook never subscribes to any store
+ * slice — it never re-renders.
+ */
 export interface CalendarActions {
-  /**
-   * Fire the configured `onConfirm` (passed to <CalendarProvider>) with
-   * the current selection payload. No-op when `onConfirm` was not given.
-   */
-  confirm: () => void;
-  /**
-   * Wipe all selection state (single date, range endpoints, and multi
-   * list) and fire the configured `onClear` callback.
-   */
+  /** Tap a day — behaviour depends on `mode`. Coerces native Date / ISO. */
+  selectDate: (date: CalendarDateValue | Date | string | number) => void;
+  /** Wipe selection state and fire `onClear` / `onChange`. */
   clear: () => void;
-  /**
-   * `true` when the current selection is confirmable:
-   *   - single   mode: a date is selected.
-   *   - multiple mode: at least one date is selected.
-   *   - range    mode: both endpoints are selected.
-   */
-  canConfirm: boolean;
-}
-
-export function useCalendarActions(): CalendarActions {
-  const store = useCalendarStore();
-  const { onConfirm, onClear } = useCalendarConfig();
-
-  const canConfirm = useCalendarSelector((s) => {
-    if (s.mode === 'single') return !!s.selectedDate;
-    if (s.mode === 'multiple') return s.selectedDates.length > 0;
-    return !!(s.rangeStart && s.rangeEnd);
-  });
-
-  const confirm = useCallback(() => {
-    if (!onConfirm) return;
-    const s = store.getSnapshot();
-    onConfirm({
-      date: s.selectedDate ? s.system.toNativeDate(s.selectedDate) : undefined,
-      startDate: s.rangeStart ? s.system.toNativeDate(s.rangeStart) : undefined,
-      endDate: s.rangeEnd ? s.system.toNativeDate(s.rangeEnd) : undefined,
-      dates: s.selectedDates.length
-        ? s.selectedDates.map((d) => s.system.toNativeDate(d))
-        : undefined,
-      systemId: s.system.id,
-    });
-  }, [onConfirm, store]);
-
-  const clear = useCallback(() => {
-    store.clear();
-    onClear?.();
-  }, [store, onClear]);
-
-  return { confirm, clear, canConfirm };
-}
-
-// ---------------------------------------------------------------------------
-// useCalendarDays — everything required to render a day grid.
-// ---------------------------------------------------------------------------
-
-export interface CalendarDays {
-  /** Weekday labels rotated to the active `firstDayOfWeek`. */
-  weekdayLabels: readonly string[];
-  /** Cells for the displayed month grid (length = ROWS * COLS). */
-  cells: readonly DayCellInfo[];
-  /** Localised month name for the displayed month. */
-  displayedMonthLabel: string;
-  /** Year of the displayed month, as a string. */
-  displayedYearLabel: string;
+  /** Fire `onConfirm` with the current selection payload. No-op when unset. */
+  confirm: () => void;
   /** Step the displayed month one back. */
   goPrevMonth: () => void;
   /** Step the displayed month one forward. */
   goNextMonth: () => void;
   /** Jump the displayed month to the given date. */
-  setDisplayedDate: (date: CalendarDateValue) => void;
-  /** Tap a day — behaviour depends on `mode`. */
-  selectDate: (date: CalendarDateValue) => void;
-}
-
-export function useCalendarDays(): CalendarDays {
-  const store = useCalendarStore();
-  const { firstDayOfWeek, modifiers, onSelectHaptic } = useCalendarConfig();
-  const system = useCalendarSelector((s) => s.system);
-  const displayed = useCalendarSelector((s) => s.displayed);
-  const mode = useCalendarSelector((s) => s.mode);
-  const selectedDate = useCalendarSelector((s) => s.selectedDate);
-  const selectedDates = useCalendarSelector((s) => s.selectedDates);
-  const rangeStart = useCalendarSelector((s) => s.rangeStart);
-  const rangeEnd = useCalendarSelector((s) => s.rangeEnd);
-  const minDate = useCalendarSelector((s) => s.minDate);
-  const maxDate = useCalendarSelector((s) => s.maxDate);
-  const disabledDates = useCalendarSelector((s) => s.disabledDates);
-  const disabledRanges = useCalendarSelector((s) => s.disabledRanges);
-  const disabledPredicate = useCalendarSelector((s) => s.disabled);
-  const monthLabels = useCalendarSelector((s) => s.system.monthLabels());
-  const displayedYear = useCalendarSelector((s) => s.system.year(s.displayed));
-
-  const weekdayLabels = useMemo(
-    () => rotateWeekdayLabels(system.weekdayLabels(), firstDayOfWeek),
-    [system, firstDayOfWeek]
-  );
-
-  const cells = useMemo<readonly DayCellInfo[]>(() => {
-    const grid = buildMonthGrid(system, displayed, firstDayOfWeek);
-    const today = system.today();
-    const modifierEntries = modifiers ? Object.entries(modifiers) : null;
-    return grid.map((c) => {
-      const isStart = !!rangeStart && system.isSame(c.date, rangeStart);
-      const isEnd = !!rangeEnd && system.isSame(c.date, rangeEnd);
-      const isSingle =
-        mode === 'single' &&
-        !!selectedDate &&
-        system.isSame(c.date, selectedDate);
-      const isMulti =
-        mode === 'multiple' &&
-        selectedDates.some((d) => system.isSame(d, c.date));
-      const inRange =
-        mode === 'range' && isBetween(system, c.date, rangeStart, rangeEnd);
-      const nativeDate = system.toNativeDate(c.date);
-      let isDisabled =
-        (!!minDate && system.isBefore(c.date, minDate)) ||
-        (!!maxDate && system.isAfter(c.date, maxDate)) ||
-        isExplicitlyDisabled(system, c.date, disabledDates, disabledRanges);
-      if (!isDisabled && disabledPredicate) {
-        try {
-          if (disabledPredicate(nativeDate)) isDisabled = true;
-        } catch {
-          // Be permissive — never crash consumers for buggy predicates.
-        }
-      }
-
-      const cellModifiers: Record<string, boolean> = {};
-      if (modifierEntries) {
-        for (const [name, matcher] of modifierEntries) {
-          if (matchDate(system, c.date, matcher)) cellModifiers[name] = true;
-        }
-      }
-
-      return {
-        date: c.date,
-        nativeDate,
-        label: system.formatDay(c.date),
-        isCurrentMonth: c.isCurrentMonth,
-        isToday: system.isSame(c.date, today),
-        isSelected: isSingle || isMulti || isStart || isEnd,
-        inRange: inRange && !isStart && !isEnd,
-        isRangeStart: isStart,
-        isRangeEnd: isEnd,
-        isDisabled,
-        modifiers: cellModifiers,
-      };
-    });
-  }, [
-    system,
-    displayed,
-    firstDayOfWeek,
-    modifiers,
-    mode,
-    selectedDate,
-    selectedDates,
-    rangeStart,
-    rangeEnd,
-    minDate,
-    maxDate,
-    disabledDates,
-    disabledRanges,
-    disabledPredicate,
-  ]);
-
-  const goPrevMonth = useCallback(() => store.changeMonth(-1), [store]);
-  const goNextMonth = useCallback(() => store.changeMonth(1), [store]);
-  const setDisplayedDate = useCallback(
-    (date: CalendarDateValue) => {
-      const next = system.from(date);
-      const currentYear = system.year(displayed);
-      const nextYear = system.year(next);
-      if (currentYear !== nextYear) store.changeYear(nextYear - currentYear);
-      const currentMonth = system.month(store.getSnapshot().displayed);
-      const nextMonth = system.month(next);
-      if (currentMonth !== nextMonth)
-        store.changeMonth(nextMonth - currentMonth);
-    },
-    [store, system, displayed]
-  );
-  const selectDate = useCallback(
-    (date: CalendarDateValue) => {
-      store.selectDate(system.from(date));
-      onSelectHaptic?.();
-    },
-    [store, system, onSelectHaptic]
-  );
-
-  const monthIndex = system.month(displayed);
-  const displayedMonthLabel = monthLabels[monthIndex] ?? String(monthIndex + 1);
-
-  return {
-    weekdayLabels,
-    cells,
-    displayedMonthLabel,
-    displayedYearLabel: String(displayedYear),
-    goPrevMonth,
-    goNextMonth,
-    setDisplayedDate,
-    selectDate,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// useCalendarMonths — 12-cell month chooser data + actions.
-// ---------------------------------------------------------------------------
-
-export interface CalendarMonthEntry {
-  /** 0-based month index expected by `selectMonth`. */
-  index: number;
-  /** Localised name for that month, in the active system. */
-  label: string;
-}
-
-export interface CalendarMonths {
-  /** All 12 months for the active system, identity-stable per system. */
-  months: readonly CalendarMonthEntry[];
-  /** 0-based index of the currently displayed month. */
-  activeMonth: number;
-  /** Jump to the given month (index 0..11). */
+  setDisplayedDate: (date: CalendarDateValue | Date | string | number) => void;
+  /** Jump to the given month (0-based) of the displayed year. */
   selectMonth: (index: number) => void;
-}
-
-export function useCalendarMonths(): CalendarMonths {
-  const store = useCalendarStore();
-  const monthLabels = useCalendarSelector((s) => s.system.monthLabels());
-  const activeMonth = useCalendarSelector((s) => s.system.month(s.displayed));
-  const months = useMemo<readonly CalendarMonthEntry[]>(
-    () => monthLabels.map((label, index) => ({ index, label })),
-    [monthLabels]
-  );
-  const selectMonth = useCallback(
-    (index: number) => store.goToMonth(index),
-    [store]
-  );
-  return { months, activeMonth, selectMonth };
-}
-
-// ---------------------------------------------------------------------------
-// useCalendarYears — paginated year chooser data + actions.
-// ---------------------------------------------------------------------------
-
-export interface CalendarYears {
-  /** Years on the page containing `activeYear` (length = YEAR_PAGE_SIZE). */
-  years: readonly number[];
-  /** Currently displayed year. */
-  activeYear: number;
-  /** Jump to the given year. */
+  /** Jump directly to a specific year. */
   selectYear: (year: number) => void;
-  /** Step backward one full year-page. */
-  goPrevPage: () => void;
-  /** Step forward one full year-page. */
-  goNextPage: () => void;
+  /** Step the year-grid backward one full page. */
+  prevYearPage: () => void;
+  /** Step the year-grid forward one full page. */
+  nextYearPage: () => void;
+  /**
+   * Synchronously read confirmability from inside an event handler.
+   * Render-time consumers should subscribe via
+   * `useCalendarSelector(selectCanConfirm)` instead.
+   */
+  isConfirmable: () => boolean;
 }
 
-export function useCalendarYears(): CalendarYears {
+export function useCalendarActions(): CalendarActions {
   const store = useCalendarStore();
-  const activeYear = useCalendarSelector((s) => s.system.year(s.displayed));
-  const years = useMemo<readonly number[]>(
-    () => getYearPage(activeYear),
-    [activeYear]
-  );
-  const selectYear = useCallback(
-    (year: number) => store.goToYear(year),
+  return useMemo<CalendarActions>(
+    () => ({
+      selectDate: store.selectDate as CalendarActions['selectDate'],
+      clear: store.clear,
+      confirm: store.confirm,
+      goPrevMonth: store.prevMonth,
+      goNextMonth: store.nextMonth,
+      setDisplayedDate:
+        store.setDisplayedDate as CalendarActions['setDisplayedDate'],
+      selectMonth: store.goToMonth,
+      selectYear: store.goToYear,
+      prevYearPage: store.prevYearPage,
+      nextYearPage: store.nextYearPage,
+      isConfirmable: store.isConfirmable,
+    }),
     [store]
   );
-  const goPrevPage = useCallback(
-    () => store.changeYear(-YEAR_PAGE_SIZE),
-    [store]
-  );
-  const goNextPage = useCallback(
-    () => store.changeYear(YEAR_PAGE_SIZE),
-    [store]
-  );
-  return { years, activeYear, selectYear, goPrevPage, goNextPage };
 }

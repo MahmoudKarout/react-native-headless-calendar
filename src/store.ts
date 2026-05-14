@@ -18,9 +18,26 @@
 import type {
   CalendarDateValue,
   CalendarMode,
+  CalendarModifiers,
+  CalendarSelectionPayload,
   CalendarSystem,
   CalendarView,
+  DayCellInfo,
+  OnChange,
+  OnClear,
+  OnConfirm,
+  Weekday,
 } from './types';
+import {
+  buildMonthGrid,
+  DEFAULT_FIRST_DAY_OF_WEEK,
+  getYearPage,
+  isBetween,
+  isExplicitlyDisabled,
+  matchDate,
+  rotateWeekdayLabels,
+  YEAR_PAGE_SIZE,
+} from './utils/grid';
 
 export interface CalendarSnapshot<T = CalendarDateValue> {
   /** Active calendar system (Gregorian, Hijri, ...). */
@@ -72,6 +89,50 @@ export interface CalendarSnapshot<T = CalendarDateValue> {
    * `disabledRanges`, and the `min/max` bounds.
    */
   disabled: ((nativeDate: Date) => boolean) | undefined;
+  /** First column of the day grid (0 = Sunday, 1 = Monday, …). */
+  firstDayOfWeek: Weekday;
+  /** Named modifiers — mapped per cell on `days.cells[i].modifiers`. */
+  modifiers: CalendarModifiers | undefined;
+  /** Pre-derived day-grid view. Identity-stable across unrelated commits. */
+  days: CalendarDays<T>;
+  /** Pre-derived month chooser view. Identity-stable across unrelated commits. */
+  months: CalendarMonths;
+  /** Pre-derived year chooser view. Identity-stable across unrelated commits. */
+  years: CalendarYears;
+}
+
+// ── Derived view shapes (live on the snapshot) ──────────────────────────────
+
+export interface CalendarDays<T = CalendarDateValue> {
+  /** Weekday labels rotated to the active `firstDayOfWeek`. */
+  weekdayLabels: readonly string[];
+  /** Cells for the displayed month grid (length = ROWS * COLS = 42). */
+  cells: readonly DayCellInfo<T>[];
+  /** Localised month name for the displayed month. */
+  displayedMonthLabel: string;
+  /** Year of the displayed month, as a string. */
+  displayedYearLabel: string;
+}
+
+export interface CalendarMonthEntry {
+  /** 0-based month index expected by `useCalendarActions().selectMonth`. */
+  index: number;
+  /** Localised name for that month, in the active system. */
+  label: string;
+}
+
+export interface CalendarMonths {
+  /** All 12 months for the active system. Identity-stable per system. */
+  months: readonly CalendarMonthEntry[];
+  /** 0-based index of the currently displayed month. */
+  activeMonth: number;
+}
+
+export interface CalendarYears {
+  /** Years on the page containing `activeYear` (length = YEAR_PAGE_SIZE). */
+  years: readonly number[];
+  /** Currently displayed year. */
+  activeYear: number;
 }
 
 export interface CalendarStoreOptions<T = CalendarDateValue> {
@@ -91,15 +152,58 @@ export interface CalendarStoreOptions<T = CalendarDateValue> {
   maxRangeDays?: number;
   maxSelected?: number;
   disabled?: (nativeDate: Date) => boolean;
+  firstDayOfWeek?: Weekday;
+  modifiers?: CalendarModifiers;
 }
 
 type Listener = () => void;
+
+function shallowModifiersEqual(
+  a: Record<string, boolean>,
+  b: Record<string, boolean>
+): boolean {
+  const ak = Object.keys(a);
+  const bk = Object.keys(b);
+  if (ak.length !== bk.length) return false;
+  for (const k of ak) if (a[k] !== b[k]) return false;
+  return true;
+}
+
+function cellsAreEquivalent<T>(a: DayCellInfo<T>, b: DayCellInfo<T>): boolean {
+  return (
+    a.label === b.label &&
+    a.isCurrentMonth === b.isCurrentMonth &&
+    a.isToday === b.isToday &&
+    a.isSelected === b.isSelected &&
+    a.inRange === b.inRange &&
+    a.isRangeStart === b.isRangeStart &&
+    a.isRangeEnd === b.isRangeEnd &&
+    a.isDisabled === b.isDisabled &&
+    a.nativeDate.getTime() === b.nativeDate.getTime() &&
+    shallowModifiersEqual(a.modifiers, b.modifiers)
+  );
+}
 
 export class CalendarStore<T = CalendarDateValue> {
   private snapshot: CalendarSnapshot<T>;
   private listeners = new Set<Listener>();
   private batchDepth = 0;
   private pendingEmit = false;
+
+  // External callbacks held as refs on the store so action methods can
+  // remain referentially stable for the lifetime of the store. They are
+  // updated by <CalendarProvider> via setExternalCallbacks(...). Reading
+  // them at call time means consumers of useCalendarActions() never
+  // re-render when these props change.
+  private onConfirmCb: OnConfirm | undefined;
+  private onClearCb: OnClear | undefined;
+  private onChangeCb: OnChange | undefined;
+
+  // Per-store cell-identity cache. Lets `days.cells[i]` keep the same
+  // reference across commits when its observable state is unchanged, so
+  // `React.memo`-wrapped DayCell components skip render on unrelated
+  // selection updates.
+  private cellCache = new Map<number, DayCellInfo<T>>();
 
   constructor(opts: CalendarStoreOptions<T>) {
     if (opts.systems.length === 0) {
@@ -138,7 +242,7 @@ export class CalendarStore<T = CalendarDateValue> {
         ? opts.initialDates.map((d) => system.from(d))
         : [];
 
-    this.snapshot = {
+    const base: Omit<CalendarSnapshot<T>, 'days' | 'months' | 'years'> = {
       system,
       systemIndex,
       mode: opts.mode,
@@ -164,6 +268,14 @@ export class CalendarStore<T = CalendarDateValue> {
       maxRangeDays: opts.maxRangeDays,
       maxSelected: opts.maxSelected,
       disabled: opts.disabled,
+      firstDayOfWeek: opts.firstDayOfWeek ?? DEFAULT_FIRST_DAY_OF_WEEK,
+      modifiers: opts.modifiers,
+    };
+    this.snapshot = {
+      ...base,
+      days: this.buildDays(base),
+      months: this.buildMonths(base),
+      years: this.buildYears(base),
     };
   }
 
@@ -188,7 +300,21 @@ export class CalendarStore<T = CalendarDateValue> {
     /* istanbul ignore next — every external commit creates a fresh object,
      * so identity equality with the current snapshot is unreachable. */
     if (next === this.snapshot) return;
-    this.snapshot = next;
+    // Re-derive views, reusing the previous reference when no input that
+    // affects a given view has changed. This is what gives selectors like
+    // `selectDays` an `Object.is`-stable result on commits that don't
+    // touch the day grid (e.g. `setView`, header `setActiveSystem`).
+    const prev = this.snapshot;
+    const days = this.daysInputsChanged(prev, next)
+      ? this.buildDays(next)
+      : prev.days;
+    const months = this.monthsInputsChanged(prev, next)
+      ? this.buildMonths(next)
+      : prev.months;
+    const years = this.yearsInputsChanged(prev, next)
+      ? this.buildYears(next)
+      : prev.years;
+    this.snapshot = { ...next, days, months, years };
     if (this.batchDepth > 0) {
       this.pendingEmit = true;
     } else {
@@ -266,6 +392,14 @@ export class CalendarStore<T = CalendarDateValue> {
       disabledRanges: newDisabledRanges,
     };
 
+    const nextFirstDay = opts.firstDayOfWeek ?? DEFAULT_FIRST_DAY_OF_WEEK;
+    if (nextFirstDay !== s.firstDayOfWeek) {
+      next = { ...next, firstDayOfWeek: nextFirstDay };
+    }
+    if (opts.modifiers !== s.modifiers) {
+      next = { ...next, modifiers: opts.modifiers };
+    }
+
     this.commit(next);
   }
 
@@ -314,6 +448,27 @@ export class CalendarStore<T = CalendarDateValue> {
     });
   };
 
+  /**
+   * Update the external callbacks held by the store. Called by
+   * <CalendarProvider> in a layout effect on every render — the callbacks
+   * themselves are passed through `useStableCallback`, so identity only
+   * changes when the consumer's prop changes.
+   *
+   * Stashing them on the store (instead of in a React context that the
+   * actions hook subscribes to) is what lets useCalendarActions() return
+   * an object whose identity never changes for the lifetime of the
+   * provider, with zero re-renders for action-only consumers.
+   */
+  setExternalCallbacks = (cbs: {
+    onConfirm?: OnConfirm;
+    onClear?: OnClear;
+    onChange?: OnChange;
+  }): void => {
+    this.onConfirmCb = cbs.onConfirm;
+    this.onClearCb = cbs.onClear;
+    this.onChangeCb = cbs.onChange;
+  };
+
   /** Step the displayed month forward (positive) or backward (negative). */
   changeMonth = (step: number): void => {
     const s = this.snapshot;
@@ -322,6 +477,11 @@ export class CalendarStore<T = CalendarDateValue> {
       displayed: s.system.addMonths(s.displayed, step),
     });
   };
+
+  /** Step the displayed month one back. Stable bound reference. */
+  prevMonth = (): void => this.changeMonth(-1);
+  /** Step the displayed month one forward. Stable bound reference. */
+  nextMonth = (): void => this.changeMonth(1);
 
   /** Step the displayed year forward (positive) or backward (negative). */
   changeYear = (step: number): void => {
@@ -356,10 +516,39 @@ export class CalendarStore<T = CalendarDateValue> {
     });
   };
 
-  /** Select a day. Behaviour depends on `mode`. */
-  selectDate = (date: T): void => {
+  /**
+   * Jump the displayed month to the given date (any input the active
+   * system can coerce — native Date, ISO string, system-native shape).
+   * Used by useCalendarActions().setDisplayedDate.
+   */
+  setDisplayedDate = (input: unknown): void => {
+    const s = this.snapshot;
+    const next = s.system.from(input);
+    if (s.system.isSame(next, s.displayed)) return;
+    this.commit({ ...s, displayed: next });
+  };
+
+  /** Step the year-grid backward one full page (12 years by default). */
+  prevYearPage = (): void => {
+    this.changeYear(-YEAR_PAGE_SIZE);
+  };
+
+  /** Step the year-grid forward one full page (12 years by default). */
+  nextYearPage = (): void => {
+    this.changeYear(YEAR_PAGE_SIZE);
+  };
+
+  /**
+   * Select a day. Behaviour depends on `mode`.
+   *
+   * Accepts any input the active system can coerce (native Date, ISO
+   * string, or the system-native value) so this method is safe to call
+   * from a stable, store-bound `useCalendarActions().selectDate`.
+   */
+  selectDate = (input: unknown): void => {
     const s = this.snapshot;
     const system = s.system;
+    const date = system.from(input);
 
     if (this.isDateDisabled(date)) return;
 
@@ -369,6 +558,7 @@ export class CalendarStore<T = CalendarDateValue> {
         selectedDate: date,
         displayed: date,
       });
+      this.notifyChange();
       return;
     }
 
@@ -386,7 +576,7 @@ export class CalendarStore<T = CalendarDateValue> {
           s.selectedDates.length >= s.maxSelected
         ) {
           // At cap — silently ignore the new pick. Consumers wanting LRU
-          // eviction can subscribe to `onSelectHaptic` and dispatch their
+          // eviction can subscribe to `onChange` and dispatch their
           // own clear-then-select sequence.
           return;
         }
@@ -397,6 +587,7 @@ export class CalendarStore<T = CalendarDateValue> {
         selectedDates: nextDates,
         displayed: date,
       });
+      this.notifyChange();
       return;
     }
 
@@ -454,6 +645,7 @@ export class CalendarStore<T = CalendarDateValue> {
       rangeEnd: nextEnd,
       displayed: date,
     });
+    this.notifyChange();
   };
 
   /**
@@ -466,9 +658,17 @@ export class CalendarStore<T = CalendarDateValue> {
     this.selectDate(date);
   };
 
-  /** Clear all selection state. */
+  /**
+   * Clear all selection state and fire the configured `onClear` callback.
+   * Stable reference for the lifetime of the store.
+   */
   clear = (): void => {
     const s = this.snapshot;
+    const hadSelection =
+      !!s.selectedDate ||
+      !!s.rangeStart ||
+      !!s.rangeEnd ||
+      s.selectedDates.length > 0;
     this.commit({
       ...s,
       selectedDate: undefined,
@@ -476,7 +676,194 @@ export class CalendarStore<T = CalendarDateValue> {
       rangeEnd: undefined,
       selectedDates: [],
     });
+    this.onClearCb?.();
+    // onChange fires on any selection mutation — including clears.
+    if (hadSelection) this.notifyChange();
   };
+
+  /**
+   * Fire the configured `onConfirm` callback with the current selection
+   * payload. No-op when no `onConfirm` was provided. Stable reference for
+   * the lifetime of the store.
+   */
+  confirm = (): void => {
+    if (!this.onConfirmCb) return;
+    this.onConfirmCb(this.buildPayload());
+  };
+
+  /**
+   * Snapshot the current selection as a CalendarSelectionPayload (always
+   * native JS Dates, regardless of active calendar system). Used to
+   * notify `onConfirm` and `onChange` consumers.
+   */
+  private buildPayload(): CalendarSelectionPayload {
+    const s = this.snapshot;
+    return {
+      date: s.selectedDate ? s.system.toNativeDate(s.selectedDate) : undefined,
+      startDate: s.rangeStart
+        ? s.system.toNativeDate(s.rangeStart)
+        : undefined,
+      endDate: s.rangeEnd ? s.system.toNativeDate(s.rangeEnd) : undefined,
+      dates: s.selectedDates.length
+        ? s.selectedDates.map((d) => s.system.toNativeDate(d))
+        : undefined,
+      systemId: s.system.id,
+    };
+  }
+
+  /** Fire `onChange` (if set) with the current selection payload. */
+  private notifyChange(): void {
+    if (!this.onChangeCb) return;
+    this.onChangeCb(this.buildPayload());
+  }
+
+  /**
+   * Returns whether the current selection is confirmable. Reads the
+   * snapshot synchronously — call this from event handlers, not render.
+   * Render-time consumers should use `useCalendarSelector(selectCanConfirm)`.
+   */
+  isConfirmable = (): boolean => {
+    const s = this.snapshot;
+    if (s.mode === 'single') return !!s.selectedDate;
+    if (s.mode === 'multiple') return s.selectedDates.length > 0;
+    return !!(s.rangeStart && s.rangeEnd);
+  };
+
+  // -- view derivation ---------------------------------------------------
+
+  /**
+   * Inputs that affect the day grid. If none of these reference-changed
+   * between commits, the previous `days` view (and its 42 cells) is
+   * reused as-is.
+   */
+  private daysInputsChanged(
+    a: CalendarSnapshot<T>,
+    b: CalendarSnapshot<T>
+  ): boolean {
+    return (
+      a.system !== b.system ||
+      a.displayed !== b.displayed ||
+      a.firstDayOfWeek !== b.firstDayOfWeek ||
+      a.modifiers !== b.modifiers ||
+      a.mode !== b.mode ||
+      a.selectedDate !== b.selectedDate ||
+      a.selectedDates !== b.selectedDates ||
+      a.rangeStart !== b.rangeStart ||
+      a.rangeEnd !== b.rangeEnd ||
+      a.minDate !== b.minDate ||
+      a.maxDate !== b.maxDate ||
+      a.disabledDates !== b.disabledDates ||
+      a.disabledRanges !== b.disabledRanges ||
+      a.disabled !== b.disabled
+    );
+  }
+
+  private monthsInputsChanged(
+    a: CalendarSnapshot<T>,
+    b: CalendarSnapshot<T>
+  ): boolean {
+    if (a.system !== b.system) return true;
+    return a.system.month(a.displayed) !== b.system.month(b.displayed);
+  }
+
+  private yearsInputsChanged(
+    a: CalendarSnapshot<T>,
+    b: CalendarSnapshot<T>
+  ): boolean {
+    if (a.system !== b.system) return true;
+    return a.system.year(a.displayed) !== b.system.year(b.displayed);
+  }
+
+  private buildDays(
+    s: Omit<CalendarSnapshot<T>, 'days' | 'months' | 'years'>
+  ): CalendarDays<T> {
+    const { system, displayed, firstDayOfWeek, modifiers, mode } = s;
+    const grid = buildMonthGrid(system, displayed, firstDayOfWeek);
+    const today = system.today();
+    const modifierEntries = modifiers ? Object.entries(modifiers) : null;
+    const cache = this.cellCache;
+    const nextCache = new Map<number, DayCellInfo<T>>();
+    const cells = grid.map((c) => {
+      const isStart = !!s.rangeStart && system.isSame(c.date, s.rangeStart);
+      const isEnd = !!s.rangeEnd && system.isSame(c.date, s.rangeEnd);
+      const isSingle =
+        mode === 'single' &&
+        !!s.selectedDate &&
+        system.isSame(c.date, s.selectedDate);
+      const isMulti =
+        mode === 'multiple' &&
+        s.selectedDates.some((d) => system.isSame(d, c.date));
+      const inRange =
+        mode === 'range' && isBetween(system, c.date, s.rangeStart, s.rangeEnd);
+      const nativeDate = system.toNativeDate(c.date);
+      let isDisabled =
+        (!!s.minDate && system.isBefore(c.date, s.minDate)) ||
+        (!!s.maxDate && system.isAfter(c.date, s.maxDate)) ||
+        isExplicitlyDisabled(system, c.date, s.disabledDates, s.disabledRanges);
+      if (!isDisabled && s.disabled) {
+        try {
+          if (s.disabled(nativeDate)) isDisabled = true;
+        } catch {
+          // Be permissive — never crash consumers for buggy predicates.
+        }
+      }
+      const cellModifiers: Record<string, boolean> = {};
+      if (modifierEntries) {
+        for (const [name, matcher] of modifierEntries) {
+          if (matchDate(system, c.date, matcher)) cellModifiers[name] = true;
+        }
+      }
+      const computed: DayCellInfo<T> = {
+        date: c.date,
+        nativeDate,
+        label: system.formatDay(c.date),
+        isCurrentMonth: c.isCurrentMonth,
+        isToday: system.isSame(c.date, today),
+        isSelected: isSingle || isMulti || isStart || isEnd,
+        inRange: inRange && !isStart && !isEnd,
+        isRangeStart: isStart,
+        isRangeEnd: isEnd,
+        isDisabled,
+        modifiers: cellModifiers,
+      };
+      const key = nativeDate.getTime();
+      const prev = cache.get(key);
+      const reused =
+        prev && cellsAreEquivalent(prev, computed) ? prev : computed;
+      nextCache.set(key, reused);
+      return reused;
+    });
+    this.cellCache = nextCache;
+    const monthIndex = system.month(displayed);
+    const monthLabel =
+      system.monthLabels()[monthIndex] ?? String(monthIndex + 1);
+    return {
+      weekdayLabels: rotateWeekdayLabels(
+        system.weekdayLabels(),
+        firstDayOfWeek
+      ),
+      cells,
+      displayedMonthLabel: monthLabel,
+      displayedYearLabel: String(system.year(displayed)),
+    };
+  }
+
+  private buildMonths(
+    s: Omit<CalendarSnapshot<T>, 'days' | 'months' | 'years'>
+  ): CalendarMonths {
+    const labels = s.system.monthLabels();
+    return {
+      months: labels.map((label, index) => ({ index, label })),
+      activeMonth: s.system.month(s.displayed),
+    };
+  }
+
+  private buildYears(
+    s: Omit<CalendarSnapshot<T>, 'days' | 'months' | 'years'>
+  ): CalendarYears {
+    const activeYear = s.system.year(s.displayed);
+    return { years: getYearPage(activeYear), activeYear };
+  }
 
   // -- internal helpers --------------------------------------------------
 

@@ -14,7 +14,7 @@ import VerticalListExample from '../VerticalListExample';
 import WeekNumbersExample from '../WeekNumbersExample';
 
 const FullScreen = (Story: () => React.JSX.Element) => (
-  <View style={{ flex: 1 }}>
+  <View className="flex-1">
     <Story />
   </View>
 );

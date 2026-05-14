@@ -1,5 +1,12 @@
 ---
 sidebar_position: 2
+title: Date Range Picker
+description: Build a hotel-style date range picker in React Native with min/max nights and allow-same-day, powered by react-native-fast-calendar.
+keywords:
+  - react native date range picker
+  - hotel calendar
+  - airbnb calendar
+  - min max nights
 ---
 
 # Date Range Picker
@@ -16,16 +23,18 @@ import CalendarDemo from '@site/src/components/CalendarDemo';
 import { Pressable, Text, View } from 'react-native';
 import {
   CalendarProvider,
-  useCalendarDays,
-  useCalendarSelector,
+  selectCanConfirm,
+  selectDays,
   useCalendarActions,
+  useCalendarSelector,
 } from 'react-native-fast-calendar';
 
 function Calendar() {
-  const days = useCalendarDays();
+  const days = useCalendarSelector(selectDays);
   const rangeStart = useCalendarSelector((s) => s.rangeStart);
   const rangeEnd = useCalendarSelector((s) => s.rangeEnd);
-  const { confirm, clear, canConfirm } = useCalendarActions();
+  const { selectDate, confirm, clear } = useCalendarActions();
+  const canConfirm = useCalendarSelector(selectCanConfirm);
 
   return (
     <View>
@@ -35,14 +44,14 @@ function Calendar() {
           <Pressable
             key={cell.nativeDate.toISOString()}
             disabled={cell.isDisabled}
-            onPress={() => days.selectDate(cell.date)}
+            onPress={() => selectDate(cell.date)}
             style={{
               width: 40,
               height: 40,
               backgroundColor: cell.isSelected
-                ? '#0f172a'
+                ? '#171717'
                 : cell.inRange
-                  ? '#dbeafe'
+                  ? '#f5f5f5'
                   : 'transparent',
             }}
           >

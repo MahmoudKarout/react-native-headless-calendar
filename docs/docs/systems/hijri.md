@@ -9,7 +9,7 @@ The Hijri (Islamic) calendar system. Requires `@tabby_ai/hijri-converter` or a c
 ## Installation
 
 ```bash
-npm install @tabby_ai/hijri-converter
+yarn add @tabby_ai/hijri-converter
 # or
 yarn add @tabby_ai/hijri-converter
 ```

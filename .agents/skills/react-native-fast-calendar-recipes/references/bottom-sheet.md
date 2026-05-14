@@ -11,7 +11,7 @@ Peer dependencies (in addition to `react-native-fast-calendar`):
 
 ```bash
 # pick the install command that matches the user's package manager
-npm install @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler
+yarn add @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler
 ```
 
 Required app-level setup (one-time):
@@ -267,7 +267,8 @@ function YearPickerGrid() {
 }
 
 function CompactFooter({ onConfirm }: { onConfirm: () => void }) {
-  const { confirm, clear, canConfirm } = useCalendarActions();
+  const { confirm, clear } = useCalendarActions();
+  const canConfirm = useCalendarSelector(selectCanConfirm);
   const { labels } = useCalendarConfig();
   const theme = useCalendarTheme();
 

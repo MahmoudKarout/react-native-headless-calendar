@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { CalendarProvider } from 'react-native-fast-calendar';
 
-import { HooksCalendar, tokens } from './HooksCalendar';
+import { HooksCalendar } from './HooksCalendar';
 
 export default function MultiMonthGridExample() {
   const thisMonth = useMemo(() => new Date(), []);
@@ -13,15 +13,17 @@ export default function MultiMonthGridExample() {
   }, [thisMonth]);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.caption}>Two-month grid</Text>
-      <View style={styles.row}>
-        <View style={styles.col}>
+    <ScrollView className="bg-background" contentContainerClassName="p-4">
+      <Text className="text-muted text-[11px] font-semibold tracking-widest uppercase mb-3">
+        Two-month grid
+      </Text>
+      <View className="flex-row gap-3">
+        <View className="flex-1">
           <CalendarProvider mode="range" initialDate={thisMonth}>
             <HooksCalendar hidePickers hideActions />
           </CalendarProvider>
         </View>
-        <View style={styles.col}>
+        <View className="flex-1">
           <CalendarProvider mode="range" initialDate={nextMonth}>
             <HooksCalendar hidePickers hideActions />
           </CalendarProvider>
@@ -30,17 +32,3 @@ export default function MultiMonthGridExample() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: tokens.muted, padding: 16 },
-  caption: {
-    color: tokens.mutedForeground,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.4,
-    marginBottom: 12,
-    textTransform: 'uppercase',
-  },
-  row: { flexDirection: 'row', gap: 12 },
-  col: { flex: 1 },
-});

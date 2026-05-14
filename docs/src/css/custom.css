@@ -559,10 +559,76 @@ tr:hover td {
 .theme-code-block {
   border-radius: var(--ds-radius-md) !important;
   box-shadow: var(--ds-shadow-2) !important;
+  overflow: hidden;
 }
 
 [data-theme='dark'] .theme-code-block {
   box-shadow: var(--ds-shadow-3) !important;
+}
+
+/* Copy-code button — always visible, brand pill, hairline border.
+   Docusaurus exposes .clean-btn for the copy button; we restyle it
+   so users can drop snippets straight into their project. */
+.theme-code-block .clean-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  height: 28px;
+  width: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: var(--ds-radius-sm) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  opacity: 1 !important;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease,
+    transform 0.12s ease;
+}
+
+.theme-code-block .clean-btn:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+.theme-code-block .clean-btn:focus-visible {
+  outline: 2px solid var(--ds-link);
+  outline-offset: 2px;
+}
+
+/* Copied success state */
+.theme-code-block .clean-btn[class*='copyButtonCopied'] {
+  background: var(--ds-success) !important;
+  border-color: var(--ds-success) !important;
+  color: #ffffff !important;
+}
+
+.theme-code-block .clean-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* On light-theme code surfaces the copy button gets the dark variant */
+.theme-code-block[class*='language-bash'] .clean-btn,
+.theme-code-block[class*='language-text'] .clean-btn {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: var(--ds-body) !important;
+}
+
+[data-theme='dark']
+  .theme-code-block[class*='language-bash']
+  .clean-btn,
+[data-theme='dark']
+  .theme-code-block[class*='language-text']
+  .clean-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
 }
 
 /* ─── Breadcrumbs ────────────────────────────────────────────────────────── */

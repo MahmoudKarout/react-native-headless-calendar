@@ -1,12 +1,14 @@
 /**
  * Week numbers — derive ISO 8601 week numbers per row from the
- * `cells` array exposed by `useCalendarDays()`. shadcn-styled.
+ * `cells` array exposed by `useCalendarSelector(selectDays)`. shadcn-styled.
  */
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
-import { CalendarProvider, useCalendarDays } from 'react-native-fast-calendar';
-
-import { tokens } from './HooksCalendar';
+import {
+  CalendarProvider,
+  selectDays,
+  useCalendarSelector,
+} from 'react-native-fast-calendar';
 
 const COLS = 7;
 const CELL = 36;
@@ -22,20 +24,31 @@ function isoWeekNumber(date: Date): number {
 }
 
 function WeekNumberCalendar() {
-  const days = useCalendarDays();
+  const days = useCalendarSelector(selectDays);
   const rows = days.cells.length / COLS;
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.caption}>ISO week numbers</Text>
-      <Text style={styles.title}>
+    <View className="bg-card border-hairline border-border rounded-xl p-4">
+      <Text className="text-muted text-[11px] font-semibold tracking-widest uppercase mb-2">
+        ISO week numbers
+      </Text>
+      <Text className="text-foreground text-sm font-semibold mb-3 text-center">
         {days.displayedMonthLabel} {days.displayedYearLabel}
       </Text>
 
-      <View style={styles.row}>
-        <Text style={[styles.headCell, styles.weekHeadCell]}>Wk</Text>
+      <View className="flex-row">
+        <Text
+          className="text-muted text-[11px] font-medium tracking-widest text-center uppercase mr-1.5"
+          style={{ width: CELL, height: CELL, lineHeight: CELL }}
+        >
+          Wk
+        </Text>
         {days.weekdayLabels.map((label) => (
-          <Text key={label} style={styles.headCell}>
+          <Text
+            key={label}
+            className="text-muted text-[11px] font-medium tracking-widest text-center uppercase"
+            style={{ width: CELL, height: CELL, lineHeight: CELL }}
+          >
             {label.slice(0, 2)}
           </Text>
         ))}
@@ -46,12 +59,22 @@ function WeekNumberCalendar() {
         const ref = rowCells[0];
         const wn = ref ? isoWeekNumber(ref.nativeDate) : 0;
         return (
-          <View key={r} style={styles.row}>
-            <Text style={styles.weekCell}>{wn}</Text>
+          <View key={r} className="flex-row">
+            <Text
+              className="bg-surface-muted rounded-md text-muted text-[11px] font-semibold text-center mr-1.5"
+              style={{ width: CELL, height: CELL, lineHeight: CELL }}
+            >
+              {wn}
+            </Text>
             {rowCells.map((cell) => (
               <Text
                 key={cell.nativeDate.toISOString()}
-                style={[styles.day, !cell.isCurrentMonth && styles.dayOutside]}
+                className={`text-[13px] font-medium text-center ${
+                  cell.isCurrentMonth
+                    ? 'text-foreground'
+                    : 'text-muted opacity-50'
+                }`}
+                style={{ width: CELL, height: CELL, lineHeight: CELL }}
               >
                 {cell.label}
               </Text>
@@ -65,73 +88,10 @@ function WeekNumberCalendar() {
 
 export default function WeekNumbersExample() {
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView className="bg-background" contentContainerClassName="p-4">
       <CalendarProvider mode="single" firstDayOfWeek={1}>
         <WeekNumberCalendar />
       </CalendarProvider>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: tokens.muted, padding: 16 },
-  card: {
-    backgroundColor: tokens.background,
-    borderColor: tokens.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-  },
-  caption: {
-    color: tokens.mutedForeground,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.4,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: tokens.foreground,
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  row: { flexDirection: 'row' },
-  headCell: {
-    color: tokens.mutedForeground,
-    fontSize: 11,
-    fontWeight: '500',
-    height: CELL,
-    letterSpacing: 0.4,
-    lineHeight: CELL,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    width: CELL,
-  },
-  weekHeadCell: {
-    marginRight: 6,
-  },
-  weekCell: {
-    backgroundColor: tokens.muted,
-    borderRadius: 6,
-    color: tokens.mutedForeground,
-    fontSize: 11,
-    fontWeight: '600',
-    height: CELL,
-    lineHeight: CELL,
-    marginRight: 6,
-    textAlign: 'center',
-    width: CELL,
-  },
-  day: {
-    color: tokens.foreground,
-    fontSize: 13,
-    fontWeight: '500',
-    height: CELL,
-    lineHeight: CELL,
-    textAlign: 'center',
-    width: CELL,
-  },
-  dayOutside: { color: tokens.mutedForeground, opacity: 0.5 },
-});

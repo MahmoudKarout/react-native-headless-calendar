@@ -9,8 +9,10 @@ import styles from './index.module.css';
 
 const SIMPLE_EXAMPLE = `import {
   CalendarProvider,
-  useCalendarDays,
+  selectCanConfirm,
+  selectDays,
   useCalendarActions,
+  useCalendarSelector,
 } from 'react-native-fast-calendar';
 
 export function BookingScreen() {
@@ -28,8 +30,9 @@ export function BookingScreen() {
 }
 
 function Grid() {
-  const days = useCalendarDays();
-  const { confirm, canConfirm } = useCalendarActions();
+  const days = useCalendarSelector(selectDays);
+  const { confirm } = useCalendarActions();
+  const canConfirm = useCalendarSelector(selectCanConfirm);
   return (
     <View>
       {/* render days.cells with your own components */}
@@ -40,9 +43,10 @@ function Grid() {
 
 const HEADLESS_EXAMPLE = `import {
   CalendarProvider,
-  useCalendarDays,
-  useCalendarSelector,
+  selectCanConfirm,
+  selectDays,
   useCalendarActions,
+  useCalendarSelector,
 } from 'react-native-fast-calendar';
 
 export function CustomCalendar() {
@@ -55,13 +59,14 @@ export function CustomCalendar() {
 }
 
 function Grid() {
-  const days = useCalendarDays();
+  const days = useCalendarSelector(selectDays);
+  const { selectDate } = useCalendarActions(); // stable, zero subscriptions
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
       {days.cells.map((cell) => (
         <Pressable
           key={cell.nativeDate.toISOString()}
-          onPress={() => days.selectDate(cell.date)}
+          onPress={() => selectDate(cell.date)}
         >
           <Text>{cell.label}</Text>
         </Pressable>
@@ -72,7 +77,8 @@ function Grid() {
 
 function Footer() {
   const start = useCalendarSelector((s) => s.rangeStart);
-  const { confirm, canConfirm } = useCalendarActions();
+  const { confirm } = useCalendarActions();
+  const canConfirm = useCalendarSelector(selectCanConfirm);
   return (
     <View>
       <Text>{start ? 'Pick checkout' : 'Pick check-in'}</Text>
@@ -204,7 +210,7 @@ const FEATURES: FeatureProps[] = [
   {
     title: 'Hooks-only API',
     description:
-      'Five hooks plus one provider. No DayGrid, no SimpleCalendar, no theming object — bring your own components.',
+      'Two hooks plus a handful of named selectors. No DayGrid, no SimpleCalendar, no theming object — bring your own components.',
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -261,7 +267,7 @@ const RECIPES = [
 
 const STATS = [
   { value: '0', label: 'runtime deps in core' },
-  { value: '5', label: 'public hooks' },
+  { value: '2', label: 'public hooks' },
   { value: '60fps', label: 'on every day tap' },
   { value: '∞', label: 'calendar systems' },
 ];
@@ -337,7 +343,7 @@ export default function Home(): JSX.Element {
             <div className={styles.installRow}>
               <span className={styles.installLabel}>$</span>
               <code className={styles.installCmd}>
-                npm install react-native-fast-calendar
+                yarn add react-native-fast-calendar
               </code>
             </div>
           </div>
@@ -434,7 +440,7 @@ export default function Home(): JSX.Element {
             <SectionHeader
               eyebrow="Two layers, one library"
               title="Batteries-included or completely custom"
-              description="Wrap your tree in CalendarProvider, then compose the calendar your design system actually needs from the five public hooks."
+              description="Wrap your tree in CalendarProvider, then compose the calendar your design system actually needs from the two public hooks and a handful of named selectors."
             />
 
             <div className={styles.codeGrid}>
@@ -454,7 +460,7 @@ export default function Home(): JSX.Element {
                 <div className={styles.codeCardHeader}>
                   <div className={styles.codeCardTitle}>Headless grid</div>
                   <div className={styles.codeCardSubtitle}>
-                    useCalendarDays · useCalendarSelector · useCalendarActions
+                    useCalendarSelector(selectDays) · useCalendarActions
                   </div>
                 </div>
                 <div className={styles.codeCardBody}>

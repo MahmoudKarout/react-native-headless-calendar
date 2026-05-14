@@ -1,5 +1,11 @@
 ---
 sidebar_position: 3
+title: Multi-Date Picker
+description: Select multiple dates with a hard cap, named modifiers (booked, holiday, weekend) and per-cell dots. Hooks-only, fully headless.
+keywords:
+  - react native multi date picker
+  - multi-select calendar
+  - modifiers
 ---
 
 # Multi-Date Picker
@@ -16,18 +22,20 @@ import CalendarDemo from '@site/src/components/CalendarDemo';
 import { Pressable, Text, View } from 'react-native';
 import {
   CalendarProvider,
-  useCalendarDays,
+  selectDays,
+  useCalendarActions,
   useCalendarSelector,
 } from 'react-native-fast-calendar';
 
 const MODIFIER_STYLES = {
-  booked:  { borderColor: '#dc2626', borderWidth: 2 },
-  holiday: { backgroundColor: '#fef3c7' },
+  booked:  { borderColor: '#ee0000', borderWidth: 2 },
+  holiday: { backgroundColor: '#ffefcf' },
   weekend: { backgroundColor: '#fafafa' },
 };
 
 function Grid() {
-  const days = useCalendarDays();
+  const days = useCalendarSelector(selectDays);
+  const { selectDate } = useCalendarActions();
   const count = useCalendarSelector((s) => s.selectedDates.length);
 
   return (
@@ -42,12 +50,12 @@ function Grid() {
             <Pressable
               key={cell.nativeDate.toISOString()}
               disabled={cell.isDisabled}
-              onPress={() => days.selectDate(cell.date)}
+              onPress={() => selectDate(cell.date)}
               style={[
                 {
                   width: 40,
                   height: 40,
-                  backgroundColor: cell.isSelected ? '#0f172a' : 'transparent',
+                  backgroundColor: cell.isSelected ? '#171717' : 'transparent',
                 },
                 ...modStyles,
               ]}

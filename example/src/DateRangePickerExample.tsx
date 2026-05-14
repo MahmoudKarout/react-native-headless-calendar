@@ -1,11 +1,11 @@
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView } from 'react-native';
 import { CalendarProvider } from 'react-native-fast-calendar';
 
-import { HooksCalendar, tokens } from './HooksCalendar';
+import { HooksCalendar } from './HooksCalendar';
 
 export default function DateRangePickerExample() {
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView className="bg-background" contentContainerClassName="p-4">
       <CalendarProvider
         mode="range"
         allowSameDay
@@ -18,7 +18,3 @@ export default function DateRangePickerExample() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: tokens.muted, padding: 16 },
-});

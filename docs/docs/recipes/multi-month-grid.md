@@ -1,5 +1,11 @@
 ---
 sidebar_position: 5
+title: Multi-Month Grid
+description: Render two or more months side-by-side, Airbnb-style, with independent calendar providers and a shared selection state.
+keywords:
+  - airbnb calendar
+  - two month calendar
+  - side by side calendar react native
 ---
 
 # Multi-Month Grid

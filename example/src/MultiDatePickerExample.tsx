@@ -1,16 +1,16 @@
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import {
   CalendarProvider,
   useCalendarSelector,
 } from 'react-native-fast-calendar';
 
-import { HooksCalendar, tokens } from './HooksCalendar';
+import { HooksCalendar } from './HooksCalendar';
 
-const MODIFIER_STYLES = {
-  booked: { borderColor: tokens.destructive, borderWidth: 1.5 },
-  holiday: { backgroundColor: '#fef3c7' },
-  weekend: { backgroundColor: tokens.muted },
+const MODIFIER_CLASSNAMES = {
+  booked: 'border-2 border-danger',
+  holiday: 'bg-warning-soft',
+  weekend: 'bg-surface-muted',
 };
 
 export default function MultiDatePickerExample() {
@@ -28,7 +28,7 @@ export default function MultiDatePickerExample() {
   );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView className="bg-background" contentContainerClassName="p-4">
       <CalendarProvider
         mode="multiple"
         modifiers={modifiers}
@@ -37,7 +37,7 @@ export default function MultiDatePickerExample() {
       >
         <HooksCalendar
           caption="Multi-select · max 5"
-          modifierStyles={MODIFIER_STYLES}
+          modifierClassNames={MODIFIER_CLASSNAMES}
         />
         <SelectedSummary />
       </CalendarProvider>
@@ -48,37 +48,11 @@ export default function MultiDatePickerExample() {
 function SelectedSummary() {
   const dates = useCalendarSelector((s) => s.selectedDates);
   return (
-    <View style={styles.summary}>
-      <Text style={styles.summaryLabel}>Selected</Text>
-      <Text style={styles.summaryValue}>{dates.length}</Text>
+    <View className="flex-row items-center justify-between mt-3 px-4 py-3 bg-card border-hairline border-border rounded-xl">
+      <Text className="text-muted text-[11px] font-semibold tracking-widest uppercase">
+        Selected
+      </Text>
+      <Text className="text-foreground text-xl font-bold">{dates.length}</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: tokens.muted, padding: 16 },
-  summary: {
-    alignItems: 'center',
-    backgroundColor: tokens.background,
-    borderColor: tokens.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  summaryLabel: {
-    color: tokens.mutedForeground,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  summaryValue: {
-    color: tokens.foreground,
-    fontSize: 20,
-    fontWeight: '700',
-  },
-});

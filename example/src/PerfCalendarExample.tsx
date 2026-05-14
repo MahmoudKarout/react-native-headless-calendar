@@ -5,60 +5,144 @@
  * render counter. When you tap a date in range mode, only the cells
  * that actually change state should re-render — every other cell stays
  * at its initial count.
+ *
+ * ── How granular subscription is achieved ───────────────────────────────
+ *
+ * The naive approach — `useCalendarSelector(selectDays)` in the parent and
+ * passing each `DayCellInfo` down as a prop — re-renders every cell on every
+ * selection change. That's because `selectDays` returns a fresh `cells` array
+ * (every cell is a new object) whenever any slice of the snapshot changes,
+ * so both the prop reference and the inline arrow handler change on every
+ * tap, defeating `React.memo`.
+ *
+ * Instead each cell:
+ *
+ *   • Receives only stable primitives as props (the native-date timestamp
+ *     + display flags + a stable `selectDate` action ref).
+ *   • Subscribes to its OWN slice (`isSelected`, `inRange`, `isToday`)
+ *     through a narrow `useCalendarSelector` predicate.
+ *   • Recomputes its bound `onPress` exactly once per cell via `useCallback`.
+ *
+ * Result: tapping a date re-renders the previously-selected cell + the
+ * newly-tapped cell. In range mode, only the cells whose `inRange` truth
+ * actually flips re-render. Every other cell short-circuits through memo.
  */
-import { memo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import {
   CalendarProvider,
-  useCalendarDays,
+  buildMonthGrid,
+  gregorianSystem,
   useCalendarActions,
-  type DayCellInfo,
+  useCalendarSelector,
+  type CalendarActions,
 } from 'react-native-fast-calendar';
 
-import { tokens } from './HooksCalendar';
-
 const CELL = 44;
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+const FIRST_DAY_OF_WEEK = 0;
+
+const isSameDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
+const isBetween = (d: Date, a: Date, b: Date) => {
+  const t = d.getTime();
+  const lo = Math.min(a.getTime(), b.getTime());
+  const hi = Math.max(a.getTime(), b.getTime());
+  return t > lo && t < hi;
+};
 
 function PerfGrid() {
-  const days = useCalendarDays();
+  const monthKey = useCalendarSelector((s) => {
+    const d = s.system.toNativeDate(s.displayed);
+    return `${d.getFullYear()}-${d.getMonth()}`;
+  });
+
   const actions = useCalendarActions();
+
+  const cells = useMemo(() => {
+    const [yearStr, monthStr] = monthKey.split('-');
+    const firstOfMonth = new Date(Number(yearStr), Number(monthStr), 1);
+    const grid = buildMonthGrid(
+      gregorianSystem,
+      gregorianSystem.fromNativeDate(firstOfMonth),
+      FIRST_DAY_OF_WEEK
+    );
+    return grid.map((c) => ({
+      nativeDate: gregorianSystem.toNativeDate(c.date),
+      day: gregorianSystem.day(c.date),
+      isCurrentMonth: c.isCurrentMonth,
+    }));
+  }, [monthKey]);
+
+  const [yearStr, monthStr] = monthKey.split('-');
+  const monthLabel = MONTH_NAMES[Number(monthStr)];
 
   return (
     <View>
-      <View style={styles.header}>
-        <IconButton onPress={days.goPrevMonth} label="‹" />
-        <View style={styles.headerLabels}>
-          <Text style={styles.title}>
-            {days.displayedMonthLabel} {days.displayedYearLabel}
+      <View className="flex-row items-center justify-between mb-2">
+        <IconButton onPress={actions.goPrevMonth} label="‹" />
+        <View className="items-center">
+          <Text className="text-foreground text-sm font-semibold">
+            {monthLabel} {yearStr}
           </Text>
-          <Text style={styles.subtitle}>render counters</Text>
+          <Text className="text-muted text-[10px] font-medium tracking-widest uppercase mt-0.5">
+            render counters
+          </Text>
         </View>
-        <IconButton onPress={days.goNextMonth} label="›" />
+        <IconButton onPress={actions.goNextMonth} label="›" />
       </View>
 
-      <View style={styles.daysWrapper}>
-        <View style={[styles.weekdays, { width: CELL * 7 }]}>
-          {days.weekdayLabels.map((l) => (
-            <Text key={l} style={styles.weekday}>
+      <View className="items-center">
+        <View className="flex-row mb-1" style={{ width: CELL * 7 }}>
+          {WEEKDAYS.map((l) => (
+            <Text
+              key={l}
+              className="text-muted text-[11px] font-medium tracking-widest text-center uppercase"
+              style={{ width: CELL }}
+            >
               {l.slice(0, 2)}
             </Text>
           ))}
         </View>
 
-        <View style={[styles.grid, { width: CELL * 7 }]}>
-          {days.cells.map((cell) => (
+        <View className="flex-row flex-wrap" style={{ width: CELL * 7 }}>
+          {cells.map((cell, idx) => (
             <CountedCell
-              key={cell.nativeDate.toISOString()}
-              cell={cell}
-              onPress={() => days.selectDate(cell.date)}
+              key={`${monthKey}-${idx}`}
+              nativeDate={cell.nativeDate}
+              day={cell.day}
+              isCurrentMonth={cell.isCurrentMonth}
+              selectDate={actions.selectDate}
             />
           ))}
         </View>
       </View>
 
-      <Pressable onPress={actions.clear} style={styles.clearButton}>
-        <Text style={styles.clearText}>Reset selection</Text>
+      <Pressable
+        onPress={actions.clear}
+        className="items-center bg-primary rounded-md mt-3 py-2.5 active:bg-primary-strong"
+      >
+        <Text className="text-on-primary text-[13px] font-semibold">
+          Reset selection
+        </Text>
       </Pressable>
     </View>
   );
@@ -72,57 +156,117 @@ function IconButton({
   label: string;
 }) {
   return (
-    <Pressable onPress={onPress} style={styles.iconButton}>
-      <Text style={styles.iconButtonText}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      className="items-center justify-center w-7 h-7 rounded-md border-hairline border-border active:bg-surface-muted"
+    >
+      <Text className="text-foreground text-base font-medium leading-4">
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
 interface CountedCellProps {
-  cell: DayCellInfo;
-  onPress: () => void;
+  nativeDate: Date;
+  day: number;
+  isCurrentMonth: boolean;
+  selectDate: CalendarActions['selectDate'];
 }
 
-const CountedCell = memo(
-  function CountedCell({ cell, onPress }: CountedCellProps) {
-    const renders = useRef(0);
-    renders.current += 1;
-    return (
-      <Pressable
-        disabled={cell.isDisabled}
-        onPress={onPress}
-        style={[
-          styles.cell,
-          !cell.isCurrentMonth && styles.cellOutside,
-          cell.inRange && styles.cellInRange,
-          cell.isSelected && styles.cellSelected,
-          cell.isToday && !cell.isSelected && styles.cellToday,
-        ]}
-      >
-        <Text style={[styles.day, cell.isSelected && styles.daySelected]}>
-          {cell.label}
-        </Text>
-        <Text
-          style={[styles.counter, cell.isSelected && styles.counterSelected]}
-        >
-          ×{renders.current}
-        </Text>
-      </Pressable>
+const CountedCell = memo(function CountedCell({
+  nativeDate,
+  day,
+  isCurrentMonth,
+  selectDate,
+}: CountedCellProps) {
+  const isSelected = useCalendarSelector((s) => {
+    if (s.mode === 'single') {
+      return (
+        !!s.selectedDate &&
+        isSameDay(s.system.toNativeDate(s.selectedDate), nativeDate)
+      );
+    }
+    if (s.mode === 'range') {
+      const startNative = s.rangeStart
+        ? s.system.toNativeDate(s.rangeStart)
+        : null;
+      const endNative = s.rangeEnd ? s.system.toNativeDate(s.rangeEnd) : null;
+      return (
+        (!!startNative && isSameDay(startNative, nativeDate)) ||
+        (!!endNative && isSameDay(endNative, nativeDate))
+      );
+    }
+    return s.selectedDates.some((d) =>
+      isSameDay(s.system.toNativeDate(d), nativeDate)
     );
-  },
-  (prev, next) => prev.cell === next.cell && prev.onPress === next.onPress
-);
+  });
+
+  const inRange = useCalendarSelector((s) => {
+    if (s.mode !== 'range' || !s.rangeStart || !s.rangeEnd) return false;
+    return isBetween(
+      nativeDate,
+      s.system.toNativeDate(s.rangeStart),
+      s.system.toNativeDate(s.rangeEnd)
+    );
+  });
+
+  const isToday = useMemo(
+    () => isSameDay(nativeDate, new Date()),
+    [nativeDate]
+  );
+
+  const renders = useRef(0);
+  renders.current += 1;
+
+  const handlePress = useCallback(
+    () => selectDate(nativeDate),
+    [selectDate, nativeDate]
+  );
+
+  const stateClass = [
+    'items-center justify-center',
+    !isCurrentMonth && 'opacity-40',
+    inRange ? 'bg-surface-muted rounded-none' : 'rounded-md',
+    isSelected && 'bg-primary',
+    isToday && !isSelected && 'bg-surface-muted',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      className={stateClass}
+      style={{ width: CELL, height: CELL }}
+    >
+      <Text
+        className={`text-[13px] font-semibold ${isSelected ? 'text-on-primary' : 'text-foreground'}`}
+      >
+        {day}
+      </Text>
+      <Text
+        className={`text-[9px] mt-px ${isSelected ? 'text-on-primary opacity-80' : 'text-muted'}`}
+      >
+        ×{renders.current}
+      </Text>
+    </Pressable>
+  );
+});
 
 export default function PerfCalendarExample() {
   const [key, setKey] = useState(0);
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Pressable onPress={() => setKey((k) => k + 1)} style={styles.remount}>
-        <Text style={styles.remountText}>
+    <ScrollView className="bg-background" contentContainerClassName="p-4">
+      <Pressable
+        onPress={() => setKey((k) => k + 1)}
+        className="items-center border-hairline border-border rounded-lg mb-3 py-2.5 active:bg-surface-muted"
+      >
+        <Text className="text-foreground text-[13px] font-medium">
           Remount calendar (reset counters)
         </Text>
       </Pressable>
-      <View style={styles.card}>
+      <View className="bg-card border-hairline border-border rounded-xl p-4">
         <CalendarProvider key={key} mode="range">
           <PerfGrid />
         </CalendarProvider>
@@ -130,109 +274,3 @@ export default function PerfCalendarExample() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: tokens.muted, padding: 16 },
-  card: {
-    backgroundColor: tokens.background,
-    borderColor: tokens.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-  },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  headerLabels: { alignItems: 'center' },
-  title: {
-    color: tokens.foreground,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  subtitle: {
-    color: tokens.mutedForeground,
-    fontSize: 10,
-    fontWeight: '500',
-    letterSpacing: 0.4,
-    marginTop: 2,
-    textTransform: 'uppercase',
-  },
-  iconButton: {
-    alignItems: 'center',
-    borderColor: tokens.border,
-    borderRadius: 6,
-    borderWidth: 1,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
-  iconButtonText: {
-    color: tokens.foreground,
-    fontSize: 16,
-    fontWeight: '500',
-    lineHeight: 16,
-  },
-  daysWrapper: { alignItems: 'center' },
-  weekdays: { flexDirection: 'row', marginBottom: 4 },
-  weekday: {
-    color: tokens.mutedForeground,
-    fontSize: 11,
-    fontWeight: '500',
-    letterSpacing: 0.4,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    width: CELL,
-  },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: {
-    alignItems: 'center',
-    borderRadius: 6,
-    height: CELL,
-    justifyContent: 'center',
-    width: CELL,
-  },
-  cellOutside: { opacity: 0.4 },
-  cellInRange: { backgroundColor: tokens.muted, borderRadius: 0 },
-  cellSelected: { backgroundColor: tokens.primary },
-  cellToday: { backgroundColor: tokens.accent },
-  day: {
-    color: tokens.foreground,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  daySelected: { color: tokens.primaryForeground },
-  counter: {
-    color: tokens.mutedForeground,
-    fontSize: 9,
-    marginTop: 1,
-  },
-  counterSelected: { color: tokens.primaryForeground, opacity: 0.8 },
-  remount: {
-    alignItems: 'center',
-    borderColor: tokens.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 12,
-    paddingVertical: 10,
-  },
-  remountText: {
-    color: tokens.foreground,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  clearButton: {
-    alignItems: 'center',
-    backgroundColor: tokens.primary,
-    borderRadius: 6,
-    marginTop: 12,
-    paddingVertical: 10,
-  },
-  clearText: {
-    color: tokens.primaryForeground,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});

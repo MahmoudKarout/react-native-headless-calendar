@@ -55,4 +55,4 @@ Inside the cell:
 
 - Modifier names are arbitrary — pick something readable in your styles.
 - Predicates run for every visible cell, so keep them cheap. Closures over arrays of `Date` objects are fine; date-fns calls are usually fine; calling into a database is not.
-- Modifier results are lifted from `useCalendarDays()` through the existing render pipeline, so they re-evaluate only when the displayed month or modifier identity changes.
+- Modifier results are surfaced through `selectDays` (read via `useCalendarSelector(selectDays)`), so they re-evaluate only when the displayed month or modifier identity changes.

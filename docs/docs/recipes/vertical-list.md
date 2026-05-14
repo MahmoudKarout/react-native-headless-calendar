@@ -1,10 +1,17 @@
 ---
 sidebar_position: 9
+title: Vertical Infinite Calendar
+description: iOS-Calendar-style infinite vertical month list backed by @shopify/flash-list. One provider per month for free virtualization.
+keywords:
+  - vertical calendar react native
+  - infinite scroll calendar
+  - flash-list calendar
+  - ios calendar
 ---
 
 # Vertical Infinite List
 
-iOS-Calendar-style infinite scrolling: each visible month is its own `<CalendarProvider>` rendered into a `FlashList` row. The five hooks power each per-month UI.
+iOS-Calendar-style infinite scrolling: each visible month is its own `<CalendarProvider>` rendered into a `FlashList` row. The two hooks and pre-built selectors power each per-month UI.
 
 import CalendarDemo from '@site/src/components/CalendarDemo';
 
@@ -13,7 +20,7 @@ import CalendarDemo from '@site/src/components/CalendarDemo';
 ## Dependencies
 
 ```bash
-npm install @shopify/flash-list
+yarn add @shopify/flash-list
 ```
 
 ## Implementation

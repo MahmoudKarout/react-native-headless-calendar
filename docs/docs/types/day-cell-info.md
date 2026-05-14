@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # DayCellInfo
 
-`DayCellInfo` describes a single cell of the day grid. The array `useCalendarDays().cells` contains one of these per visible cell (current-month and outside-month).
+`DayCellInfo` describes a single cell of the day grid. The array `useCalendarSelector(selectDays).cells` contains one of these per visible cell (current-month and outside-month).
 
 ## Interface
 

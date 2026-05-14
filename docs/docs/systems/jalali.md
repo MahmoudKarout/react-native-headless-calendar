@@ -9,7 +9,7 @@ The Jalali (Persian/Solar Hijri) calendar system. Requires `moment-jalaali`.
 ## Installation
 
 ```bash
-npm install moment-jalaali
+yarn add moment-jalaali
 # or
 yarn add moment-jalaali
 ```
@@ -118,7 +118,7 @@ function PersianCalendar() {
       systems={[jalaliSystem, gregorianSystem]}
       initialSystemId="jalali"
     >
-      {/* render your own day grid with `useCalendarDays()` */}
+      {/* render your own day grid with `useCalendarSelector(selectDays)` */}
     </CalendarProvider>
   );
 }

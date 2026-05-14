@@ -49,6 +49,22 @@
   max-width: 640px;
 }
 
+/* Wider container for price / status cells which need horizontal room
+   for short labels (e.g. "AVAILABLE", "$129"). Without this, content
+   overflows the 7-column grid. */
+.calendarWideCells {
+  max-width: 480px;
+}
+
+.calendarWideCells .daysGrid {
+  gap: 3px;
+}
+
+.calendarWideCells .dayWrapper {
+  min-height: 56px;
+  padding: 0;
+}
+
 /* ─── Header ─────────────────────────────────────────────────────────────── */
 .header {
   display: flex;
@@ -348,21 +364,32 @@
   flex-direction: column;
   height: 52px;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--border);
   border-left-width: 3px;
+  border-radius: var(--radius);
   background: var(--background);
   gap: 2px;
   align-items: flex-start;
-  padding: 6px 8px;
+  justify-content: center;
+  padding: 4px 6px;
+  overflow: hidden;
 }
 
 .statusLabel {
-  font-size: 9px;
+  font-size: 8px;
   text-transform: uppercase;
   font-weight: 500;
   color: var(--muted-foreground);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   font-family: var(--ds-font-mono);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1;
 }
 
 /* ─── Footer ─────────────────────────────────────────────────────────────── */
@@ -571,21 +598,69 @@
   padding: 8px var(--ds-space-md) var(--ds-space-md);
 }
 
-/* ─── Vertical (infinite) variant ───────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+ * VERTICAL INFINITE LIST — DESIGN.md alignment
+ *
+ * Pattern: iOS Calendar (vertical infinite months) rendered as a
+ * Vercel-style card.
+ *
+ *   • Chrome    — `card-marketing` surface (canvas, 8px radius, Level 3
+ *                 stacked shadow, inset hairline). No heavy drop-shadow.
+ *   • Caption   — `caption-mono` eyebrow (uppercase, 0.06em tracking) — month
+ *                 is the technical label.
+ *   • Weekday   — `caption-mono` row, muted text, body-strong divider.
+ *   • Day cell  — geometric sans, 600 weight on hover/selected, tabular nums,
+ *                 ink-black `rounded.full` pill on select, hairline ring on
+ *                 today.
+ *   • Footer    — sits flush under the scroll region with its own hairline,
+ *                 hosts the secondary pill buttons.
+ *   • Scroll    — top/bottom fade mask so months feel infinite.
+ * ══════════════════════════════════════════════════════════════════════════*/
+
 .verticalContainer {
+  --vertical-row: 36px;
+  --vertical-day: 32px;
+
+  display: flex;
+  flex-direction: column;
   background: var(--ds-canvas);
+  color: var(--ds-ink);
   border: 1px solid var(--ds-hairline);
   border-radius: var(--ds-radius-md);
-  max-width: 320px;
+  max-width: 340px;
   margin: 0 auto 1.5rem;
   overflow: hidden;
-  box-shadow: var(--ds-shadow-2);
+
+  /* Level-3 stacked shadow (DESIGN.md §Elevation) — never a single heavy drop */
+  box-shadow: var(--ds-shadow-3);
+
+  font-family: var(--ds-font-sans);
+  font-feature-settings: "ss01", "ss02";
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Scroll surface — fades at top + bottom so the list reads as infinite */
 .verticalScroll {
-  max-height: 440px;
+  position: relative;
+  max-height: 460px;
   overflow-y: auto;
-  padding: var(--ds-space-sm);
+  padding: 0 var(--ds-space-md);
+  scrollbar-gutter: stable;
+
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black 12px,
+    black calc(100% - 12px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black 12px,
+    black calc(100% - 12px),
+    transparent 100%
+  );
 }
 
 .verticalScroll::-webkit-scrollbar {
@@ -597,30 +672,165 @@
 }
 
 .verticalScroll::-webkit-scrollbar-thumb {
-  background: var(--ds-hairline-strong);
+  background: var(--ds-hairline);
   border-radius: var(--ds-radius-full);
 }
 
+.verticalScroll::-webkit-scrollbar-thumb:hover {
+  background: var(--ds-hairline-strong);
+}
+
+/* Month block — generous top/bottom rhythm; hairline between months */
 .verticalMonth {
-  margin-bottom: var(--ds-space-md);
+  padding: var(--ds-space-md) 0 var(--ds-space-sm);
 }
 
-.verticalMonth:last-child {
-  margin-bottom: 0;
+.verticalMonth + .verticalMonth {
+  border-top: 1px solid var(--ds-hairline);
 }
 
+/* Sticky caption — caption-mono eyebrow (DESIGN.md §Typography).
+   Surface-soft inset chip so the heading reads as a section eyebrow,
+   not a heavy header bar. */
 .verticalMonthCaption {
   position: sticky;
-  top: -12px;
-  background: var(--ds-canvas);
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-xs);
+  padding: 10px 0 12px;
+  margin: 0 0 var(--ds-space-xs);
+
+  background: linear-gradient(
+    to bottom,
+    var(--ds-canvas) 0,
+    var(--ds-canvas) 70%,
+    rgba(255, 255, 255, 0) 100%
+  );
+
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
   font-weight: 500;
-  font-size: 13px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-mute);
+}
+
+[data-theme='dark'] .verticalMonthCaption {
+  background: linear-gradient(
+    to bottom,
+    var(--ds-canvas) 0,
+    var(--ds-canvas) 70%,
+    rgba(17, 17, 17, 0) 100%
+  );
+}
+
+/* The month-name half of the eyebrow gets ink color so the year sits muted */
+.verticalMonthCaptionMonth {
   color: var(--ds-ink);
-  padding: 8px 0;
-  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+/* Weekday row — caption-mono, lighter divider underneath */
+.verticalMonth .weekdays {
+  margin: 0 0 4px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--ds-hairline);
-  z-index: 1;
+}
+
+.verticalMonth .weekday {
+  width: 100%;
+  margin: 0;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+/* Day grid — tabular numerals, geometric sans */
+.verticalMonth .daysGrid {
+  padding: 4px 0 2px;
+}
+
+.verticalMonth .dayWrapper {
+  min-height: var(--vertical-row);
+  padding: 0;
+}
+
+.verticalMonth .day {
+  height: var(--vertical-day);
+  width: var(--vertical-day);
+  font-size: 13px;
+  font-weight: 400;
+  border-radius: var(--ds-radius-full); /* iOS-Calendar circular pill */
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color 0.14s ease,
+    color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.verticalMonth .day:hover:not(:disabled) {
+  background: var(--ds-canvas-soft-2);
+  color: var(--ds-ink);
+  font-weight: 500;
+}
+
+/* Today — hairline ring, no fill (DESIGN.md §Components icon-button-circular) */
+.verticalMonth .day.today {
+  background: transparent;
+  border: 1px solid var(--ds-hairline-strong);
+  color: var(--ds-ink);
+  font-weight: 500;
+}
+
+/* Selected — ink-black `rounded.full` pill (DESIGN.md primary token) */
+.verticalMonth .day.selected,
+.verticalMonth .day.selected:hover:not(:disabled) {
+  background: var(--ds-primary);
+  color: var(--ds-primary-fg);
+  border: none;
+  font-weight: 500;
+  box-shadow: var(--ds-shadow-2);
+}
+
+.verticalMonth .outsideMonth {
+  opacity: 0.32;
+}
+
+/* Footer — pinned under the scroll region, hairline divider, secondary pills */
+.verticalContainer .footer {
+  margin-top: 0;
+  padding: var(--ds-space-sm) var(--ds-space-md);
+  border-top: 1px solid var(--ds-hairline);
+  background: var(--ds-canvas);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-sm);
+  flex-wrap: wrap;
+}
+
+.verticalContainer .selectionInfo {
+  margin-bottom: 0;
+  font-size: 12px;
+  color: var(--ds-body);
+  letter-spacing: -0.01em;
+}
+
+.verticalContainer .actions {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+/* Footer buttons — `button-secondary-sm` 6px square (in-app radius from DESIGN.md) */
+.verticalContainer .clearButton,
+.verticalContainer .todayButton {
+  height: 28px;
+  padding: 0 var(--ds-space-sm);
+  font-size: 12px;
+  border-radius: var(--ds-radius-sm);
+  letter-spacing: -0.01em;
 }
 
 /* ─── Wheel Date Picker variant ──────────────────────────────────────────── */

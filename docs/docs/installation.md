@@ -5,23 +5,13 @@ sidebar_position: 2
 # Installation
 
 ```bash
-npm install react-native-fast-calendar
-# or
 yarn add react-native-fast-calendar
-```
-
-## Peer Dependencies
-
-The core has no runtime dependencies beyond React and React Native:
-
-```bash
-npm install react react-native
 ```
 
 ### Optional — Hijri Calendar
 
 ```bash
-npm install @tabby_ai/hijri-converter
+yarn add @tabby_ai/hijri-converter
 ```
 
 Required only when you import `react-native-fast-calendar/systems/hijri`.
@@ -29,21 +19,15 @@ Required only when you import `react-native-fast-calendar/systems/hijri`.
 ### Optional — Jalali (Persian) Calendar
 
 ```bash
-npm install moment-jalaali
+yarn add moment-jalaali
 ```
 
 Required only when you import `react-native-fast-calendar/systems/jalali`.
 
-### Optional — Bottom-Sheet Recipe
-
-```bash
-npm install @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler
-```
 
 ### Optional — Vertical List Recipe
-
 ```bash
-npm install @shopify/flash-list
+yarn add @shopify/flash-list
 ```
 
 ## Requirements

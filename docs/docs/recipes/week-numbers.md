@@ -1,10 +1,15 @@
 ---
 sidebar_position: 7
+title: ISO Week Numbers
+description: Add an ISO 8601 week-number column to your calendar grid using selectDays and the bundled isoWeekNumber helper.
+keywords:
+  - iso week numbers
+  - calendar week numbers react native
 ---
 
 # Week Numbers
 
-`useCalendarDays()` gives you the cells in row-major order (`ROWS × COLS`). Derive the ISO 8601 week number for each row from any cell's `nativeDate`.
+`useCalendarSelector(selectDays)` gives you the cells in row-major order (`ROWS × COLS`). Derive the ISO 8601 week number for each row from any cell's `nativeDate`.
 
 import CalendarDemo from '@site/src/components/CalendarDemo';
 
@@ -16,7 +21,8 @@ import CalendarDemo from '@site/src/components/CalendarDemo';
 import { Text, View } from 'react-native';
 import {
   CalendarProvider,
-  useCalendarDays,
+  selectDays,
+  useCalendarSelector,
 } from 'react-native-fast-calendar';
 
 const COLS = 7;
@@ -32,7 +38,7 @@ function isoWeekNumber(date: Date): number {
 }
 
 function Grid() {
-  const days = useCalendarDays();
+  const days = useCalendarSelector(selectDays);
   const rows = days.cells.length / COLS;
 
   return (

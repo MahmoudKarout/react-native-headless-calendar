@@ -1,29 +1,21 @@
 /**
- * Flight-price range calendar — shadcn dark variant. Fares are painted
- * into a custom cell renderer driven by `useCalendarDays()`.
+ * Flight-price range calendar — shadcn-style. Fares are painted into a
+ * custom cell renderer driven by `useCalendarSelector(selectDays)`.
+ *
+ * Wrapped in a `ScopedTheme` so the demo always renders against the dark
+ * palette regardless of the surrounding app theme.
  */
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScopedTheme } from 'uniwind';
 import {
   CalendarProvider,
-  useCalendarDays,
+  selectCanConfirm,
+  selectDays,
   useCalendarActions,
   useCalendarSelector,
   type DayCellInfo,
 } from 'react-native-fast-calendar';
-
-// shadcn dark zinc palette
-const dark = {
-  background: '#09090b',
-  card: '#18181b',
-  border: '#27272a',
-  foreground: '#fafafa',
-  muted: '#27272a',
-  mutedForeground: '#a1a1aa',
-  primary: '#fafafa',
-  primaryForeground: '#18181b',
-  accent: '#27272a',
-} as const;
 
 const SEED = 7919;
 function priceFor(date: Date): number {
@@ -35,46 +27,53 @@ const CELL_W = 48;
 const CELL_H = 56;
 
 function PriceCalendar() {
-  const days = useCalendarDays();
+  const days = useCalendarSelector(selectDays);
   const actions = useCalendarActions();
   const rangeStart = useCalendarSelector((s) => s.rangeStart);
   const rangeEnd = useCalendarSelector((s) => s.rangeEnd);
+  const canConfirm = useCalendarSelector(selectCanConfirm);
 
   return (
-    <View style={styles.card}>
-      <View style={styles.headerRow}>
-        <IconButton onPress={days.goPrevMonth} label="‹" />
-        <View style={styles.headerLabels}>
-          <Text style={styles.title}>
+    <View className="bg-card border-hairline border-border rounded-xl p-4">
+      <View className="flex-row items-center justify-between mb-2">
+        <IconButton onPress={actions.goPrevMonth} label="‹" />
+        <View className="items-center">
+          <Text className="text-foreground text-sm font-semibold">
             {days.displayedMonthLabel} {days.displayedYearLabel}
           </Text>
-          <Text style={styles.subtitle}>fares per night</Text>
+          <Text className="text-muted text-[10px] font-medium tracking-widest uppercase mt-0.5">
+            fares per night
+          </Text>
         </View>
-        <IconButton onPress={days.goNextMonth} label="›" />
+        <IconButton onPress={actions.goNextMonth} label="›" />
       </View>
 
-      <View style={styles.daysWrapper}>
-        <View style={[styles.weekdays, { width: CELL_W * 7 }]}>
+      <View className="items-center">
+        <View className="flex-row mb-1" style={{ width: CELL_W * 7 }}>
           {days.weekdayLabels.map((l) => (
-            <Text key={l} style={styles.weekday}>
+            <Text
+              key={l}
+              className="text-muted text-[11px] font-medium tracking-widest text-center uppercase"
+              style={{ width: CELL_W }}
+            >
               {l.slice(0, 2)}
             </Text>
           ))}
         </View>
 
-        <View style={[styles.grid, { width: CELL_W * 7 }]}>
+        <View className="flex-row flex-wrap" style={{ width: CELL_W * 7 }}>
           {days.cells.map((cell) => (
             <PriceCell
               key={cell.nativeDate.toISOString()}
               cell={cell}
-              onPress={() => days.selectDate(cell.date)}
+              onPress={() => actions.selectDate(cell.date)}
             />
           ))}
         </View>
       </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.summary}>
+      <View className="flex-row items-center justify-between mt-4 pt-4 border-t-hairline border-border">
+        <Text className="text-muted text-xs font-medium">
           {rangeStart && rangeEnd
             ? 'Range complete'
             : rangeStart
@@ -83,17 +82,11 @@ function PriceCalendar() {
         </Text>
         <Pressable
           onPress={actions.confirm}
-          disabled={!actions.canConfirm}
-          style={[
-            styles.confirmButton,
-            !actions.canConfirm && styles.confirmDisabled,
-          ]}
+          disabled={!canConfirm}
+          className="px-4 py-2 rounded-md bg-primary disabled:bg-surface-muted"
         >
           <Text
-            style={[
-              styles.confirmText,
-              !actions.canConfirm && styles.confirmTextDisabled,
-            ]}
+            className={`text-[13px] font-semibold ${canConfirm ? 'text-on-primary' : 'text-muted'}`}
           >
             Confirm
           </Text>
@@ -111,8 +104,13 @@ function IconButton({
   label: string;
 }) {
   return (
-    <Pressable onPress={onPress} style={styles.iconButton}>
-      <Text style={styles.iconButtonText}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      className="items-center justify-center w-7 h-7 rounded-md border-hairline border-border active:bg-surface-muted"
+    >
+      <Text className="text-foreground text-base font-medium leading-4">
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -125,23 +123,33 @@ interface PriceCellProps {
 function PriceCell({ cell, onPress }: PriceCellProps) {
   const price = priceFor(cell.nativeDate);
   const isRangeMiddle = cell.inRange && !cell.isRangeStart && !cell.isRangeEnd;
+
+  const stateClass = [
+    'items-center justify-center',
+    !cell.isCurrentMonth && 'opacity-35',
+    isRangeMiddle ? 'bg-surface-muted rounded-none' : 'rounded-md',
+    cell.isRangeStart && 'bg-primary rounded-r-none',
+    cell.isRangeEnd && 'bg-primary rounded-l-none',
+    cell.isSelected && 'bg-primary',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <Pressable
       disabled={cell.isDisabled}
       onPress={onPress}
-      style={[
-        styles.cell,
-        !cell.isCurrentMonth && styles.cellOutside,
-        isRangeMiddle && styles.cellInRange,
-        cell.isRangeStart && styles.cellRangeStart,
-        cell.isRangeEnd && styles.cellRangeEnd,
-        cell.isSelected && styles.cellSelected,
-      ]}
+      className={stateClass}
+      style={{ width: CELL_W, height: CELL_H }}
     >
-      <Text style={[styles.day, cell.isSelected && styles.daySelected]}>
+      <Text
+        className={`text-[13px] font-semibold ${cell.isSelected ? 'text-on-primary' : 'text-foreground'}`}
+      >
         {cell.label}
       </Text>
-      <Text style={[styles.price, cell.isSelected && styles.priceSelected]}>
+      <Text
+        className={`text-[10px] mt-0.5 ${cell.isSelected ? 'text-on-primary opacity-70' : 'text-muted'}`}
+      >
         ${price}
       </Text>
     </Pressable>
@@ -151,127 +159,12 @@ function PriceCell({ cell, onPress }: PriceCellProps) {
 export default function FlightPriceCalendarExample() {
   const today = useMemo(() => new Date(), []);
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <CalendarProvider mode="range" minDate={today}>
-        <PriceCalendar />
-      </CalendarProvider>
-    </ScrollView>
+    <ScopedTheme theme="dark">
+      <ScrollView className="bg-background" contentContainerClassName="p-4">
+        <CalendarProvider mode="range" minDate={today}>
+          <PriceCalendar />
+        </CalendarProvider>
+      </ScrollView>
+    </ScopedTheme>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: dark.background, padding: 16 },
-  card: {
-    backgroundColor: dark.card,
-    borderColor: dark.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-  },
-  headerRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  headerLabels: { alignItems: 'center' },
-  title: {
-    color: dark.foreground,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  subtitle: {
-    color: dark.mutedForeground,
-    fontSize: 10,
-    fontWeight: '500',
-    letterSpacing: 0.4,
-    marginTop: 2,
-    textTransform: 'uppercase',
-  },
-  iconButton: {
-    alignItems: 'center',
-    borderColor: dark.border,
-    borderRadius: 6,
-    borderWidth: 1,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
-  iconButtonText: {
-    color: dark.foreground,
-    fontSize: 16,
-    fontWeight: '500',
-    lineHeight: 16,
-  },
-  daysWrapper: { alignItems: 'center' },
-  weekdays: { flexDirection: 'row', marginBottom: 4 },
-  weekday: {
-    color: dark.mutedForeground,
-    fontSize: 11,
-    fontWeight: '500',
-    letterSpacing: 0.4,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    width: CELL_W,
-  },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: {
-    alignItems: 'center',
-    borderRadius: 6,
-    height: CELL_H,
-    justifyContent: 'center',
-    width: CELL_W,
-  },
-  cellOutside: { opacity: 0.35 },
-  cellInRange: { backgroundColor: dark.muted, borderRadius: 0 },
-  cellRangeStart: {
-    backgroundColor: dark.primary,
-    borderBottomRightRadius: 0,
-    borderTopRightRadius: 0,
-  },
-  cellRangeEnd: {
-    backgroundColor: dark.primary,
-    borderBottomLeftRadius: 0,
-    borderTopLeftRadius: 0,
-  },
-  cellSelected: { backgroundColor: dark.primary },
-  day: {
-    color: dark.foreground,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  daySelected: { color: dark.primaryForeground },
-  price: {
-    color: dark.mutedForeground,
-    fontSize: 10,
-    marginTop: 2,
-  },
-  priceSelected: { color: dark.primaryForeground, opacity: 0.7 },
-  footer: {
-    alignItems: 'center',
-    borderTopColor: dark.border,
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    paddingTop: 16,
-  },
-  summary: {
-    color: dark.mutedForeground,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  confirmButton: {
-    backgroundColor: dark.primary,
-    borderRadius: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  confirmText: {
-    color: dark.primaryForeground,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  confirmDisabled: { backgroundColor: dark.muted },
-  confirmTextDisabled: { color: dark.mutedForeground },
-});

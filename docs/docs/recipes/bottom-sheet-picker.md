@@ -1,5 +1,11 @@
 ---
 sidebar_position: 8
+title: Bottom Sheet Date Picker
+description: Pop a date picker inside a @gorhom/bottom-sheet modal. Mobile-first presentation, headless logic.
+keywords:
+  - bottom sheet date picker
+  - gorhom bottom sheet calendar
+  - mobile date picker
 ---
 
 # Bottom Sheet Picker
@@ -13,7 +19,7 @@ import CalendarDemo from '@site/src/components/CalendarDemo';
 ## Dependencies
 
 ```bash
-npm install @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler
+yarn add @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler
 ```
 
 ## Implementation

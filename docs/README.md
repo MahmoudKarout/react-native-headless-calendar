@@ -50,7 +50,7 @@ docs/
 ## Installation
 
 ```bash
-npm install
+yarn add
 ```
 
 ## Local Development

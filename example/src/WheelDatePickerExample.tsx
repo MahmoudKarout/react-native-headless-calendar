@@ -10,10 +10,13 @@
  *   - Boundary rubber-band resistance
  *   - Vertically-faded edges (no extra deps — stacked translucent Views)
  *   - Automatically clamps day when month / year change
+ *
+ * Styling is fully driven by Uniwind utilities, except for the few
+ * inline transforms that depend on runtime Reanimated values.
  */
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -27,6 +30,7 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
+import { useResolveClassNames } from 'uniwind';
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
@@ -42,16 +46,11 @@ const SPRING = {
   overshootClamping: true,
 } as const;
 
-// ─── palette ─────────────────────────────────────────────────────────────────
-
-const C = {
-  bg: '#18181B',
-  surface: '#27272A',
-  fg: '#FAFAFA',
-  muted: '#A1A1AA',
-  border: '#3F3F46',
-  sep: 'rgba(250,250,250,0.1)',
-} as const;
+// Surface colour used by the column fade overlays — needs to match the
+// wheel's background. Resolved from the `--color-surface-muted` token at
+// render time so light/dark themes both look right.
+const SURFACE_FADE_LIGHT = '#f1f5f9';
+const SURFACE_FADE_DARK = '#1f2937';
 
 // ─── data helpers ─────────────────────────────────────────────────────────────
 
@@ -120,24 +119,15 @@ const WheelItem = memo(function WheelItem({
   });
 
   return (
-    <Animated.View style={[itemS.wrap, animStyle]}>
-      <Text style={itemS.text}>{label}</Text>
+    <Animated.View
+      className="items-center justify-center"
+      style={[{ height: ITEM_H }, animStyle]}
+    >
+      <Text className="text-foreground text-lg font-normal tracking-wide">
+        {label}
+      </Text>
     </Animated.View>
   );
-});
-
-const itemS = StyleSheet.create({
-  wrap: {
-    height: ITEM_H,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    fontSize: 19,
-    fontWeight: '400',
-    color: C.fg,
-    letterSpacing: 0.3,
-  },
 });
 
 // ─── FadeOverlay ─────────────────────────────────────────────────────────────
@@ -155,7 +145,8 @@ function FadeOverlay({
   return (
     <View
       pointerEvents="none"
-      style={[fadeS.base, edge === 'top' ? fadeS.top : fadeS.bottom]}
+      className={`absolute inset-x-0 z-10 ${edge === 'top' ? 'top-0 flex-col' : 'bottom-0 flex-col-reverse'}`}
+      style={{ height: CENTER }}
     >
       {Array.from({ length: STEPS }, (_, i) => {
         const t =
@@ -163,26 +154,14 @@ function FadeOverlay({
         return (
           <View
             key={i}
-            style={[fadeS.layer, { backgroundColor: color, opacity: t ** 1.6 }]}
+            className="flex-1"
+            style={{ backgroundColor: color, opacity: t ** 1.6 }}
           />
         );
       })}
     </View>
   );
 }
-
-const fadeS = StyleSheet.create({
-  base: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: CENTER,
-    zIndex: 10,
-  },
-  top: { top: 0, flexDirection: 'column' },
-  bottom: { bottom: 0, flexDirection: 'column-reverse' },
-  layer: { flex: 1 },
-});
 
 // ─── WheelColumn ─────────────────────────────────────────────────────────────
 
@@ -192,6 +171,8 @@ interface WheelColumnProps {
   onIndexChange: (i: number) => void;
   /** Fixed pixel width; omit to allow flex growth. */
   width?: number;
+  /** Fade colour (must match the wheel's background). */
+  fadeColor: string;
 }
 
 function WheelColumn({
@@ -199,17 +180,16 @@ function WheelColumn({
   selectedIndex,
   onIndexChange,
   width,
+  fadeColor,
 }: WheelColumnProps) {
   const offset = useSharedValue(selectedIndex * ITEM_H);
   const dragStart = useSharedValue(0);
-  // Keep items.length accessible inside worklets without capturing stale closure
   const itemCount = useSharedValue<number>(items.length);
 
   useEffect(() => {
     itemCount.set(items.length);
   }, [items.length, itemCount]);
 
-  // Animate to new selectedIndex whenever the parent changes it
   const prevSelected = useRef(selectedIndex);
   useEffect(() => {
     if (prevSelected.current !== selectedIndex) {
@@ -226,7 +206,6 @@ function WheelColumn({
       'worklet';
       const raw = dragStart.get() - e.translationY;
       const maxOff = (itemCount.get() - 1) * ITEM_H;
-      // Rubber-band resistance beyond edges
       offset.set(
         raw < 0
           ? raw * 0.25
@@ -237,7 +216,6 @@ function WheelColumn({
     })
     .onEnd((e) => {
       'worklet';
-      // Project forward by a fraction of velocity to determine target item
       const proj = offset.get() + -e.velocityY * 0.18;
       const snap = Math.round(
         Math.max(0, Math.min(proj / ITEM_H, itemCount.get() - 1))
@@ -246,19 +224,25 @@ function WheelColumn({
       scheduleOnRN(onIndexChange, snap);
     });
 
-  // The list container is translated so item[selectedIndex] sits at CENTER
   const listStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -offset.get() + CENTER }],
   }));
 
   return (
     <GestureDetector gesture={gesture}>
-      <View style={[colS.outer, width != null ? { width } : undefined]}>
+      <View
+        className="overflow-hidden flex-1"
+        style={[{ height: WHEEL_H }, width != null ? { width } : undefined]}
+      >
         {/* Selection-row separator lines */}
-        <View pointerEvents="none" style={colS.selector} />
+        <View
+          pointerEvents="none"
+          className="absolute left-2.5 right-2.5 z-[5] border-y-hairline border-foreground/10"
+          style={{ top: CENTER, height: ITEM_H }}
+        />
 
         {/* Scrollable item list */}
-        <Animated.View style={[colS.list, listStyle]}>
+        <Animated.View className="absolute inset-x-0 top-0" style={listStyle}>
           {items.map((label, i) => (
             <WheelItem
               key={`${label}-${i}`}
@@ -270,37 +254,12 @@ function WheelColumn({
         </Animated.View>
 
         {/* Fade edges */}
-        <FadeOverlay edge="top" color={C.surface} />
-        <FadeOverlay edge="bottom" color={C.surface} />
+        <FadeOverlay edge="top" color={fadeColor} />
+        <FadeOverlay edge="bottom" color={fadeColor} />
       </View>
     </GestureDetector>
   );
 }
-
-const colS = StyleSheet.create({
-  outer: {
-    height: WHEEL_H,
-    overflow: 'hidden',
-    flex: 1,
-  },
-  list: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-  },
-  selector: {
-    position: 'absolute',
-    top: CENTER,
-    left: 10,
-    right: 10,
-    height: ITEM_H,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: C.sep,
-    zIndex: 5,
-  },
-});
 
 // ─── WheelDatePicker ─────────────────────────────────────────────────────────
 
@@ -309,6 +268,8 @@ export interface WheelDatePickerProps {
   onChange?: (date: Date) => void;
   minYear?: number;
   maxYear?: number;
+  /** Fade colour for the column edge overlays. */
+  fadeColor: string;
 }
 
 export function WheelDatePicker({
@@ -316,6 +277,7 @@ export function WheelDatePicker({
   onChange,
   minYear = 1924,
   maxYear = 2124,
+  fadeColor,
 }: WheelDatePickerProps) {
   const seed = value ?? new Date();
 
@@ -327,7 +289,6 @@ export function WheelDatePicker({
   const numDays = daysInMonth(monthIdx, minYear + yearIdx);
   const days = buildDays(numDays);
 
-  // Clamp day to valid range whenever month / year change
   const clampedDay = Math.min(dayIdx, numDays - 1);
 
   const emit = useCallback(
@@ -367,54 +328,67 @@ export function WheelDatePicker({
   );
 
   return (
-    <View style={pickerS.root}>
+    <View className="flex-row bg-surface-muted rounded-2xl overflow-hidden">
       <WheelColumn
         items={days}
         selectedIndex={clampedDay}
         onIndexChange={handleDay}
         width={64}
+        fadeColor={fadeColor}
       />
       <WheelColumn
         items={MONTH_LABELS}
         selectedIndex={monthIdx}
         onIndexChange={handleMonth}
+        fadeColor={fadeColor}
       />
       <WheelColumn
         items={years}
         selectedIndex={yearIdx}
         onIndexChange={handleYear}
         width={72}
+        fadeColor={fadeColor}
       />
     </View>
   );
 }
 
-const pickerS = StyleSheet.create({
-  root: {
-    flexDirection: 'row',
-    backgroundColor: C.surface,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-});
-
 // ─── Demo screen ─────────────────────────────────────────────────────────────
 
 export default function WheelDatePickerExample() {
   const [date, setDate] = useState(() => new Date());
+  const rootStyle = useResolveClassNames(
+    'flex-1 bg-background px-6 justify-center'
+  );
+
+  // The fade colour must match the wheel surface so the edges blend in
+  // seamlessly. We pick light or dark based on the current scheme; a
+  // single hex pair is enough since there is no in-between state.
+  const isDark = useIsDarkTheme();
+  const fadeColor = isDark ? SURFACE_FADE_DARK : SURFACE_FADE_LIGHT;
 
   return (
-    <GestureHandlerRootView style={demoS.root}>
-      <Text style={demoS.title}>Wheel Date Picker</Text>
-      <Text style={demoS.sub}>iOS-style drum-roll — day · month · year</Text>
+    <GestureHandlerRootView style={rootStyle}>
+      <Text className="text-2xl font-bold text-foreground mb-1.5">
+        Wheel Date Picker
+      </Text>
+      <Text className="text-sm text-muted mb-8">
+        iOS-style drum-roll — day · month · year
+      </Text>
 
-      <View style={demoS.card}>
-        <WheelDatePicker value={date} onChange={setDate} />
+      <View className="rounded-[20px] border-hairline border-border overflow-hidden mb-5">
+        <WheelDatePicker
+          value={date}
+          onChange={setDate}
+          fadeColor={fadeColor}
+        />
       </View>
 
-      <View style={demoS.result}>
-        <Text style={demoS.resultLabel}>Selected date</Text>
-        <Text style={demoS.resultValue}>
+      <View className="bg-surface-muted rounded-[14px] p-4 border-hairline border-border">
+        <Text className="text-[11px] font-semibold text-muted uppercase tracking-widest mb-1.5">
+          Selected date
+        </Text>
+        <Text className="text-base font-medium text-foreground">
           {date.toLocaleDateString('en-US', {
             weekday: 'long',
             year: 'numeric',
@@ -427,49 +401,11 @@ export default function WheelDatePickerExample() {
   );
 }
 
-const demoS = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: C.bg,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: C.fg,
-    marginBottom: 6,
-  },
-  sub: {
-    fontSize: 14,
-    color: C.muted,
-    marginBottom: 32,
-  },
-  card: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  result: {
-    backgroundColor: C.surface,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  resultLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: C.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 6,
-  },
-  resultValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: C.fg,
-  },
-});
+// ─── theme helper ────────────────────────────────────────────────────────────
+
+import { useUniwind } from 'uniwind';
+
+function useIsDarkTheme() {
+  const { theme } = useUniwind();
+  return theme === 'dark';
+}

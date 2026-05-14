@@ -8,23 +8,18 @@
  *   3. Sync prop changes into the store via a single useLayoutEffect.
  *
  * Renders no UI. The library is hooks-only: every piece of UI lives in
- * the consumer's app and is built with `useCalendarDays`,
- * `useCalendarMonths`, `useCalendarYears`, `useCalendarActions`, and
- * `useCalendarSelector`.
+ * the consumer's app and is built with `useCalendarSelector` (reads,
+ * usually paired with one of `selectDays / selectMonths / selectYears /
+ * selectCanConfirm`) and `useCalendarActions` (writes).
  */
 import React, {
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   type ReactNode,
 } from 'react';
 
-import {
-  CalendarConfigContext,
-  CalendarStoreContext,
-  type CalendarConfig,
-} from '../context';
+import { CalendarStoreContext } from '../context';
 import { CalendarStore } from '../store';
 import type {
   CalendarMode,
@@ -33,6 +28,7 @@ import type {
   CalendarSystem,
   DisabledDateInput,
   DisabledDateRangeInput,
+  OnChange,
   OnClear,
   OnConfirm,
   Weekday,
@@ -96,7 +92,7 @@ export interface CalendarRootProps {
   /**
    * Named modifiers — each value is a list of dates / inclusive ranges, or
    * a `(nativeDate) => boolean` predicate. Surfaced per cell on
-   * `DayCellInfo.modifiers` from `useCalendarDays`.
+   * `DayCellInfo.modifiers` from `useCalendarSelector(selectDays)`.
    */
   modifiers?: CalendarModifiers;
 
@@ -110,8 +106,12 @@ export interface CalendarRootProps {
   onConfirm?: OnConfirm;
   /** Called when `useCalendarActions().clear()` fires. */
   onClear?: OnClear;
-  /** Optional haptic hook fired on `useCalendarDays().selectDate(...)`. */
-  onSelectHaptic?: () => void;
+  /**
+   * Fires whenever the selection changes — any successful `selectDate`
+   * or `clear` call. Receives the full selection payload so consumers
+   * can wire it straight into form state.
+   */
+  onChange?: OnChange;
 
   children: ReactNode;
 }
@@ -137,7 +137,7 @@ export const Root: React.FC<CalendarRootProps> = ({
   firstDayOfWeek = DEFAULT_FIRST_DAY_OF_WEEK,
   onConfirm,
   onClear,
-  onSelectHaptic,
+  onChange,
   children,
 }) => {
   const systems = systemsProp ?? [gregorianSystem];
@@ -149,7 +149,8 @@ export const Root: React.FC<CalendarRootProps> = ({
   const stableOnConfirm: OnConfirm | undefined =
     useStableCallback<[CalendarSelectionPayload]>(onConfirm);
   const stableOnClear: OnClear | undefined = useStableCallback<[]>(onClear);
-  const stableOnSelectHaptic = useStableCallback<[]>(onSelectHaptic);
+  const stableOnChange: OnChange | undefined =
+    useStableCallback<[CalendarSelectionPayload]>(onChange);
   const stableDisabled = useStablePredicate<[Date], boolean>(disabled);
   const stableModifiers = useStableRecord(modifiers);
 
@@ -173,9 +174,22 @@ export const Root: React.FC<CalendarRootProps> = ({
       minRangeDays,
       maxRangeDays,
       maxSelected,
+      firstDayOfWeek,
+      modifiers: stableModifiers,
     });
   }
   const store = storeRef.current;
+
+  // External callbacks are stashed on the store so action methods stay
+  // referentially stable across the lifetime of the provider. Any
+  // re-binding here is invisible to consumers of useCalendarActions().
+  useLayoutEffect(() => {
+    store.setExternalCallbacks({
+      onConfirm: stableOnConfirm,
+      onClear: stableOnClear,
+      onChange: stableOnChange,
+    });
+  }, [store, stableOnConfirm, stableOnClear, stableOnChange]);
 
   // Sync mutable props -> store. Selection inputs are intentionally not
   // re-synced — they're "initial".
@@ -192,6 +206,8 @@ export const Root: React.FC<CalendarRootProps> = ({
       minRangeDays,
       maxRangeDays,
       maxSelected,
+      firstDayOfWeek,
+      modifiers: stableModifiers,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -205,6 +221,8 @@ export const Root: React.FC<CalendarRootProps> = ({
     minRangeDays,
     maxRangeDays,
     maxSelected,
+    firstDayOfWeek,
+    stableModifiers,
   ]);
 
   // Swap the active system when `systems` changes identity.
@@ -222,29 +240,10 @@ export const Root: React.FC<CalendarRootProps> = ({
     }
   }, [stableSystems, store]);
 
-  const config = useMemo<CalendarConfig>(
-    () => ({
-      firstDayOfWeek,
-      modifiers: stableModifiers,
-      onConfirm: stableOnConfirm,
-      onClear: stableOnClear,
-      onSelectHaptic: stableOnSelectHaptic,
-    }),
-    [
-      firstDayOfWeek,
-      stableModifiers,
-      stableOnConfirm,
-      stableOnClear,
-      stableOnSelectHaptic,
-    ]
-  );
-
   return (
-    <CalendarConfigContext.Provider value={config}>
-      <CalendarStoreContext.Provider value={store}>
-        {children}
-      </CalendarStoreContext.Provider>
-    </CalendarConfigContext.Provider>
+    <CalendarStoreContext.Provider value={store}>
+      {children}
+    </CalendarStoreContext.Provider>
   );
 };
 

@@ -41,7 +41,8 @@ import {
   useCalendarMonthPicker,
   useCalendarYearPicker,
   useCalendarNavigation,     // goPrev / goNext
-  useCalendarActions,        // confirm / clear / canConfirm
+  useCalendarActions,        // every mutator (selectDate, nav, confirm, clear) — stable, no subscriptions
+  selectCanConfirm,          // selector for the canConfirm boolean — use via useCalendarSelector
   useCalendarSystemSwitcher, // systems / activeId / setActive
   // Defaults
   defaultTheme,
@@ -194,7 +195,7 @@ The headless wrapper. Shares the store with every `useCalendar*` hook in its sub
 | `onSystemChange` | `(systemId: string) => void` |
 | `modifiers` | `CalendarModifiers` (`Record<string, CalendarMatcher>`) |
 | `components` | `CalendarComponents` (slot map — see below) |
-| `onSelectHaptic` | `() => void` (fires on tap) |
+| `onChange` | `(payload: CalendarSelectionPayload) => void` (fires on every selectDate / clear) |
 | `testID` | `string` |
 
 `disabledDates` / `disabledRanges` / `disabled` compose with **OR** semantics — a cell is disabled if any of them say so.
@@ -291,11 +292,27 @@ useCalendarYearPicker(): {
 
 ```ts
 useCalendarActions(): {
-  canConfirm: boolean;          // true when current selection is committable
+  // selection
+  selectDate: (input: Date | string | CalendarDateValue) => void;
+  clear: () => void;            // wipes selection, fires onClear + onChange
   confirm: () => void;          // fires onConfirm with payload
-  clear: () => void;            // wipes selection, fires onClear
+  // navigation (all stable references for the lifetime of the provider)
+  goPrevMonth: () => void;
+  goNextMonth: () => void;
+  setDisplayedDate: (input: Date | string | CalendarDateValue) => void;
+  selectMonth: (index: number) => void;
+  selectYear: (year: number) => void;
+  prevYearPage: () => void;
+  nextYearPage: () => void;
+  // synchronous read for handlers (use selectCanConfirm in render)
+  isConfirmable: () => boolean;
 }
+
+// Render-time canConfirm — subscribes to the slices that actually matter.
+const canConfirm = useCalendarSelector(selectCanConfirm);
 ```
+
+`useCalendarActions()` returns a subscription-free, identity-stable object: the consumer never re-renders when the store changes.
 
 ### System switcher
 

@@ -8,7 +8,7 @@ const meta = {
   component: WheelDatePickerExample,
   decorators: [
     (Story: () => React.JSX.Element) => (
-      <View style={{ flex: 1 }}>
+      <View className="flex-1">
         <Story />
       </View>
     ),

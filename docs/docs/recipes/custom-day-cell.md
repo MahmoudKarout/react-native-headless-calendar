@@ -1,10 +1,16 @@
 ---
 sidebar_position: 6
+title: Custom Day Cell
+description: Render every day cell with your own React component — modifier dots, prices, status badges, emoji — and keep granular per-cell re-renders via React.memo.
+keywords:
+  - custom day cell
+  - calendar React.memo
+  - status badge calendar
 ---
 
 # Custom Day Cell
 
-Every cell is rendered by **your** component — `useCalendarDays()` only computes the data. Wrap each cell in `React.memo` for free per-cell render savings.
+Every cell is rendered by **your** component — `useCalendarSelector(selectDays)` only computes the data. Wrap each cell in `React.memo` for free per-cell render savings.
 
 import CalendarDemo from '@site/src/components/CalendarDemo';
 
@@ -17,7 +23,9 @@ import { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import {
   CalendarProvider,
-  useCalendarDays,
+  selectDays,
+  useCalendarActions,
+  useCalendarSelector,
   type DayCellInfo,
 } from 'react-native-fast-calendar';
 
@@ -40,10 +48,10 @@ const Cell = memo(function Cell({
         height: 48,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: cell.isSelected ? '#0f172a' : 'transparent',
+        backgroundColor: cell.isSelected ? '#171717' : 'transparent',
       }}
     >
-      <Text style={{ color: cell.isSelected ? '#fff' : '#0f172a' }}>
+      <Text style={{ color: cell.isSelected ? '#ffffff' : '#171717' }}>
         {cell.label}
       </Text>
       <Text>{emoji}</Text>
@@ -52,14 +60,16 @@ const Cell = memo(function Cell({
 });
 
 function Grid() {
-  const days = useCalendarDays();
+  const days = useCalendarSelector(selectDays);
+  // Subscription-free, identity-stable — never bumps the memoised cells.
+  const { selectDate } = useCalendarActions();
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
       {days.cells.map((cell) => (
         <Cell
           key={cell.nativeDate.toISOString()}
           cell={cell}
-          onPress={() => days.selectDate(cell.date)}
+          onPress={() => selectDate(cell.date)}
         />
       ))}
     </View>

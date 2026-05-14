@@ -1,5 +1,11 @@
 ---
 sidebar_position: 4
+title: Bounded Selection
+description: Lock a calendar to a min/max date range, disable specific dates or ranges, and compose a disabled() predicate — all in one provider.
+keywords:
+  - disabled dates calendar
+  - min max date react native
+  - blackout dates
 ---
 
 # Bounded Selection
@@ -51,4 +57,4 @@ export default function Screen() {
 | `disabledRanges` | Each `{ start, end }` disables an inclusive range. |
 | `disabled(d)` | Predicate against the **native** JS date. Errors are caught — buggy predicates can't crash the calendar. |
 
-The disabled state is precomputed in `useCalendarDays()` and surfaced as `cell.isDisabled` for styling.
+The disabled state is precomputed by `selectDays` (read via `useCalendarSelector(selectDays)`) and surfaced as `cell.isDisabled` for styling.

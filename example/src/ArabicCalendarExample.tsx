@@ -5,13 +5,13 @@
  * (Saturday-first).
  */
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { CalendarProvider } from 'react-native-fast-calendar';
 import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
 import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
 
-import { HooksCalendar, tokens } from './HooksCalendar';
+import { HooksCalendar } from './HooksCalendar';
 
 type SystemId = 'gregorian' | 'hijri';
 
@@ -20,24 +20,26 @@ export default function ArabicCalendarExample() {
   const systems = useMemo(() => [gregorianSystem, hijriSystem], []);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.tabs}>
-        {(['gregorian', 'hijri'] as const).map((id) => (
-          <Pressable
-            key={id}
-            onPress={() => setActiveSystemId(id)}
-            style={[styles.tab, activeSystemId === id && styles.tabActive]}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeSystemId === id && styles.tabTextActive,
-              ]}
+    <ScrollView className="bg-background" contentContainerClassName="p-4">
+      <View className="bg-card border-hairline border-border rounded-lg flex-row p-0.5 mb-3">
+        {(['gregorian', 'hijri'] as const).map((id) => {
+          const active = activeSystemId === id;
+          return (
+            <Pressable
+              key={id}
+              onPress={() => setActiveSystemId(id)}
+              className={`flex-1 py-2 rounded-md ${active ? 'bg-primary' : ''}`}
             >
-              {id}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                className={`text-xs font-semibold tracking-wider text-center uppercase ${
+                  active ? 'text-on-primary' : 'text-muted'
+                }`}
+              >
+                {id}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <CalendarProvider
@@ -52,31 +54,3 @@ export default function ArabicCalendarExample() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { backgroundColor: tokens.muted, padding: 16 },
-  tabs: {
-    backgroundColor: tokens.background,
-    borderColor: tokens.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: 'row',
-    marginBottom: 12,
-    padding: 2,
-  },
-  tab: {
-    borderRadius: 6,
-    flex: 1,
-    paddingVertical: 8,
-  },
-  tabActive: { backgroundColor: tokens.primary },
-  tabText: {
-    color: tokens.mutedForeground,
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-  },
-  tabTextActive: { color: tokens.primaryForeground },
-});

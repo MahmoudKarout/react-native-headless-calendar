@@ -4,7 +4,7 @@
  * the rest of the recipe set.
  */
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetModalProvider,
@@ -12,8 +12,9 @@ import {
 } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { CalendarProvider } from 'react-native-fast-calendar';
+import { useResolveClassNames } from 'uniwind';
 
-import { HooksCalendar, tokens } from './HooksCalendar';
+import { HooksCalendar } from './HooksCalendar';
 
 export default function BottomSheetPickerExample() {
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -22,17 +23,30 @@ export default function BottomSheetPickerExample() {
   const open = useCallback(() => sheetRef.current?.present(), []);
   const close = useCallback(() => sheetRef.current?.dismiss(), []);
 
+  // @gorhom/bottom-sheet only accepts plain `style` objects for its
+  // background, handle, and inner view, so we resolve the Uniwind
+  // classes upfront.
+  const backgroundStyle = useResolveClassNames('bg-card');
+  const handleIndicatorStyle = useResolveClassNames('bg-border-strong');
+  const sheetContentStyle = useResolveClassNames('p-4');
+  const rootStyle = useResolveClassNames('flex-1');
+
   return (
-    <GestureHandlerRootView style={styles.flex}>
+    <GestureHandlerRootView style={rootStyle}>
       <BottomSheetModalProvider>
-        <View style={styles.container}>
-          <View style={styles.field}>
-            <Text style={styles.label}>Date</Text>
-            <Pressable onPress={open} style={styles.trigger}>
-              <Text style={styles.triggerText}>
+        <View className="flex-1 justify-center p-6 bg-background">
+          <View className="gap-2">
+            <Text className="text-foreground text-[13px] font-semibold">
+              Date
+            </Text>
+            <Pressable
+              onPress={open}
+              className="flex-row items-center justify-between px-3.5 py-3 bg-card border-hairline border-border rounded-lg active:bg-surface-muted"
+            >
+              <Text className="text-foreground text-sm font-medium">
                 {picked ? picked.toDateString() : 'Pick a date'}
               </Text>
-              <Text style={styles.triggerIcon}>▾</Text>
+              <Text className="text-muted text-xs">▾</Text>
             </Pressable>
           </View>
         </View>
@@ -40,10 +54,10 @@ export default function BottomSheetPickerExample() {
         <BottomSheetModal
           ref={sheetRef}
           snapPoints={['65%']}
-          backgroundStyle={styles.sheetBg}
-          handleIndicatorStyle={styles.sheetHandle}
+          backgroundStyle={backgroundStyle}
+          handleIndicatorStyle={handleIndicatorStyle}
         >
-          <BottomSheetView style={styles.sheet}>
+          <BottomSheetView style={sheetContentStyle}>
             <CalendarProvider
               mode="single"
               onConfirm={(p) => {
@@ -60,48 +74,3 @@ export default function BottomSheetPickerExample() {
     </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: {
-    backgroundColor: tokens.muted,
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  field: {
-    gap: 8,
-  },
-  label: {
-    color: tokens.foreground,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  trigger: {
-    alignItems: 'center',
-    backgroundColor: tokens.background,
-    borderColor: tokens.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  triggerText: {
-    color: tokens.foreground,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  triggerIcon: {
-    color: tokens.mutedForeground,
-    fontSize: 12,
-  },
-  sheet: { padding: 16 },
-  sheetBg: {
-    backgroundColor: tokens.background,
-  },
-  sheetHandle: {
-    backgroundColor: tokens.border,
-  },
-});

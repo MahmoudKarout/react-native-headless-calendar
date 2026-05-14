@@ -12,12 +12,13 @@ import MultiDatePickerExample from '../../src/MultiDatePickerExample';
 import MultiMonthGridExample from '../../src/MultiMonthGridExample';
 import PerfCalendarExample from '../../src/PerfCalendarExample';
 import SingleDatePickerExample from '../../src/SingleDatePickerExample';
+import SwipeableCalendarExample from '../../src/SwipeableCalendarExample';
 import VerticalListExample from '../../src/VerticalListExample';
 import WeekNumbersExample from '../../src/WeekNumbersExample';
 import WheelDatePickerExample from '../../src/WheelDatePickerExample';
 
 const FullScreen = (Story: () => React.JSX.Element) => (
-  <View style={{ flex: 1 }}>
+  <View className="flex-1">
     <Story />
   </View>
 );
@@ -74,6 +75,11 @@ export const BottomSheet: StoryObj = {
 export const Vertical: StoryObj = {
   name: 'Vertical infinite list',
   render: () => <VerticalListExample />,
+};
+
+export const Swipeable: StoryObj = {
+  name: 'Swipeable (horizontal paged)',
+  render: () => <SwipeableCalendarExample />,
 };
 
 export const FlightPrice: StoryObj = {

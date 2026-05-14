@@ -2,28 +2,38 @@
  * react-native-fast-calendar — hooks-first public surface.
  *
  * The library is intentionally headless: there is one provider component
- * (<CalendarProvider>) and five hooks. Consumers bring their own UI.
+ * (<CalendarProvider>) and two hooks — `useCalendarSelector` for reads
+ * and `useCalendarActions` for writes. Pre-built selectors
+ * (`selectDays`, `selectMonths`, `selectYears`, `selectCanConfirm`)
+ * cover the common shapes. Consumers bring their own UI.
  */
 
 // Provider — the only required boundary for every hook below.
 export { Root as CalendarProvider } from './components/Root';
 export type { CalendarRootProps as CalendarProviderProps } from './components/Root';
 
-// Public hooks.
+// Public hooks — there are exactly two. Everything readable goes through
+// `useCalendarSelector(...)`; every mutator is on `useCalendarActions()`.
+export { useCalendarActions, useCalendarSelector } from './context';
+export type { CalendarActions } from './context';
+
+// Built-in selectors. Pass these to `useCalendarSelector` for the common
+// shapes; or write your own narrow `(s) => s.something` for anything bespoke.
 export {
-  useCalendarActions,
-  useCalendarDays,
-  useCalendarMonths,
-  useCalendarSelector,
-  useCalendarYears,
+  selectCanConfirm,
+  selectDays,
+  selectMonths,
+  selectYears,
 } from './context';
+
+// Snapshot + derived view types so consumers can type their own selectors.
 export type {
-  CalendarActions,
   CalendarDays,
   CalendarMonthEntry,
   CalendarMonths,
+  CalendarSnapshot,
   CalendarYears,
-} from './context';
+} from './store';
 
 // Calendar systems — also available via sub-exports for tree-shaking.
 export {
@@ -45,6 +55,7 @@ export type {
   DayCellInfo,
   DisabledDateInput,
   DisabledDateRangeInput,
+  OnChange,
   OnClear,
   OnConfirm,
   Weekday,
