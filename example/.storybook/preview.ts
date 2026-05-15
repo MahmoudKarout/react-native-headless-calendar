@@ -1,5 +1,9 @@
 import type { Preview } from '@storybook/react-native-web-vite';
 
+// Boot the Uniwind + Tailwind v4 stylesheet. The matching Vite plugins are
+// registered in `.storybook/main.ts` via `viteFinal`.
+import '../global.css';
+
 const preview: Preview = {
   parameters: {
     controls: {

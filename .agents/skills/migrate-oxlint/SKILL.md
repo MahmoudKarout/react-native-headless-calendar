@@ -103,13 +103,13 @@ Review the output and decide whether to keep ESLint for those rules or not. Some
 Install the core oxlint package (use `yarn install`, `pnpm install`, `vp install`, `bun install`, etc. depending on your package manager):
 
 ```bash
-npm install -D oxlint
+yarn add -D oxlint
 ```
 
 If you want to add the `oxlint-tsgolint` package, if you intend to use type-aware rules that require TypeScript type information:
 
 ```bash
-npm install -D oxlint-tsgolint
+yarn add -D oxlint-tsgolint
 ```
 
 No other packages besides the above are needed by default, though you will need to keep/install any additional ESLint plugins that were migrated into `jsPlugins`. Do not add `@oxlint/migrate` to the package.json, it is meant for one-off usage.

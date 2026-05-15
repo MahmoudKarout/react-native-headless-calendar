@@ -168,23 +168,23 @@ function YearPicker() {
 
 ### `ActionBar` — clear + confirm
 
-Reads `canConfirm` from the store so it disables/enables itself correctly without re-implementing the gate.
+`useCalendarActions()` is subscription-free, so it doesn't re-render the bar on selection changes. The `canConfirm` boolean is reactive state — pull it from `useCalendarSelector(selectCanConfirm)` so only this bar re-renders when committability flips.
 
 ```tsx
 function ActionBar() {
-  const { canConfirm, clear, confirm } = useCalendarActions();
-  const labels = useCalendarLabels();
+  const { clear, confirm } = useCalendarActions();
+  const canConfirm = useCalendarSelector(selectCanConfirm);
   return (
     <View style={s.actionBar}>
       <Pressable onPress={clear} style={[s.btn, s.btnOutline]}>
-        <Text>{labels.clear}</Text>
+        <Text>Clear</Text>
       </Pressable>
       <Pressable
         onPress={confirm}
         disabled={!canConfirm}
         style={[s.btn, s.btnPrimary, !canConfirm && s.btnDisabled]}
       >
-        <Text style={s.btnPrimaryLabel}>{labels.confirm}</Text>
+        <Text style={s.btnPrimaryLabel}>Confirm</Text>
       </Pressable>
     </View>
   );

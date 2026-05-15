@@ -4,85 +4,43 @@ sidebar_position: 2
 
 # Installation
 
-## NPM/Yarn
-
 ```bash
-npm install react-native-fast-calendar
-# or
 yarn add react-native-fast-calendar
 ```
 
-## Peer Dependencies
-
-The core library requires:
+### Optional — Hijri Calendar
 
 ```bash
-npm install react react-native
+yarn add @tabby_ai/hijri-converter
 ```
 
-### Optional Peer Dependencies
+Required only when you import `react-native-fast-calendar/systems/hijri`.
 
-Depending on your use case, you may need additional dependencies:
-
-#### For Swipeable Mode (FlashList)
+### Optional — Jalali (Persian) Calendar
 
 ```bash
-npm install @shopify/flash-list
+yarn add moment-jalaali
 ```
 
-Required when using `<Calendar.DayGrid swipeable />`.
+Required only when you import `react-native-fast-calendar/systems/jalali`.
 
-#### For Hijri Calendar Support
 
+### Optional — Vertical List Recipe
 ```bash
-npm install @tabby_ai/hijri-converter
+yarn add @shopify/flash-list
 ```
 
-Required when using the Hijri calendar system.
+## Requirements
 
-#### For Jalali (Persian) Calendar Support
-
-```bash
-npm install moment-jalaali
-```
-
-Required when using the Jalali calendar system.
-
-#### For Bottom Sheet Integration
-
-```bash
-npm install @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler
-```
-
-Required when building bottom sheet date pickers.
-
-## TypeScript Configuration
-
-The library is written in TypeScript and provides comprehensive type definitions. No additional `@types` package is needed.
-
-## React Native Version Requirements
-
-- React Native >= 0.70.0
-- React >= 18.0.0
+- React `>= 18.0.0`
+- React Native `>= 0.70.0`
+- TypeScript types ship with the package.
 
 ## Web Support
 
-The library works with React Native Web. No additional configuration is required.
-
-## AI Assistant Skill
-
-Install the `react-native-fast-calendar-recipes` skill to give your AI coding assistant (Cursor, Claude, etc.) full knowledge of the library API — all eleven recipes, every hook, the headless scaffold, theming, multi-calendar systems, and common pitfalls.
-
-```bash
-npx skills install react-native-fast-calendar-recipes --registry https://skills.sh
-```
-
-The skill activates automatically whenever you ask your AI for a calendar, date picker, range picker, or anything involving `<Calendar.Root>`, `<Calendar.DayGrid>`, `SimpleCalendar`, or the `useCalendar*` hooks.
+Works out of the box with React Native Web — including the live demos in this docset.
 
 ## Next Steps
 
-Now that you have the library installed:
-
-1. Check out the [SimpleCalendar component](./components/simple-calendar) for quick usage
-2. Learn about the [headless API](./core-concepts/headless-design) for custom implementations
-3. Explore [recipes](./recipes/single-date-picker) for common use cases
+- [Mental Model](./core-concepts/mental-model)
+- [Single date picker recipe](./recipes/single-date-picker)

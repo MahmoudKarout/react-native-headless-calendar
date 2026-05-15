@@ -318,4 +318,4 @@ function MyComponent() {
 
 ## Implementing a Custom System
 
-See the [Custom Calendar System](../advanced/custom-calendar-system) guide for a complete implementation example.
+See the [Custom Calendar System](../systems/custom-system) guide for a complete implementation example.

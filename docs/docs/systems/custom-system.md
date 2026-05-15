@@ -104,9 +104,9 @@ const ethiopianSystem = createEthiopianSystem();
 ## Usage
 
 ```tsx
-<Calendar.Root systems={[ethiopianSystem]}>
-  <Calendar.DayGrid />
-</Calendar.Root>
+<CalendarProvider systems={[ethiopianSystem]}>
+  {/* render your own day grid with `useCalendarSelector(selectDays)` */}
+</CalendarProvider>
 ```
 
 ## Tips

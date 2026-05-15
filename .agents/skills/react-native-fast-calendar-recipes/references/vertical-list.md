@@ -19,7 +19,7 @@ The library does **not** ship a vertical month list. `<Calendar.DayGrid>` always
 Peer dependency:
 
 ```bash
-npm install @shopify/flash-list
+yarn add @shopify/flash-list
 ```
 
 `@shopify/flash-list` is listed as an *optional* peer dependency on `react-native-fast-calendar` — install it explicitly if you're using this recipe.

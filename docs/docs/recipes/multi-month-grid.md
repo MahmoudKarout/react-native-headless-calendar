@@ -1,142 +1,53 @@
 ---
 sidebar_position: 5
+title: Multi-Month Grid
+description: Render two or more months side-by-side, Airbnb-style, with independent calendar providers and a shared selection state.
+keywords:
+  - airbnb calendar
+  - two month calendar
+  - side by side calendar react native
 ---
 
 # Multi-Month Grid
 
-Display multiple months side-by-side — useful for travel booking, seasonal planning, and date range selection.
+Render two months side-by-side, Airbnb-style, by mounting two independent `<CalendarProvider>` instances with different `initialDate`s.
 
 import CalendarDemo from '@site/src/components/CalendarDemo';
 
-## Interactive Demo
-
-Two months side-by-side with range selection — exactly what `<SimpleCalendar mode="range" numberOfMonths={2} swipeable={false} />` renders:
-
 <CalendarDemo mode="range" numberOfMonths={2} />
 
-## Quick Start
+## Implementation
 
 ```tsx
-import { SimpleCalendar } from 'react-native-fast-calendar';
+import { View } from 'react-native';
+import { CalendarProvider } from 'react-native-fast-calendar';
 
-<SimpleCalendar
-  mode="range"
-  numberOfMonths={2}
-  swipeable={false}
-/>
-```
+import { HooksCalendar } from './HooksCalendar';
 
-:::warning
-`numberOfMonths` disables `swipeable`. The grid becomes static.
-:::
+const thisMonth = new Date();
+const nextMonth = new Date(thisMonth);
+nextMonth.setMonth(nextMonth.getMonth() + 1);
 
-## With DayGrid
-
-```tsx
-<Calendar.DayGrid numberOfMonths={2} />
-```
-
-## Month Captions
-
-Add month labels using the `MonthCaption` slot:
-
-```tsx
-<Calendar.Root
-  components={{
-    MonthCaption: MyMonthCaption,
-  }}
->
-  <Calendar.DayGrid numberOfMonths={2} />
-</Calendar.Root>
-
-function MyMonthCaption({ label, monthIndex }) {
-  const seasons = ['❄️', '❄️', '🌸', '🌸', '🌸', '☀️', '☀️', '☀️', '🍂', '🍂', '🍂', '❄️'];
-
+export default function Screen() {
   return (
-    <View style={styles.caption}>
-      <Text style={styles.label}>{label}</Text>
-      <Text>{seasons[monthIndex]}</Text>
+    <View style={{ flexDirection: 'row', gap: 12 }}>
+      <View style={{ flex: 1 }}>
+        <CalendarProvider mode="range" initialDate={thisMonth}>
+          <HooksCalendar />
+        </CalendarProvider>
+      </View>
+      <View style={{ flex: 1 }}>
+        <CalendarProvider mode="range" initialDate={nextMonth}>
+          <HooksCalendar />
+        </CalendarProvider>
+      </View>
     </View>
   );
 }
 ```
 
-## Three-Month View
+## Why Two Providers
 
-```tsx
-<SimpleCalendar
-  mode="range"
-  numberOfMonths={3}
-  fixedWeeks={false}
-  showOutsideDays={false}
-/>
-```
+The hooks operate on a single store per provider. Mounting two providers gives you two independent stores — each scrolls its own months, while their selection callbacks can still write to the same parent state.
 
-## With Week Numbers
-
-```tsx
-<Calendar.DayGrid
-  numberOfMonths={2}
-  showWeekNumbers
-/>
-```
-
-## Hotel Booking Example
-
-```tsx
-function HotelBookingCalendar() {
-  return (
-    <View>
-      <Text style={styles.title}>Select Your Stay</Text>
-
-      <Calendar.Root
-        mode="range"
-        minRangeDays={2}
-        maxRangeDays={14}
-        numberOfMonths={2}
-      >
-        <Calendar.DayGrid />
-        <BookingSummary />
-      </Calendar.Root>
-    </View>
-  );
-}
-
-function BookingSummary() {
-  const rangeStart = useCalendarSelector(s => s.rangeStart);
-  const rangeEnd = useCalendarSelector(s => s.rangeEnd);
-
-  if (!rangeStart || !rangeEnd) {
-    return <Text>Select your dates</Text>;
-  }
-
-  const nights = Math.round(
-    (rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  return (
-    <View style={styles.summary}>
-      <Text>{nights} nights selected</Text>
-      <Text>Total: ${nights * 150}</Text>
-    </View>
-  );
-}
-```
-
-## Layout Considerations
-
-Multi-month grids need horizontal space. Ensure your container is wide enough:
-
-```tsx
-const GRID_WIDTH = theme.cellSize * 7 * numberOfMonths + gap * (numberOfMonths - 1);
-
-<View style={{ width: GRID_WIDTH }}>
-  <Calendar.DayGrid numberOfMonths={2} />
-</View>
-```
-
-On smaller screens, consider:
-- Using `ScrollView` horizontally
-- Reducing `cellSize` in theme
-- Showing fewer months (1 on mobile, 2 on tablet)
-
+To keep a single shared selection across both grids, lift the selection up: have each provider's `onConfirm` call back into a parent reducer, or render one provider that drives both grids by computing two months from the same `displayed` snapshot.

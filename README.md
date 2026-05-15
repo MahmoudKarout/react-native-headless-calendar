@@ -2,23 +2,22 @@
 
 A **headless**, **calendar-system-agnostic**, **fully composable** React Native calendar.
 
-**Now with `SimpleCalendar`** — a batteries-included component for the 80% use case, while keeping the full headless API for advanced customization.
+There is one provider component and **two hooks** (plus a handful of pre-built selectors) — that's the entire public API. You bring the UI; the library brings the data, the math, and the store.
 
 ---
 
 ## Table of Contents
 
 - [Install](#install)
-- [Quickstart (Zero Config)](#quickstart-zero-config)
-- [SimpleCalendar API](#simplecalendar-api)
-- [Headless API (Advanced)](#headless-api-advanced)
-- [The Hooks](#the-hooks)
-- [Themes](#themes)
-- [Calendar Systems](#calendar-systems)
+- [Quickstart](#quickstart)
+- [The Provider](#the-provider)
+- [The Two Hooks](#the-two-hooks)
+- [Built-in Selectors](#built-in-selectors)
 - [Selection Modes](#selection-modes)
-- [Layout Options](#layout-options)
+- [Calendar Systems](#calendar-systems)
 - [Modifiers](#modifiers)
-- [Custom Day Cells](#custom-day-cells)
+- [Disabled Dates](#disabled-dates)
+- [Performance Notes](#performance-notes)
 - [Architecture](#architecture)
 - [Contributing](#contributing)
 
@@ -27,472 +26,239 @@ A **headless**, **calendar-system-agnostic**, **fully composable** React Native 
 ## Install
 
 ```bash
-npm install react-native-fast-calendar
+yarn add react-native-fast-calendar
 # or
 yarn add react-native-fast-calendar
 ```
 
-`react-native-fast-calendar` has **zero calendar-system dependencies**. Gregorian is built in; everything else (Hijri, Persian, Chinese, …) is a plugin you either consume from `react-native-fast-calendar/systems/*` or implement yourself.
+`react-native-fast-calendar` has **zero calendar-system dependencies**. Gregorian is built in; Hijri / Jalali / anything else is a plugin you either consume from `react-native-fast-calendar/systems/*` or implement yourself.
 
 ---
 
-## Quickstart (Zero Config)
-
-Use `SimpleCalendar` for a complete, opinionated calendar in one line:
+## Quickstart
 
 ```tsx
-import { SimpleCalendar } from 'react-native-fast-calendar';
-
-function App() {
-  return (
-    <SimpleCalendar
-      mode="single"
-      onConfirm={({ date }) => console.log('Selected:', date)}
-    />
-  );
-}
-```
-
-That's it! No system imports, no hook wiring, no custom components. `SimpleCalendar` includes:
-
-- Header with month/year labels and navigation chevrons
-- Swipeable day grid
-- Confirm/clear footer
-- Gregorian calendar (default)
-
-### SimpleCalendar with Options
-
-```tsx
-import { SimpleCalendar, darkTheme } from 'react-native-fast-calendar';
-
-<SimpleCalendar
-  mode="range"
-  theme={darkTheme}
-  minDate={new Date()}
-  maxRangeDays={14}
-  showWeekNumbers
-  firstDayOfWeek={1} // Monday first
-  onSelect={(date) => console.log('Tapped:', date)}     // Immediate feedback
-  onConfirm={({ startDate, endDate }) => submitBooking(startDate, endDate)}
-/>
-```
-
----
-
-## SimpleCalendar API
-
-### Props
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `mode` | `'single' \| 'range' \| 'multiple'` | `'single'` | Selection mode |
-| `systems` | `CalendarSystem[]` | `[gregorianSystem]` | Calendar systems (optional, defaults to Gregorian) |
-| `onSelect` | `(date: Date) => void` | — | Immediate callback when any date is tapped |
-| `onConfirm` | `OnConfirm` | — | Callback when confirm button pressed |
-| `onClear` | `OnClear` | — | Callback when clear button pressed |
-| `showHeader` | `boolean` | `true` | Show month/year header with navigation |
-| `showFooter` | `boolean` | `true` | Show confirm/clear footer |
-| `swipeable` | `boolean` | `true` | Enable horizontal swipe between months |
-| `numberOfMonths` | `number` | `1` | Show multiple months side-by-side |
-| `showWeekNumbers` | `boolean` | `false` | Show ISO week numbers |
-| `firstDayOfWeek` | `0-6` | `0` | Sunday=0, Monday=1, etc. |
-| `showOutsideDays` | `boolean` | `true` | Show days from adjacent months |
-| `fixedWeeks` | `boolean` | `true` | Always show 6 weeks |
-| `minDate` | `Date` | — | Minimum selectable date |
-| `maxDate` | `Date` | — | Maximum selectable date |
-| `initialDate` | `Date` | — | Initial selected date (single mode) |
-| `initialStart` | `Date` | — | Initial start date (range mode) |
-| `initialEnd` | `Date` | — | Initial end date (range mode) |
-| `initialDates` | `Date[]` | — | Initial selected dates (multiple mode) |
-| `theme` | `CalendarThemeOverride` | — | Theme override |
-| `labels` | `Partial<CalendarLabels>` | — | Label overrides |
-| `disabled` | `(date: Date) => boolean` | — | Disable specific dates |
-| `testID` | `string` | — | Test ID prefix |
-
----
-
-## Headless API (Advanced)
-
-For full control over UI, use the headless API with `Calendar.Root` and the `useCalendar*` hooks.
-
-```tsx
+import { Pressable, Text, View } from 'react-native';
 import {
-  Calendar,
+  CalendarProvider,
+  selectCanConfirm,
+  selectDays,
   useCalendarActions,
-  useCalendarHeader,
   useCalendarSelector,
 } from 'react-native-fast-calendar';
 
-function MyDatePicker() {
-  return (
-    <Calendar.Root mode="single" onConfirm={({ date }) => console.log(date)}>
-      <MyHeader />
-      <MyView />
-      <MyFooter />
-    </Calendar.Root>
-  );
-}
-
-// Using the convenience useCalendarHeader hook
-function MyHeader() {
-  const {
-    monthLabel,
-    yearLabel,
-    isMonthVisible,
-    toggleMonthPicker,
-    toggleYearPicker,
-    goPrev,
-    goNext,
-  } = useCalendarHeader();
+function Calendar() {
+  const days = useCalendarSelector(selectDays);
+  const { selectDate, goPrevMonth, goNextMonth, confirm } =
+    useCalendarActions();
+  const canConfirm = useCalendarSelector(selectCanConfirm);
 
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        {isMonthVisible && (
-          <Pressable onPress={toggleMonthPicker}>
-            <Text>{monthLabel}</Text>
+    <View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Pressable onPress={goPrevMonth}><Text>‹</Text></Pressable>
+        <Text>
+          {days.displayedMonthLabel} {days.displayedYearLabel}
+        </Text>
+        <Pressable onPress={goNextMonth}><Text>›</Text></Pressable>
+      </View>
+
+      <View style={{ flexDirection: 'row' }}>
+        {days.weekdayLabels.map((l) => (
+          <Text key={l} style={{ width: 40, textAlign: 'center' }}>{l}</Text>
+        ))}
+      </View>
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {days.cells.map((cell) => (
+          <Pressable
+            key={cell.nativeDate.toISOString()}
+            onPress={() => selectDate(cell.date)}
+            disabled={cell.isDisabled}
+            style={{
+              width: 40,
+              height: 40,
+              opacity: cell.isCurrentMonth ? 1 : 0.4,
+              backgroundColor: cell.isSelected ? '#0f172a' : 'transparent',
+            }}
+          >
+            <Text style={{ color: cell.isSelected ? '#fff' : '#0f172a' }}>
+              {cell.label}
+            </Text>
           </Pressable>
-        )}
-        <Pressable onPress={toggleYearPicker}>
-          <Text>{yearLabel}</Text>
-        </Pressable>
+        ))}
       </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Pressable onPress={goPrev}><Text>‹</Text></Pressable>
-        <Pressable onPress={goNext}><Text>›</Text></Pressable>
-      </View>
-    </View>
-  );
-}
 
-function MyView() {
-  const view = useCalendarSelector((s) => s.view);
-  if (view === 'day') return <Calendar.DayGrid swipeable />;
-  if (view === 'month') return <MyMonthPicker />;
-  return <MyYearPicker />;
-}
-
-function MyFooter() {
-  const { confirm, clear, canConfirm } = useCalendarActions();
-  return (
-    <View style={{ flexDirection: 'row', gap: 12 }}>
-      <Pressable onPress={clear}><Text>Clear</Text></Pressable>
-      <Pressable disabled={!canConfirm} onPress={confirm}>
-        <Text>Confirm</Text>
+      <Pressable onPress={confirm} disabled={!canConfirm}>
+        <Text>Done</Text>
       </Pressable>
     </View>
   );
 }
-```
 
-### Optional Systems (Gregorian by Default)
-
-The `systems` prop is now optional — it defaults to Gregorian:
-
-```tsx
-// Before: had to import and pass gregorianSystem
-import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
-<Calendar.Root systems={[gregorianSystem]}>
-
-// After: systems is optional
-<Calendar.Root>
-  <Calendar.DayGrid />
-</Calendar.Root>
-```
-
-You can still import systems explicitly for tree-shaking or custom configuration:
-
-```tsx
-import {
-  Calendar,
-  gregorianSystem,
-  createGregorianSystem,
-} from 'react-native-fast-calendar';
-
-// Use the default
-<Calendar.Root systems={[gregorianSystem]}>
-
-// Or customize
-const frenchGregorian = createGregorianSystem({
-  monthLabels: ['Janvier', 'Février', /* ... */],
-  weekdayLabels: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
-});
-<Calendar.Root systems={[frenchGregorian]}>
+export default function Screen() {
+  return (
+    <CalendarProvider
+      mode="single"
+      onChange={({ date }) => console.log('selection changed:', date)}
+      onConfirm={({ date }) => console.log('confirmed:', date)}
+    >
+      <Calendar />
+    </CalendarProvider>
+  );
+}
 ```
 
 ---
 
-## The Hooks
+## The Provider
 
-Every `useCalendar*` hook must be called inside `<Calendar.Root>`.
+`<CalendarProvider>` is the only required boundary. It owns the store, normalises inputs against the active calendar system, and routes the external callbacks.
 
-### Convenience Hooks
+```tsx
+<CalendarProvider
+  mode="single"                       // "single" | "range" | "multiple"
+  systems={[gregorianSystem]}         // optional, defaults to [gregorianSystem]
+  initialDate={new Date()}
+  minDate={new Date()}
+  maxDate={...}
+  disabledDates={[...]}
+  disabledRanges={[{ start, end }]}
+  disabled={(d) => d.getDay() === 0}
+  modifiers={{ booked: [...], holiday: (d) => ... }}
+  firstDayOfWeek={1}                  // 0=Sun (default), 1=Mon (ISO), 6=Sat
+  // range-specific
+  allowSameDay
+  minRangeDays={2}
+  maxRangeDays={14}
+  // multiple-specific
+  maxSelected={5}
+  // callbacks
+  onChange={(payload) => /* fires on every selectDate / clear */}
+  onConfirm={(payload) => /* fires when actions.confirm() runs */}
+  onClear={() => /* fires when actions.clear() runs */}
+>
+  {/* your hooks-driven UI */}
+</CalendarProvider>
+```
 
-| Hook | Returns | Purpose |
-|------|---------|---------|
-| `useCalendarHeader()` | `{ monthLabel, yearLabel, isMonthVisible, toggleMonthPicker, toggleYearPicker, goPrev, goNext }` | Combines month/year labels + navigation |
+`CalendarSelectionPayload` (passed to `onChange` / `onConfirm`):
 
-### Granular Hooks
+```ts
+interface CalendarSelectionPayload {
+  date?: Date;          // single mode
+  startDate?: Date;     // range mode
+  endDate?: Date;       // range mode
+  dates?: Date[];       // multiple mode
+  systemId: string;     // active calendar system id
+}
+```
+
+---
+
+## The Two Hooks
+
+Strict separation: every hook is **either data or actions, never both**. This means consumers that only call mutators never subscribe to store state.
 
 | Hook | Returns | Re-renders on |
 |------|---------|---------------|
-| `useCalendarStore()` | Store instance | never |
-| `useCalendarSelector(fn)` | Selected slice | slice identity change |
-| `useCalendarConfig()` | Full config | config identity change |
-| `useCalendarTheme()` / `useCalendarLabels()` | Theme / Labels | config change |
-| `useCalendarComponents()` | Component slots | slot identity change |
-| `useCalendarFirstDayOfWeek()` | `0-6` | prop change |
-| `useCalendarWeekdayLabels()` | Rotated weekday labels | system or `firstDayOfWeek` change |
-| `useCalendarWeekNumbers()` | ISO week numbers | month/system/`firstDayOfWeek` change |
-| `useCalendarActions()` | `{ confirm, clear, canConfirm }` | `canConfirm` change |
-| `useCalendarNavigation()` | `{ goPrev, goNext }` | never (stable functions) |
-| `useCalendarMonthLabel()` | `{ label, isVisible, toggle }` | month text or view change |
-| `useCalendarYearLabel()` | `{ label, toggle }` | year text change |
-| `useCalendarSystemSwitcher()` | `{ systems, activeId, setActive }` | active system change |
-| `useCalendarMonthPicker()` | `{ months, activeMonth, selectMonth }` | month/system change |
-| `useCalendarYearPicker()` | `{ years, activeYear, selectYear }` | year change |
-| `useCalendarSelectedDates()` | `readonly T[]` | selection array change |
+| [`useCalendarSelector`](#usecalendarselector) | whatever the selector returns | only when the selector's value changes (`Object.is`) |
+| [`useCalendarActions`](#usecalendaractions) | every mutator (selectDate, navigation, confirm, clear) | **never** — subscription-free, identity-stable |
 
-### Confirm / Clear Actions
+That's it. There are no per-shape `useCalendarDays` / `useCalendarMonths` / `useCalendarYears` hooks — pass one of the [built-in selectors](#built-in-selectors) (or your own) to `useCalendarSelector` instead.
+
+### useCalendarSelector
+
+Granular subscription to any slice of the store snapshot.
 
 ```tsx
-import { useCalendarActions, useCalendarLabels } from 'react-native-fast-calendar';
+import {
+  selectCanConfirm,
+  selectDays,
+  useCalendarSelector,
+} from 'react-native-fast-calendar';
 
-function ConfirmBar() {
-  const { confirm, clear, canConfirm } = useCalendarActions();
-  const { confirm: confirmLabel, clear: clearLabel } = useCalendarLabels();
+const selectedDate = useCalendarSelector((s) => s.selectedDate);
+const rangeStart   = useCalendarSelector((s) => s.rangeStart);
+const count        = useCalendarSelector((s) => s.selectedDates.length);
+const canConfirm   = useCalendarSelector(selectCanConfirm);
+const days         = useCalendarSelector(selectDays);
+```
 
-  return (
-    <View style={{ flexDirection: 'row', gap: 12 }}>
-      <MyGhostButton onPress={clear}>{clearLabel}</MyGhostButton>
-      <MyPrimaryButton disabled={!canConfirm} onPress={confirm}>
-        {confirmLabel}
-      </MyPrimaryButton>
-    </View>
-  );
+The component re-renders only when the selector's return value actually changes (`Object.is`). Selectors against derived views (`selectDays`, `selectMonths`, `selectYears`) read pre-built, identity-stable slices off the snapshot, so unrelated commits don't bump them.
+
+### useCalendarActions
+
+Every mutator the calendar exposes — **subscription-free, identity-stable for the lifetime of the provider**. Safe to pass straight into `React.memo`'d components, `useEffect` deps, or out-of-tree handlers.
+
+```ts
+interface CalendarActions {
+  // selection
+  selectDate: (date: CalendarDateValue | Date | string | number) => void;
+  clear: () => void;
+  confirm: () => void;
+  // navigation
+  goPrevMonth: () => void;
+  goNextMonth: () => void;
+  setDisplayedDate: (date: CalendarDateValue | Date | string | number) => void;
+  selectMonth: (index: number) => void;
+  selectYear: (year: number) => void;
+  prevYearPage: () => void;
+  nextYearPage: () => void;
+  // synchronous read for handlers (use selectCanConfirm for render)
+  isConfirmable: () => boolean;
 }
 ```
 
-### System Switcher
-
-```tsx
-import { useCalendarSystemSwitcher } from 'react-native-fast-calendar';
-
-function MySystemSwitcher() {
-  const { systems, activeId, setActive } = useCalendarSystemSwitcher();
-  if (systems.length < 2) return null;
-  return (
-    <MySegmentedControl>
-      {systems.map((s) => (
-        <MyPill
-          key={s.id}
-          active={s.id === activeId}
-          onPress={() => setActive(s.id)}
-        >
-          {s.label}
-        </MyPill>
-      ))}
-    </MySegmentedControl>
-  );
-}
-```
-
-### Month / Year Pickers
-
-```tsx
-import { useCalendarMonthPicker, useCalendarYearPicker } from 'react-native-fast-calendar';
-
-function MyMonthPicker() {
-  const { months, activeMonth, selectMonth } = useCalendarMonthPicker();
-  return (
-    <MyGrid>
-      {months.map((m) => (
-        <MyCell
-          key={m.index}
-          active={m.index === activeMonth}
-          onPress={() => selectMonth(m.index)}
-        >
-          {m.label}
-        </MyCell>
-      ))}
-    </MyGrid>
-  );
-}
-
-function MyYearPicker() {
-  const { years, activeYear, selectYear } = useCalendarYearPicker();
-  return (
-    <MyGrid>
-      {years.map((y) => (
-        <MyCell key={y} active={y === activeYear} onPress={() => selectYear(y)}>
-          {y}
-        </MyCell>
-      ))}
-    </MyGrid>
-  );
-}
-```
+`selectDate` accepts native `Date`, ISO string, or the system-native value — it's coerced via the active system's `from(...)` adapter.
 
 ---
 
-## Themes
+## Built-in Selectors
 
-### Built-in Presets
+Pre-built selectors for the common shapes. Pass them to `useCalendarSelector`. Every selector returns an identity-stable view across commits that don't touch its underlying slice.
 
-```tsx
-import { SimpleCalendar, defaultTheme, darkTheme } from 'react-native-fast-calendar';
+| Selector | Returns | Re-renders on |
+|---|---|---|
+| `selectCanConfirm` | `boolean` — current selection is committable | the slices that gate confirm (mode + relevant selection fields) |
+| `selectDays` | `CalendarDays` — `{ weekdayLabels, cells, displayedMonthLabel, displayedYearLabel }` | day-grid slices (selection, displayed month, bounds, modifiers) |
+| `selectMonths` | `CalendarMonths` — `{ months, activeMonth }` | system or displayed-month changes |
+| `selectYears` | `CalendarYears` — `{ years, activeYear }` | displayed-year changes |
 
-// Light theme (default)
-<SimpleCalendar />
+```ts
+interface CalendarDays {
+  weekdayLabels: readonly string[];
+  cells: readonly DayCellInfo[];
+  displayedMonthLabel: string;
+  displayedYearLabel: string;
+}
 
-// Dark theme
-<SimpleCalendar theme={darkTheme} />
+interface DayCellInfo {
+  date: CalendarDateValue;     // active-system value
+  nativeDate: Date;            // for keys, comparisons, formatting
+  label: string;               // already localised
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  isSelected: boolean;         // single, range endpoint, or multiple member
+  inRange: boolean;            // strictly between range endpoints
+  isRangeStart: boolean;
+  isRangeEnd: boolean;
+  isDisabled: boolean;
+  modifiers: Readonly<Record<string, boolean>>;
+}
+
+interface CalendarMonths {
+  months: readonly { index: number; label: string }[];
+  activeMonth: number;
+}
+
+interface CalendarYears {
+  years: readonly number[];     // YEAR_PAGE_SIZE entries
+  activeYear: number;
+}
 ```
 
-### Custom Theme
-
-```tsx
-<SimpleCalendar
-  theme={{
-    colors: {
-      primary: '#FF6F00',
-      onPrimary: '#FFFFFF',
-      background: '#FFF8E1',
-      text: '#3E2723',
-      textMuted: '#8D6E63',
-      todayBorder: '#FF6F00',
-      rangeBackground: '#FFE0B2',
-      disabled: '#D7CCC8',
-      border: '#D7CCC8',
-    },
-    cellSize: 44,
-    borderRadius: 8,
-    fontSize: { day: 14, weekday: 12, header: 16 },
-    spacing: { cellInnerGap: 4, controlGap: 8, controlPadding: 12, monthGap: 16, containerPadding: 24 },
-  }}
-/>
-```
-
-### Theme Tokens
-
-| Token | Description |
-|-------|-------------|
-| `colors.primary` | Selected day / range endpoints |
-| `colors.onPrimary` | Text on primary color |
-| `colors.background` | Calendar background |
-| `colors.text` | Day cell text |
-| `colors.textMuted` | Weekday labels / outside days |
-| `colors.todayBorder` | Today's border color |
-| `colors.rangeBackground` | In-range background |
-| `colors.disabled` | Disabled text |
-| `colors.border` | Borders |
-| `cellSize` | Day cell size (px) |
-| `borderRadius` | Cell border radius |
-
----
-
-## Calendar Systems
-
-### Gregorian (Default)
-
-```tsx
-import { SimpleCalendar, gregorianSystem, createGregorianSystem } from 'react-native-fast-calendar';
-
-// Default
-<SimpleCalendar />
-
-// With custom labels
-<SimpleCalendar
-  systems={[createGregorianSystem({
-    label: 'Grégorien',
-    monthLabels: ['Janvier', 'Février', 'Mars', /* ... */],
-    weekdayLabels: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
-  })]}
-  labels={{ confirm: 'Valider', clear: 'Effacer' }}
-/>
-```
-
-### Hijri
-
-Install the optional peer dep and import the pre-configured `hijriSystem`:
-
-```bash
-npm install @tabby_ai/hijri-converter
-```
-
-```tsx
-import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
-import { gregorianSystem } from 'react-native-fast-calendar';
-
-<SimpleCalendar systems={[gregorianSystem, hijriSystem]} />
-```
-
-The library auto-loads `@tabby_ai/hijri-converter` on import and throws a clear, install-pointing error if the package is missing. To use a different converter (`moment-hijri`, `Intl.DateTimeFormat`, custom Umm al-Qura tables, …) wrap it in the `HijriConverter` shape and pass it explicitly:
-
-```tsx
-import { createHijriSystem } from 'react-native-fast-calendar/systems/hijri';
-
-const hijri = createHijriSystem({
-  converter: {
-    gregorianToHijri: ({ year, month, day }) => /* … */,
-    hijriToGregorian: ({ year, month, day }) => /* … */,
-  },
-  // Optional: monthLabels, weekdayLabels, label, formatDay, formatMonthYear
-});
-```
-
-### Jalali (Persian / Solar Hijri)
-
-Install the optional peer dep and import the pre-configured `jalaliSystem`:
-
-```bash
-npm install moment-jalaali
-```
-
-```tsx
-import { jalaliSystem } from 'react-native-fast-calendar/systems/jalali';
-import { gregorianSystem } from 'react-native-fast-calendar';
-
-<SimpleCalendar systems={[gregorianSystem, jalaliSystem]} />
-```
-
-Same auto-load pattern as Hijri: `moment-jalaali` is loaded lazily, and a missing install raises a friendly error at import time. Pass a custom converter (`jalaali-js` directly, an `Intl.DateTimeFormat` `ca-persian` wrapper, …) via `createJalaliSystem({ converter })` from the same module.
-
-### Custom Calendar System
-
-Implement `CalendarSystem<T>` to add Chinese, Ethiopian, or any other calendar — no plugin required:
-
-```tsx
-import type { CalendarSystem } from 'react-native-fast-calendar';
-
-const persianSystem: CalendarSystem<PersianDate> = {
-  id: 'persian',
-  label: 'Persian',
-  today() { /* ... */ },
-  fromNativeDate(d) { /* ... */ },
-  from(input) { /* ... */ },
-  year(d) { /* ... */ },
-  month(d) { /* 0-based */ },
-  day(d) { /* 1-based */ },
-  weekday(d) { /* 0=Sun..6=Sat */ },
-  daysInMonth(d) { /* ... */ },
-  withYear(d, year) { /* ... */ },
-  withMonth(d, month) { /* ... */ },
-  withDay(d, day) { /* ... */ },
-  addMonths(d, n) { /* ... */ },
-  addYears(d, n) { /* ... */ },
-  isSame(a, b) { /* ... */ },
-  isBefore(a, b) { /* ... */ },
-  isAfter(a, b) { /* ... */ },
-  monthLabels() { /* 12 strings */ },
-  weekdayLabels() { /* 7 strings */ },
-  formatDay(d) { /* ... */ },
-  formatMonthYear(d) { /* ... */ },
-  toNativeDate(d) { /* ... */ },
-};
-
-<SimpleCalendar systems={[persianSystem]} />
-```
+For anything bespoke, write your own narrow selector — `useCalendarSelector((s) => s.system.id)`, `useCalendarSelector((s) => s.selectedDates.length)`, etc. The snapshot type (`CalendarSnapshot`) is exported for typing them.
 
 ---
 
@@ -500,11 +266,11 @@ const persianSystem: CalendarSystem<PersianDate> = {
 
 ```tsx
 // Single date
-<SimpleCalendar mode="single" onConfirm={({ date }) => {}} />
+<CalendarProvider mode="single" onConfirm={({ date }) => {}} />
 
 // Date range
-<SimpleCalendar 
-  mode="range" 
+<CalendarProvider
+  mode="range"
   minRangeDays={2}
   maxRangeDays={14}
   allowSameDay
@@ -512,269 +278,201 @@ const persianSystem: CalendarSystem<PersianDate> = {
 />
 
 // Multiple dates
-<SimpleCalendar 
+<CalendarProvider
   mode="multiple"
   maxSelected={5}
   onConfirm={({ dates }) => {}}
 />
 ```
 
-### Reading Selection State
-
-```tsx
-import { useCalendarSelectedDates, useCalendarSelector } from 'react-native-fast-calendar';
-
-// In multiple mode
-const dates = useCalendarSelectedDates<Date>();
-
-// In single/range mode
-const { selectedDate, rangeStart, rangeEnd } = useCalendarSelector(s => ({
-  selectedDate: s.selectedDate,
-  rangeStart: s.rangeStart,
-  rangeEnd: s.rangeEnd,
-}));
-```
-
 ---
 
-## Layout Options
+## Calendar Systems
 
-| Prop | Applies To | Default | Effect |
-|------|-----------|---------|--------|
-| `firstDayOfWeek` | Root | `0` (Sun) | Week starts on Sunday/Monday/Saturday |
-| `showOutsideDays` | Root | `true` | Show days from adjacent months |
-| `fixedWeeks` | Root | `true` | Always show 6 rows |
-| `showWeekNumbers` | DayGrid | `false` | Show ISO week numbers |
-| `numberOfMonths` | DayGrid | `1` | Multiple months side-by-side |
-| `swipeable` | DayGrid | `false` | Swipe between months |
+### Gregorian (default)
 
 ```tsx
-// ISO week, Monday first, with week numbers
-<SimpleCalendar
-  firstDayOfWeek={1}
-  showWeekNumbers
-/>
+import {
+  CalendarProvider,
+  createGregorianSystem,
+  gregorianSystem,
+} from 'react-native-fast-calendar';
 
-// Two months side-by-side
-<SimpleCalendar numberOfMonths={2} swipeable={false} />
+<CalendarProvider />                              // implicit Gregorian
+<CalendarProvider systems={[gregorianSystem]} />  // explicit
+
+const french = createGregorianSystem({
+  label: 'Grégorien',
+  monthLabels: ['Janvier', 'Février', /* … */],
+  weekdayLabels: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
+});
+<CalendarProvider systems={[french]} />
+```
+
+### Hijri
+
+```bash
+yarn add @tabby_ai/hijri-converter
+```
+
+```tsx
+import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
+import {
+  CalendarProvider,
+  gregorianSystem,
+} from 'react-native-fast-calendar';
+
+<CalendarProvider systems={[gregorianSystem, hijriSystem]} />
+```
+
+### Jalali (Persian / Solar Hijri)
+
+```bash
+yarn add moment-jalaali
+```
+
+```tsx
+import { jalaliSystem } from 'react-native-fast-calendar/systems/jalali';
+<CalendarProvider systems={[gregorianSystem, jalaliSystem]} />
+```
+
+### Custom
+
+Implement `CalendarSystem<T>` for Chinese, Ethiopian, or anything else — no plugin required:
+
+```tsx
+import type { CalendarSystem } from 'react-native-fast-calendar';
+
+const persianSystem: CalendarSystem<PersianDate> = {
+  id: 'persian',
+  label: 'Persian',
+  today() { /* … */ },
+  fromNativeDate(d) { /* … */ },
+  from(input) { /* … */ },
+  year(d) { /* … */ },
+  month(d) { /* 0-based */ },
+  day(d) { /* 1-based */ },
+  weekday(d) { /* 0=Sun..6=Sat */ },
+  daysInMonth(d) { /* … */ },
+  withYear(d, year) { /* … */ },
+  withMonth(d, month) { /* … */ },
+  withDay(d, day) { /* … */ },
+  addMonths(d, n) { /* … */ },
+  addYears(d, n) { /* … */ },
+  isSame(a, b) { /* … */ },
+  isBefore(a, b) { /* … */ },
+  isAfter(a, b) { /* … */ },
+  monthLabels() { /* 12 strings */ },
+  weekdayLabels() { /* 7 strings */ },
+  formatDay(d) { /* … */ },
+  formatMonthYear(d) { /* … */ },
+  toNativeDate(d) { /* … */ },
+};
 ```
 
 ---
 
 ## Modifiers
 
-Tag dates with custom flags for styling:
+Tag dates with named flags surfaced on `DayCellInfo.modifiers`:
 
 ```tsx
-const BOOKED = [new Date(2024, 4, 7), new Date(2024, 4, 8)];
-
-<SimpleCalendar
+<CalendarProvider
   modifiers={{
-    booked: BOOKED,
+    booked:  [new Date(2024, 4, 7), new Date(2024, 4, 8)],
+    holiday: { start: new Date(2024, 11, 24), end: new Date(2024, 11, 26) },
     weekend: (d) => d.getDay() === 0 || d.getDay() === 6,
-    summer: { from: new Date(2024, 5, 1), to: new Date(2024, 7, 31) },
   }}
 />
 ```
 
-Or with custom rendering:
+Then in your cell renderer:
 
 ```tsx
-<Calendar.Root modifiers={{ holiday: HOLIDAYS }}>
-  <Calendar.DayGrid
-    renderDay={(info) => (
-      <View style={info.modifiers.holiday && styles.holiday}>
-        <Text>{info.label}</Text>
-      </View>
-    )}
+days.cells.map((cell) => (
+  <View
+    style={[
+      cell.modifiers.booked  && styles.booked,
+      cell.modifiers.holiday && styles.holiday,
+      cell.modifiers.weekend && styles.weekend,
+    ]}
   />
-</Calendar.Root>
+));
 ```
+
+Matchers can be `Date[]`, `{ start, end }[]`, or a `(nativeDate: Date) => boolean` predicate.
 
 ---
 
-## Custom Day Cells
+## Disabled Dates
 
-Replace the default day cell via `components` prop or `renderDay`:
+`minDate` / `maxDate` / `disabledDates` / `disabledRanges` / a `disabled` predicate compose with OR semantics. Disabled dates are silently ignored on `selectDate`.
 
 ```tsx
-// Global slot replacement
-<Calendar.Root
-  components={{
-    DayCell: ({ info, onSelect }) => (
-      <MyCustomCell
-        label={info.label}
-        isSelected={info.isSelected}
-        isToday={info.isToday}
-        inRange={info.inRange}
-        isDisabled={info.isDisabled}
-        onPress={() => onSelect(info.date)}
-      />
-    ),
-  }}
->
-  <Calendar.DayGrid />
-</Calendar.Root>
-
-// Per-grid render prop (overrides slot)
-<Calendar.DayGrid
-  renderDay={(info) => (
-    <MyCustomCell {...info} />
-  )}
+<CalendarProvider
+  mode="single"
+  minDate={new Date()}
+  maxDate={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)}
+  disabledDates={[new Date(2024, 4, 1)]}
+  disabledRanges={[{ start: new Date(2024, 11, 24), end: new Date(2024, 11, 26) }]}
+  disabled={(d) => d.getDay() === 0 || d.getDay() === 6}
 />
 ```
 
-### Available Component Slots
-
-| Slot | Props |
-|------|-------|
-| `WeekdayHeader` | `{ labels }` |
-| `WeekdayCell` | `{ label, index }` |
-| `DayCell` | `{ info, onSelect }` |
-| `WeekNumberCell` | `{ weekNumber }` |
-| `MonthCaption` | `{ label, monthDate, monthIndex, year }` |
+Each cell exposes the resolved `isDisabled` boolean.
 
 ---
 
-## Custom UI with Calendar State
+## Performance Notes
 
-Build any UI that reads from the calendar store:
+The library is built around `useSyncExternalStore` for granular, surgical re-renders. The hook split exists specifically so action-only consumers don't re-render on selection changes.
 
-```tsx
-import { useCalendarSelector, useCalendarStore } from 'react-native-fast-calendar';
-
-function TodayShortcut() {
-  const store = useCalendarStore();
-  const onPress = () => {
-    const { system } = store.getSnapshot();
-    store.selectDate(system.today());
-  };
-  return <Button onPress={onPress}>Today</Button>;
-}
-
-function SelectionPreview() {
-  const selected = useCalendarSelector(s => s.selectedDate);
-  return <Text>{selected ? 'Selected!' : 'Tap a date'}</Text>;
-}
-```
-
----
-
-## Bottom Sheet Integration
-
-`SimpleCalendar` works seamlessly inside bottom sheets. Here's an example using `@gorhom/bottom-sheet`:
-
-```bash
-npm install @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler
-```
+**Rule of thumb:** in any component that only needs to *call* the calendar (a tappable cell, a "Today" button, a confirm bar), use `useCalendarActions()` only. It returns a stable object and never causes a re-render.
 
 ```tsx
-import React, { useCallback, useRef } from 'react';
-import { Pressable, Text } from 'react-native';
-import {
-  BottomSheetBackdrop,
-  BottomSheetModal,
-  BottomSheetModalProvider,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-
-import { SimpleCalendar, darkTheme } from 'react-native-fast-calendar';
-
-function DatePickerBottomSheet() {
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
-
-  const snapPoints = useMemo(() => ['50%', '75%'], []);
-
-  const renderBackdrop = useCallback(
-    (props) => (
-      <BottomSheetBackdrop
-        {...props}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        pressBehavior="close"
-      />
-    ),
-    []
-  );
-
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        {/* Trigger Button */}
-        <Pressable onPress={() => bottomSheetRef.current?.present()}>
-          <Text>{selectedDate?.toLocaleDateString() ?? 'Select Date'}</Text>
-        </Pressable>
-
-        {/* Bottom Sheet */}
-        <BottomSheetModal
-          ref={bottomSheetRef}
-          index={0}
-          snapPoints={snapPoints}
-          backdropComponent={renderBackdrop}
-        >
-          <BottomSheetView style={{ flex: 1, padding: 16 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 16 }}>
-              Select Date
-            </Text>
-            <SimpleCalendar
-              mode="single"
-              theme={darkTheme}
-              onSelect={(date) => setSelectedDate(date)}
-              onConfirm={() => bottomSheetRef.current?.dismiss()}
-              swipeable
-            />
-          </BottomSheetView>
-        </BottomSheetModal>
-      </BottomSheetModalProvider>
-    </GestureHandlerRootView>
-  );
+// ✅ MonthList renders exactly once for the lifetime of the provider.
+function MonthList() {
+  const { selectDate } = useCalendarActions();
+  return <FlashList renderItem={({ item }) => <DayCell selectDate={selectDate} ... />} />;
 }
+
+// ✅ Each DayCell only re-renders when its own selected state flips.
+const DayCell = memo(function DayCell({ date, selectDate }) {
+  const isSelected = useCalendarSelector(
+    (s) => s.selectedDate && s.system.isSame(s.selectedDate, date)
+  );
+  return <Pressable onPress={() => selectDate(date)} ... />;
+});
 ```
-
-### Tips for Bottom Sheet Usage
-
-1. **Use `darkTheme` inside bottom sheets** — Matches the typical dark modal background
-2. **Enable `swipeable`** — Natural gesture inside a bottom sheet
-3. **Compact layout** — Use `showHeader` and `showFooter` props to control vertical space
-4. **Handle backdrop** — Use `BottomSheetBackdrop` for proper dismiss behavior
-
-See the full example in `example/src/BottomSheetExample.tsx`.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────┐
-│  <Calendar.Root systems components ...> │  ◄── provider
-│  ┌───────────────────────────────────┐  │
-│  │  CalendarConfigContext            │  │  ◄── theme, labels, modifiers
-│  │  (memoised; rarely changes)       │  │
-│  └───────────────────────────────────┘  │
-│  ┌───────────────────────────────────┐  │
-│  │  CalendarStoreContext             │  │  ◄── store instance
-│  │  └── CalendarStore                │  │      (useSyncExternalStore)
-│  └───────────────────────────────────┘  │
-│                                         │
-│  Hooks subscribe via                    │
-│  useCalendarSelector(s => slice)        │
-│  → only re-render on slice change       │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│  <CalendarProvider systems modifiers …>  │  ◄── boundary
+│  ┌────────────────────────────────────┐  │
+│  │  CalendarConfigContext             │  │  ◄── firstDayOfWeek + modifiers
+│  └────────────────────────────────────┘  │
+│  ┌────────────────────────────────────┐  │
+│  │  CalendarStoreContext              │  │  ◄── store instance
+│  │  └── CalendarStore                 │  │      (useSyncExternalStore)
+│  │       ├── snapshot                 │  │
+│  │       └── stable action methods    │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  Hooks:                                  │
+│   - useCalendarSelector(slice)           │  → re-render on slice change
+│   - useCalendarActions()                 │  → never re-renders the consumer
+│                                          │
+│  Built-in selectors (for the above):     │
+│   - selectCanConfirm                     │
+│   - selectDays / selectMonths / Years    │
+└──────────────────────────────────────────┘
 ```
 
-### Performance Guarantees
-
-| Hook | Re-renders When... |
-|------|-------------------|
-| `useCalendarSystemSwitcher()` | active system changes |
-| `useCalendarMonthLabel()` | month text or view changes |
-| `useCalendarYearLabel()` | year text changes |
-| `useCalendarNavigation()` | never (stable functions) |
-| `useCalendarActions()` | `canConfirm` changes |
-| `useCalendarSelectedDates()` | selection array changes |
-| `Calendar.DayGrid` cells | only affected 2-4 cells |
+External callbacks (`onChange`, `onConfirm`, `onClear`) live on the store, not in context, so action methods stay referentially stable across the lifetime of the provider.
 
 ---
 

@@ -1,86 +1,116 @@
 ---
 sidebar_position: 1
+title: Introduction
+description: react-native-fast-calendar is a headless, hooks-only calendar primitive for React Native — one provider, two hooks, infinite UI.
+keywords:
+  - react native calendar
+  - headless calendar
+  - react native date picker
+  - hooks
 ---
 
 # Introduction
 
-`react-native-fast-calendar` is a **headless, high-performance calendar library** for React Native. It provides the core logic for calendar functionality while giving you complete control over the UI.
+`react-native-fast-calendar` is a **hooks-only, headless calendar primitive** for React Native. The entire public API is one provider component plus two hooks (and a handful of pre-built selectors) — bring your own UI.
 
 import CalendarDemo from '@site/src/components/CalendarDemo';
 
 ## Try It Out
 
-Here's a live, interactive demo. Click on dates to select them:
-
 <CalendarDemo mode="single" />
 
-## Key Features
-
-- **Headless by Design** — The library ships only essential components. You bring your own UI and wire it to the store via hooks.
-- **High Performance** — Granular subscriptions mean only components that need to update will re-render. Day taps don't re-render the header, system switcher, or action bar.
-- **Multi-Calendar System Support** — Built-in Gregorian calendar with pre-configured Hijri and Jalali (Persian) systems. BYO for Chinese, Ethiopian, or any other calendar.
-- **Zero Dependencies** — The core has zero calendar-system dependencies. Optional peer dependencies for specific features.
-- **TypeScript First** — Fully typed with comprehensive interfaces.
-- **Accessible** — Built with accessibility in mind, including proper labels and roles.
-
-## Quick Start
-
-The simplest way to get started is with `SimpleCalendar`, a batteries-included component:
+## The Whole API in One Glance
 
 ```tsx
-import { SimpleCalendar } from 'react-native-fast-calendar';
+import {
+  CalendarProvider,
+  useCalendarActions,
+  useCalendarSelector,
+  // Pre-built selectors for the common shapes.
+  selectCanConfirm,
+  selectDays,
+  selectMonths,
+  selectYears,
+} from 'react-native-fast-calendar';
+```
 
-function MyScreen() {
+| Symbol | Purpose |
+| --- | --- |
+| `CalendarProvider` | Required boundary. Owns the store and the per-render config. |
+| `useCalendarSelector` | Subscribe to any slice of the store with granular re-renders. |
+| `useCalendarActions` | Every mutator: `selectDate`, navigation, `confirm`, `clear`. Subscription-free. |
+| `selectDays` | Day-grid cells, weekday labels, displayed-month/year labels. |
+| `selectMonths` | 12 month entries + active month. |
+| `selectYears` | Paginated year list + active year. |
+| `selectCanConfirm` | `true` when the current selection is committable. |
+
+There is no `<Calendar.DayGrid>`, no `<SimpleCalendar>`, no theme, no labels object. You render your own components with the data the hooks expose.
+
+## Quickest Possible Example
+
+```tsx
+import { Pressable, Text, View } from 'react-native';
+import {
+  CalendarProvider,
+  selectCanConfirm,
+  selectDays,
+  useCalendarActions,
+  useCalendarSelector,
+} from 'react-native-fast-calendar';
+
+function Calendar() {
+  const days = useCalendarSelector(selectDays);
+  const { selectDate, goPrevMonth, goNextMonth, confirm } =
+    useCalendarActions();
+  const canConfirm = useCalendarSelector(selectCanConfirm);
+
   return (
-    <SimpleCalendar
-      mode="single"
-      onConfirm={({ date }) => console.log('Selected:', date)}
-    />
+    <View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Pressable onPress={goPrevMonth}><Text>‹</Text></Pressable>
+        <Text>{days.displayedMonthLabel} {days.displayedYearLabel}</Text>
+        <Pressable onPress={goNextMonth}><Text>›</Text></Pressable>
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {days.cells.map((cell) => (
+          <Pressable
+            key={cell.nativeDate.toISOString()}
+            onPress={() => selectDate(cell.date)}
+            disabled={cell.isDisabled}
+            style={{ width: 40, height: 40, opacity: cell.isCurrentMonth ? 1 : 0.4 }}
+          >
+            <Text style={{ fontWeight: cell.isSelected ? '700' : '400' }}>
+              {cell.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <Pressable onPress={confirm} disabled={!canConfirm}>
+        <Text>Done</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+export default function Screen() {
+  return (
+    <CalendarProvider mode="single" onConfirm={({ date }) => console.log(date)}>
+      <Calendar />
+    </CalendarProvider>
   );
 }
 ```
 
-## The Mental Model
+## Key Properties
 
-Understanding the library's architecture will help you use it effectively:
+- **Headless.** Zero opinions about how a calendar looks.
+- **Hooks-only.** Two primitives plus named selectors compose into every recipe in this docset.
+- **Granular re-renders.** Each selector subscribes only to the slice it needs.
+- **Multi-system.** Built-in Gregorian; bundled adapters for Hijri and Jalali.
+- **TypeScript-first.** Every hook return type is exported.
 
-```tsx
-// 1. Root provides the store
-<Calendar.Root mode="single">
-  {/* 2. Header uses navigation hooks */}
-  <MyHeader />
+## Where Next
 
-  {/* 3. View renders the grid or pickers */}
-  <MyView />
-
-  {/* 4. Readout shows selected dates */}
-  <MyReadout />
-
-  {/* 5. Actions for confirm/clear */}
-  <MyActionBar />
-</Calendar.Root>
-```
-
-| Layer | Purpose | Hooks Used |
-|-------|---------|------------|
-| L1 | Optional header (chevrons, month/year) | `useCalendarHeader`, `useCalendarNavigation` |
-| L2 | Day grid OR month/year pickers | `useCalendarSelector`, `useCalendarDayGrid` |
-| L3 | Selection readout | `useCalendarSelector`, `useCalendarSelectedDates` |
-| L4 | Action bar | `useCalendarActions`, `useCalendarLabels` |
-
-## AI Assistant Skill
-
-If you use an AI coding assistant (Cursor, Claude, etc.), there is a dedicated skill that teaches it the full `react-native-fast-calendar` API — all eleven recipes, every hook, the headless scaffold, theming, multi-system pickers, and common pitfalls. Install it once and your AI will reach for the right pattern automatically instead of guessing.
-
-```bash
-npx skills install react-native-fast-calendar-recipes --registry https://skills.sh
-```
-
-Once installed the skill activates whenever you ask for a calendar, date picker, range picker, booking calendar, scheduling UI, or anything involving `<Calendar.Root>`, `<Calendar.DayGrid>`, `SimpleCalendar`, or the `useCalendar*` hooks — even if you don't mention the library by name.
-
-## What's Next?
-
-- [Installation](./installation) — Get the library set up in your project
-- [Mental Model](./core-concepts/mental-model) — Deep dive into the architecture
-- [SimpleCalendar](./components/simple-calendar) — Learn about the batteries-included component
-- [Calendar.Root](./components/calendar-root) — Understand the headless API
+- [Installation](./installation)
+- [Mental Model](./core-concepts/mental-model)
+- [Recipes](./recipes/single-date-picker)

@@ -9,7 +9,7 @@ The Hijri (Islamic) calendar system. Requires `@tabby_ai/hijri-converter` or a c
 ## Installation
 
 ```bash
-npm install @tabby_ai/hijri-converter
+yarn add @tabby_ai/hijri-converter
 # or
 yarn add @tabby_ai/hijri-converter
 ```
@@ -31,7 +31,7 @@ import {
 ### Default Instance
 
 ```tsx
-<Calendar.Root systems={[hijriSystem]} />
+<CalendarProvider systems={[hijriSystem]} />
 ```
 
 ### With Custom Converter
@@ -44,7 +44,7 @@ const customHijriSystem = createHijriSystem({
   label: 'Hijri',
 });
 
-<Calendar.Root systems={[customHijriSystem]} />
+<CalendarProvider systems={[customHijriSystem]} />
 ```
 
 ## Converter Interface
@@ -113,16 +113,12 @@ import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
 
 function DualCalendar() {
   return (
-    <Calendar.Root
+    <CalendarProvider
       systems={[gregorianSystem, hijriSystem]}
       initialSystemId="hijri"
-      onSystemChange={(id) => console.log('Switched to:', id)}
     >
-      <View>
-        <SystemSwitcher />
-        <Calendar.DayGrid />
-      </View>
-    </Calendar.Root>
+      {/* render your own UI built from the public hooks */}
+    </CalendarProvider>
   );
 }
 ```

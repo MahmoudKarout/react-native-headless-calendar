@@ -20,5 +20,20 @@ const config: StorybookConfig = {
     getAbsolutePath('@storybook/addon-docs'),
   ],
   framework: getAbsolutePath('@storybook/react-native-web-vite'),
+  // Register the Tailwind v4 + Uniwind Vite plugins so the web-storybook
+  // build can compile the same `className`s our examples ship.
+  // Requires `@tailwindcss/vite` to be installed as a dev dependency.
+  viteFinal: async (vite) => {
+    const { default: tailwindcss } = await import('@tailwindcss/vite');
+    const { uniwind } = await import('uniwind/vite');
+    vite.plugins = vite.plugins ?? [];
+    vite.plugins.push(
+      tailwindcss(),
+      uniwind({
+        cssEntryFile: './global.css',
+      })
+    );
+    return vite;
+  },
 };
 export default config;
