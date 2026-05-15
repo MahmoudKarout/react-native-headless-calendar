@@ -48,6 +48,12 @@ export interface HooksCalendarProps {
   hideActions?: boolean;
   /** Wider/taller cells — useful for image / price cells. */
   cellSize?: number;
+  /**
+   * Fires for every day-cell tap, *regardless* of whether the underlying
+   * store accepts or rejects it. Useful for surfacing validation errors
+   * (e.g. `maxRangeDays`) that the library silently rejects.
+   */
+  onSelectDate?: (date: unknown, cell: DayCellInfo) => void;
 }
 
 export function HooksCalendar({
@@ -57,6 +63,7 @@ export function HooksCalendar({
   hidePickers,
   hideActions,
   cellSize = 36,
+  onSelectDate,
 }: HooksCalendarProps) {
   const [view, setView] = useState<ViewKind>('day');
   const days = useCalendarSelector(selectDays);
@@ -119,6 +126,7 @@ export function HooksCalendar({
         <DayView
           days={days}
           selectDate={actions.selectDate}
+          onSelectDate={onSelectDate}
           renderDay={renderDay}
           modifierClassNames={modifierClassNames}
           cellSize={cellSize}
@@ -220,6 +228,7 @@ function PrimaryButton({
 interface DayViewProps {
   days: CalendarDays;
   selectDate: CalendarActions['selectDate'];
+  onSelectDate?: (date: unknown, cell: DayCellInfo) => void;
   renderDay?: (cell: DayCellInfo) => ReactNode;
   modifierClassNames?: Record<string, string>;
   cellSize: number;
@@ -228,6 +237,7 @@ interface DayViewProps {
 const DayView = memo(function DayView({
   days,
   selectDate,
+  onSelectDate,
   renderDay,
   modifierClassNames,
   cellSize,
@@ -254,7 +264,10 @@ const DayView = memo(function DayView({
           <DayCell
             key={cell.nativeDate.toISOString()}
             cell={cell}
-            onPress={() => selectDate(cell.date)}
+            onPress={() => {
+              onSelectDate?.(cell.date, cell);
+              selectDate(cell.date);
+            }}
             cellSize={cellSize}
             renderDay={renderDay}
             modifierClassNames={modifierClassNames}

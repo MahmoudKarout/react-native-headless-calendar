@@ -56,6 +56,7 @@ const sidebars: SidebarsConfig = {
         'recipes/vertical-list',
         'recipes/flight-price-calendar',
         'recipes/wheel-date-picker',
+        'recipes/horoscope-calendar',
       ],
     },
   ],

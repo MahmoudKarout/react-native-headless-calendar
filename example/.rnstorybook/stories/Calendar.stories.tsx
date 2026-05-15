@@ -8,6 +8,7 @@ import BottomSheetPickerExample from '../../src/BottomSheetPickerExample';
 import CustomDayCellExample from '../../src/CustomDayCellExample';
 import DateRangePickerExample from '../../src/DateRangePickerExample';
 import FlightPriceCalendarExample from '../../src/FlightPriceCalendarExample';
+import HoroscopeCalendarExample from '../../src/HoroscopeCalendarExample';
 import MultiDatePickerExample from '../../src/MultiDatePickerExample';
 import MultiMonthGridExample from '../../src/MultiMonthGridExample';
 import PerfCalendarExample from '../../src/PerfCalendarExample';
@@ -100,4 +101,9 @@ export const Perf: StoryObj = {
 export const Wheel: StoryObj = {
   name: 'Wheel date picker',
   render: () => <WheelDatePickerExample />,
+};
+
+export const Horoscope: StoryObj = {
+  name: 'Horoscope (multi-band)',
+  render: () => <HoroscopeCalendarExample />,
 };

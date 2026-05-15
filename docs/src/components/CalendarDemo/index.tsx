@@ -36,6 +36,8 @@ interface CalendarDemoProps {
   firstDayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   /** render an iOS-style drum-roll wheel date picker */
   wheel?: boolean;
+  /** render a vertical horoscope calendar with zodiac bands */
+  horoscope?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -259,6 +261,259 @@ function WheelDatePickerDemo() {
   );
 }
 
+// ─── Horoscope Calendar (vertical, zodiac-tinted) ─────────────────────────────
+
+interface ZodiacSign {
+  id: string;
+  name: string;
+  symbol: string;
+  start: { month: number; day: number };
+}
+
+const ZODIAC: ZodiacSign[] = [
+  { id: 'capricorn',   name: 'Capricorn',   symbol: '\u2651', start: { month: 11, day: 22 } },
+  { id: 'aquarius',    name: 'Aquarius',    symbol: '\u2652', start: { month: 0,  day: 20 } },
+  { id: 'pisces',      name: 'Pisces',      symbol: '\u2653', start: { month: 1,  day: 19 } },
+  { id: 'aries',       name: 'Aries',       symbol: '\u2648', start: { month: 2,  day: 21 } },
+  { id: 'taurus',      name: 'Taurus',      symbol: '\u2649', start: { month: 3,  day: 20 } },
+  { id: 'gemini',      name: 'Gemini',      symbol: '\u264A', start: { month: 4,  day: 21 } },
+  { id: 'cancer',      name: 'Cancer',      symbol: '\u264B', start: { month: 5,  day: 21 } },
+  { id: 'leo',         name: 'Leo',         symbol: '\u264C', start: { month: 6,  day: 23 } },
+  { id: 'virgo',       name: 'Virgo',       symbol: '\u264D', start: { month: 7,  day: 23 } },
+  { id: 'libra',       name: 'Libra',       symbol: '\u264E', start: { month: 8,  day: 23 } },
+  { id: 'scorpio',     name: 'Scorpio',     symbol: '\u264F', start: { month: 9,  day: 23 } },
+  { id: 'sagittarius', name: 'Sagittarius', symbol: '\u2650', start: { month: 10, day: 22 } },
+];
+
+const ZODIAC_BY_ID: Record<string, ZodiacSign> = Object.fromEntries(
+  ZODIAC.map((s) => [s.id, s])
+);
+
+const doy = (d: Date): number =>
+  Math.floor(
+    (d.getTime() - new Date(d.getFullYear(), 0, 1).getTime()) / 86400000
+  );
+
+const signForDate = (d: Date): ZodiacSign => {
+  const y = d.getFullYear();
+  const t = doy(d);
+  for (let i = 1; i < ZODIAC.length; i += 1) {
+    const cur = ZODIAC[i];
+    const next = ZODIAC[i + 1] ?? ZODIAC[0];
+    const curDoy = doy(new Date(y, cur.start.month, cur.start.day));
+    const nextDoy =
+      next.id === 'capricorn'
+        ? doy(new Date(y, 11, 22))
+        : doy(new Date(y, next.start.month, next.start.day));
+    if (t >= curDoy && t < nextDoy) return cur;
+  }
+  return ZODIAC_BY_ID.capricorn;
+};
+
+/**
+ * Memoised per-year start/end boundary maps. A day-of-year hits the
+ * `startDoy` map iff it's the *first* day of some sign's band, and the
+ * `endDoy` map iff it's the last. Used by `HoroscopeCell` to decide
+ * whether to render the corner badge(s).
+ */
+const BOUNDARY_CACHE = new Map<
+  number,
+  { startDoy: Map<number, ZodiacSign>; endDoy: Map<number, ZodiacSign> }
+>();
+const getBoundaries = (year: number) => {
+  let cached = BOUNDARY_CACHE.get(year);
+  if (!cached) {
+    const startDoy = new Map<number, ZodiacSign>();
+    const endDoy = new Map<number, ZodiacSign>();
+    for (let i = 0; i < ZODIAC.length; i += 1) {
+      const sign = ZODIAC[i];
+      const next = ZODIAC[(i + 1) % ZODIAC.length];
+      startDoy.set(doy(new Date(year, sign.start.month, sign.start.day)), sign);
+      const nextStart = new Date(year, next.start.month, next.start.day);
+      const endDate = new Date(nextStart);
+      endDate.setDate(endDate.getDate() - 1);
+      endDoy.set(doy(endDate), sign);
+    }
+    cached = { startDoy, endDoy };
+    BOUNDARY_CACHE.set(year, cached);
+  }
+  return cached;
+};
+
+const rangeLabel = (sign: ZodiacSign): string => {
+  const idx = ZODIAC.indexOf(sign);
+  const next = ZODIAC[(idx + 1) % ZODIAC.length];
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const start = new Date(2001, sign.start.month, sign.start.day);
+  const end = new Date(2001, next.start.month, next.start.day - 1);
+  return `${fmt(start)} – ${fmt(end)}`;
+};
+
+function HoroscopeCalendarDemo() {
+  const today = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
+  const [focusedKey, setFocusedKey] = useState<string | null>(null);
+  // `monthsToShow` is generous enough to span a full zodiac cycle.
+  const monthsToShow = 6;
+
+  const focused = useMemo(() => {
+    if (!focusedKey) return null;
+    const [y, m, d] = focusedKey.split('-').map(Number);
+    return new Date(y, m, d);
+  }, [focusedKey]);
+
+  const focusedSign = focused ? signForDate(focused) : null;
+
+  const startOfMonthYear = today.getFullYear();
+  const startOfMonth = today.getMonth();
+
+  return (
+    <div className={styles.verticalContainer}>
+      <div className={styles.horoscopeHeader}>
+        {focused && focusedSign ? (
+          <>
+            <div
+              className={styles.horoscopeHeaderBadge}
+              data-sign={focusedSign.id}
+            >
+              <span>{focusedSign.symbol}</span>
+            </div>
+            <div className={styles.horoscopeHeaderText}>
+              <div className={styles.horoscopeHeaderEyebrow}>
+                {focused.toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </div>
+              <div className={styles.horoscopeHeaderName}>
+                {focusedSign.name}
+              </div>
+              <div className={styles.horoscopeHeaderRange}>
+                {rangeLabel(focusedSign)}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className={styles.horoscopeHeaderText}>
+            <div className={styles.horoscopeHeaderEyebrow}>Horoscope</div>
+            <div className={styles.horoscopeHeaderRange}>
+              Tap any day to see its zodiac sign.
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className={styles.verticalScroll}>
+        {Array.from({ length: monthsToShow }).map((_, i) => {
+          const monthDate = new Date(startOfMonthYear, startOfMonth + i, 1);
+          const cells = (() => {
+            const firstOfMonth = new Date(
+              monthDate.getFullYear(),
+              monthDate.getMonth(),
+              1
+            );
+            const offset = firstOfMonth.getDay();
+            const arr: Date[] = [];
+            for (let j = 0; j < 42; j += 1) {
+              arr.push(
+                new Date(
+                  monthDate.getFullYear(),
+                  monthDate.getMonth(),
+                  j - offset + 1
+                )
+              );
+            }
+            return arr;
+          })();
+
+          return (
+            <div key={i} className={styles.verticalMonth}>
+              <div className={styles.verticalMonthCaption}>
+                <span className={styles.verticalMonthCaptionMonth}>
+                  {MONTH_NAMES[monthDate.getMonth()]}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>{monthDate.getFullYear()}</span>
+              </div>
+              <div className={styles.weekdays}>
+                {SUNDAY_WEEKDAY_NAMES.map((d) => (
+                  <div key={d} className={styles.weekday}>
+                    {d}
+                  </div>
+                ))}
+              </div>
+              <div className={styles.daysGrid}>
+                {cells.map((date) => {
+                  const isCurrentMonth =
+                    date.getMonth() === monthDate.getMonth();
+                  if (!isCurrentMonth) {
+                    return (
+                      <div
+                        key={date.toISOString()}
+                        className={styles.dayWrapper}
+                      >
+                        <span className={styles.day} />
+                      </div>
+                    );
+                  }
+                  const sign = signForDate(date);
+                  const t = doy(date);
+                  const { startDoy, endDoy } = getBoundaries(date.getFullYear());
+                  const startSign = startDoy.get(t) ?? null;
+                  const endSign = endDoy.get(t) ?? null;
+                  const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+                  const isFocused = focusedKey === key;
+                  return (
+                    <div
+                      key={date.toISOString()}
+                      className={styles.dayWrapper}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setFocusedKey(key)}
+                        className={`${styles.day} ${styles.horoscopeDay} ${
+                          isFocused ? styles.horoscopeDayFocused : ''
+                        }`}
+                        data-sign={sign.id}
+                      >
+                        <span>{date.getDate()}</span>
+                        {startSign ? (
+                          <span
+                            className={`${styles.horoscopeBadge} ${styles.horoscopeBadgeStart}`}
+                            data-sign={startSign.id}
+                            aria-label={`${startSign.name} starts`}
+                          >
+                            {startSign.symbol}
+                          </span>
+                        ) : null}
+                        {endSign ? (
+                          <span
+                            className={`${styles.horoscopeBadge} ${styles.horoscopeBadgeEnd}`}
+                            data-sign={endSign.id}
+                            aria-label={`${endSign.name} ends`}
+                          >
+                            {endSign.symbol}
+                          </span>
+                        ) : null}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CalendarDemo({
@@ -281,6 +536,7 @@ export default function CalendarDemo({
   initialDate,
   firstDayOfWeek = 0,
   wheel = false,
+  horoscope = false,
 }: CalendarDemoProps) {
   const [currentDate, setCurrentDate] = useState(initialDate ?? new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -300,6 +556,7 @@ export default function CalendarDemo({
 
   // All hooks are above this line — safe to return early.
   if (wheel) return <WheelDatePickerDemo />;
+  if (horoscope) return <HoroscopeCalendarDemo />;
 
   const isDateDisabled = (date: Date): boolean => {
     if (minDate && date < startOfDay(minDate)) return true;

@@ -957,6 +957,138 @@
   letter-spacing: -0.02em;
 }
 
+/* ─── Horoscope variant ──────────────────────────────────────────────────── */
+
+/* Header card pinned above the scroll region. Mirrors `verticalContainer`'s
+   canvas chrome but trades the eyebrow row for a focused-sign summary. */
+.horoscopeHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-sm);
+  padding: var(--ds-space-md);
+  border-bottom: 1px solid var(--ds-hairline);
+  background: var(--ds-canvas);
+}
+
+.horoscopeHeaderBadge {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--ds-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: #fff;
+  flex-shrink: 0;
+  background: var(--zodiac-color, var(--ds-ink));
+}
+
+.horoscopeHeaderText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.horoscopeHeaderEyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ds-body);
+}
+
+.horoscopeHeaderName {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ds-ink);
+  letter-spacing: -0.01em;
+}
+
+.horoscopeHeaderRange {
+  font-size: 12px;
+  color: var(--ds-body);
+}
+
+/* Zodiac-tinted day pill. The `data-sign` attribute drives both the
+   day cell tint and the corner badge color via the cascade below — one
+   source of truth per sign, no per-cell inline styles. */
+.horoscopeDay {
+  position: relative;
+  background: var(--zodiac-tint, transparent);
+  color: var(--ds-ink);
+}
+
+.horoscopeDay:hover:not(:disabled) {
+  filter: brightness(0.97);
+  background: var(--zodiac-tint, var(--ds-canvas-soft-2));
+}
+
+[data-theme='dark'] .horoscopeDay:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.horoscopeDayFocused {
+  outline: 2px solid var(--ds-ink);
+  outline-offset: -2px;
+}
+
+/* Corner badge — small saturated chip carrying the zodiac symbol. */
+.horoscopeBadge {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--ds-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #fff;
+  background: var(--zodiac-color, var(--ds-ink));
+  box-shadow: 0 0 0 1.5px var(--ds-canvas);
+}
+
+.horoscopeBadgeStart {
+  top: -4px;
+  right: -4px;
+}
+
+.horoscopeBadgeEnd {
+  bottom: -4px;
+  right: -4px;
+}
+
+/* Per-sign palette. Light theme uses pastel tints; dark theme deepens
+   them so the calendar's ink colour stays readable. The badge uses the
+   same saturated hue across both themes. Scoped under `.verticalContainer`
+   so these custom-property declarations can't leak into the rest of
+   the docs site. */
+.verticalContainer [data-sign='capricorn']    { --zodiac-color: #6366f1; --zodiac-tint: #e0e7ff; }
+.verticalContainer [data-sign='aquarius']     { --zodiac-color: #06b6d4; --zodiac-tint: #cffafe; }
+.verticalContainer [data-sign='pisces']       { --zodiac-color: #3b82f6; --zodiac-tint: #dbeafe; }
+.verticalContainer [data-sign='aries']        { --zodiac-color: #ef4444; --zodiac-tint: #fee2e2; }
+.verticalContainer [data-sign='taurus']       { --zodiac-color: #22c55e; --zodiac-tint: #dcfce7; }
+.verticalContainer [data-sign='gemini']       { --zodiac-color: #eab308; --zodiac-tint: #fef9c3; }
+.verticalContainer [data-sign='cancer']       { --zodiac-color: #0ea5e9; --zodiac-tint: #e0f2fe; }
+.verticalContainer [data-sign='leo']          { --zodiac-color: #f97316; --zodiac-tint: #ffedd5; }
+.verticalContainer [data-sign='virgo']        { --zodiac-color: #84cc16; --zodiac-tint: #ecfccb; }
+.verticalContainer [data-sign='libra']        { --zodiac-color: #ec4899; --zodiac-tint: #fce7f3; }
+.verticalContainer [data-sign='scorpio']      { --zodiac-color: #a855f7; --zodiac-tint: #fae8ff; }
+.verticalContainer [data-sign='sagittarius']  { --zodiac-color: #f43f5e; --zodiac-tint: #ffe4e6; }
+
+[data-theme='dark'] .verticalContainer [data-sign='capricorn']    { --zodiac-tint: #1e1b4b; }
+[data-theme='dark'] .verticalContainer [data-sign='aquarius']     { --zodiac-tint: #164e63; }
+[data-theme='dark'] .verticalContainer [data-sign='pisces']       { --zodiac-tint: #1e3a8a; }
+[data-theme='dark'] .verticalContainer [data-sign='aries']        { --zodiac-tint: #7f1d1d; }
+[data-theme='dark'] .verticalContainer [data-sign='taurus']       { --zodiac-tint: #14532d; }
+[data-theme='dark'] .verticalContainer [data-sign='gemini']       { --zodiac-tint: #713f12; }
+[data-theme='dark'] .verticalContainer [data-sign='cancer']       { --zodiac-tint: #0c4a6e; }
+[data-theme='dark'] .verticalContainer [data-sign='leo']          { --zodiac-tint: #7c2d12; }
+[data-theme='dark'] .verticalContainer [data-sign='virgo']        { --zodiac-tint: #3f6212; }
+[data-theme='dark'] .verticalContainer [data-sign='libra']        { --zodiac-tint: #831843; }
+[data-theme='dark'] .verticalContainer [data-sign='scorpio']      { --zodiac-tint: #581c87; }
+[data-theme='dark'] .verticalContainer [data-sign='sagittarius']  { --zodiac-tint: #881337; }
+
 /* ─── Demo badge ─────────────────────────────────────────────────────────── */
 .demoBadge {
   display: inline-flex;
