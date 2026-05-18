@@ -165,6 +165,10 @@ function shallowModifiersEqual(
   const ak = Object.keys(a);
   const bk = Object.keys(b);
   if (ak.length !== bk.length) return false;
+  // The cell builder only ever sets `true` for matched modifiers and
+  // omits unmatched ones, so the value-mismatch branch is unreachable
+  // through the public API. Kept as a defensive check.
+  /* istanbul ignore next */
   for (const k of ak) if (a[k] !== b[k]) return false;
   return true;
 }

@@ -31,6 +31,33 @@ jobs:
       - name: Typecheck files
         run: yarn typecheck
 
+  react-doctor:
+    runs-on: ubuntu-latest
+
+    # Scoped permissions so this job (and only this job) can post the
+    # diagnostics comment on the PR. The default workflow permissions
+    # stay read-only for everything else.
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          # Full history is required so `--diff main` can resolve the
+          # merge-base when running on a PR.
+          fetch-depth: 0
+
+      # Upstream currently recommends `@main` — no semver tag exists yet
+      # (see https://github.com/millionco/react-doctor/tags). Revisit and
+      # pin to a SHA / tagged release once one ships.
+      - name: React Doctor
+        uses: millionco/react-doctor@main
+        with:
+          diff: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
   test:
     runs-on: ubuntu-latest
 

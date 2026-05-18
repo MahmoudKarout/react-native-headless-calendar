@@ -1,0 +1,18 @@
+{
+  "$schema": "https://www.mintlify.com/millionco/react-doctor/schema.json",
+  "ignore": {
+    "files": [
+      "docs/**",
+      "example/**",
+      "lib/**",
+      "scripts/**",
+      "ios/**",
+      "android/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/__tests__/**",
+      "**/__mocks__/**",
+      "babel.config.js"
+    ]
+  }
+}

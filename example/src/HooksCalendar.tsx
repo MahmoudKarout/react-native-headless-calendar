@@ -1,21 +1,3 @@
-/**
- * HooksCalendar — shared shadcn-styled building block for every example.
- *
- * Built on the two public hooks:
- *   - useCalendarSelector(selector)  — universal narrow read primitive.
- *   - useCalendarActions()           — every mutator, subscription-free.
- *
- * The bundled "data shapes" (day grid, month chooser, year page) live
- * on the snapshot itself and are reached via the named selectors
- * `selectDays / selectMonths / selectYears`.
- *
- * Visual language is modelled on shadcn/ui's Calendar primitive: a card
- * with a hairline border, ghost icon chevrons, uppercase weekday labels,
- * square-rounded day cells, and the design-system primary accent.
- *
- * Styling is fully driven by Uniwind utilities and CSS theme tokens
- * (see `example/global.css`).
- */
 import { memo, useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 

@@ -654,3 +654,242 @@ describe('CalendarStore — dynamic disabled predicate', () => {
     expect(store.getSnapshot().selectedDate).toEqual(date(2024, 0, 1));
   });
 });
+
+// ---------------------------------------------------------------------------
+// External callbacks (onChange / onConfirm / onClear)
+// ---------------------------------------------------------------------------
+
+describe('CalendarStore — external callbacks', () => {
+  it('setExternalCallbacks wires onChange / onConfirm / onClear', () => {
+    const store = makeStore();
+    const onChange = jest.fn();
+    const onConfirm = jest.fn();
+    const onClear = jest.fn();
+    store.setExternalCallbacks({ onChange, onConfirm, onClear });
+
+    store.selectDate(date(2024, 0, 1));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0]?.[0]).toMatchObject({
+      date: expect.any(Date),
+      systemId: sys.id,
+    });
+
+    store.confirm();
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm.mock.calls[0]?.[0]?.date).toBeInstanceOf(Date);
+
+    store.clear();
+    expect(onClear).toHaveBeenCalledTimes(1);
+    // clear() also fires onChange (the second invocation), since the
+    // selection mutated from "set" → "empty".
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
+
+  it('confirm() is a no-op when onConfirm is not wired', () => {
+    const store = makeStore();
+    store.selectDate(date(2024, 0, 1));
+    expect(() => store.confirm()).not.toThrow();
+  });
+
+  it('notifyChange is a no-op when onChange is not wired (clear() path)', () => {
+    // No callbacks wired — exercising the early-return in notifyChange().
+    const store = makeStore();
+    store.selectDate(date(2024, 0, 1));
+    expect(() => store.clear()).not.toThrow();
+    expect(store.getSnapshot().selectedDate).toBeUndefined();
+  });
+
+  it('setExternalCallbacks accepts empty / undefined values', () => {
+    const store = makeStore();
+    store.setExternalCallbacks({});
+    // Rewire to ensure we can swap callbacks at runtime — exercises the
+    // assignment branches without any side effect.
+    const onChange = jest.fn();
+    store.setExternalCallbacks({ onChange });
+    store.selectDate(date(2024, 0, 1));
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('confirm() payload covers range and multiple modes', () => {
+    const onConfirm = jest.fn();
+
+    const rangeStore = makeStore({ mode: 'range' });
+    rangeStore.setExternalCallbacks({ onConfirm });
+    rangeStore.selectDate(date(2024, 0, 1));
+    rangeStore.selectDate(date(2024, 0, 5));
+    rangeStore.confirm();
+    expect(onConfirm.mock.calls[0]?.[0]).toMatchObject({
+      startDate: expect.any(Date),
+      endDate: expect.any(Date),
+    });
+
+    const multiStore = makeStore({ mode: 'multiple' });
+    multiStore.setExternalCallbacks({ onConfirm });
+    multiStore.selectDate(date(2024, 0, 1));
+    multiStore.selectDate(date(2024, 0, 2));
+    multiStore.confirm();
+    const payload = onConfirm.mock.calls[1]?.[0];
+    expect(payload?.dates).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Navigation actions: setDisplayedDate, prevYearPage, nextYearPage
+// ---------------------------------------------------------------------------
+
+describe('CalendarStore — navigation actions', () => {
+  it('setDisplayedDate moves the displayed month', () => {
+    const store = makeStore();
+    const target = new Date(2026, 5, 15); // June 2026
+    store.setDisplayedDate(target);
+    const s = store.getSnapshot();
+    expect(sys.year(s.displayed)).toBe(2026);
+    expect(sys.month(s.displayed)).toBe(5);
+  });
+
+  it('setDisplayedDate is a no-op when the input matches the current displayed date', () => {
+    const store = makeStore({ initialDate: new Date(2024, 0, 15) });
+    const before = store.getSnapshot();
+    // Same calendar day → store should bail before commit.
+    store.setDisplayedDate(new Date(2024, 0, 15));
+    expect(store.getSnapshot()).toBe(before);
+  });
+
+  it('prevYearPage and nextYearPage step the displayed year by YEAR_PAGE_SIZE', () => {
+    const store = makeStore({ initialDate: new Date(2024, 0, 1) });
+    const startYear = sys.year(store.getSnapshot().displayed);
+    store.nextYearPage();
+    const after = sys.year(store.getSnapshot().displayed);
+    expect(after).toBeGreaterThan(startYear);
+    store.prevYearPage();
+    expect(sys.year(store.getSnapshot().displayed)).toBe(startYear);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isConfirmable (synchronous read for event handlers)
+// ---------------------------------------------------------------------------
+
+describe('CalendarStore — isConfirmable', () => {
+  it('single mode — true iff selectedDate is set', () => {
+    const store = makeStore();
+    expect(store.isConfirmable()).toBe(false);
+    store.selectDate(date(2024, 0, 1));
+    expect(store.isConfirmable()).toBe(true);
+  });
+
+  it('multiple mode — true iff selectedDates is non-empty', () => {
+    const store = makeStore({ mode: 'multiple' });
+    expect(store.isConfirmable()).toBe(false);
+    store.selectDate(date(2024, 0, 1));
+    expect(store.isConfirmable()).toBe(true);
+  });
+
+  it('range mode — true iff both endpoints are set', () => {
+    const store = makeStore({ mode: 'range' });
+    expect(store.isConfirmable()).toBe(false);
+    store.selectDate(date(2024, 0, 1));
+    expect(store.isConfirmable()).toBe(false);
+    store.selectDate(date(2024, 0, 5));
+    expect(store.isConfirmable()).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// syncProps edge cases — firstDayOfWeek + modifiers
+// ---------------------------------------------------------------------------
+
+describe('CalendarStore — syncProps edge cases', () => {
+  it('updates firstDayOfWeek when it changes', () => {
+    const store = makeStore({ firstDayOfWeek: 0 });
+    store.syncProps({
+      systems: [sys],
+      mode: 'single',
+      firstDayOfWeek: 1,
+    });
+    expect(store.getSnapshot().firstDayOfWeek).toBe(1);
+  });
+
+  it('updates modifiers when the reference changes', () => {
+    const store = makeStore();
+    const modA = { weekend: (d: Date) => d.getDay() === 0 };
+    const modB = { weekend: (d: Date) => d.getDay() === 6 };
+    store.syncProps({
+      systems: [sys],
+      mode: 'single',
+      modifiers: modA,
+    });
+    expect(store.getSnapshot().modifiers).toBe(modA);
+    store.syncProps({
+      systems: [sys],
+      mode: 'single',
+      modifiers: modB,
+    });
+    expect(store.getSnapshot().modifiers).toBe(modB);
+  });
+
+  it('reflects modifiers as boolean flags on DayCellInfo', () => {
+    // Drives the cell builder's modifier-iteration branch.
+    const store = makeStore({
+      initialDate: new Date(2024, 0, 1),
+      modifiers: {
+        monday: (d: Date) => d.getDay() === 1,
+      },
+    });
+    const monday = store
+      .getSnapshot()
+      .days.cells.find((c) => c.nativeDate.getDay() === 1);
+    expect(monday?.modifiers.monday).toBe(true);
+  });
+
+  it('updates maxDate when the new value differs from the previous one', () => {
+    const store = makeStore();
+    const max1 = new Date(2024, 11, 31);
+    const max2 = new Date(2025, 11, 31);
+    store.syncProps({
+      systems: [sys],
+      mode: 'single',
+      maxDate: max1,
+    });
+    expect(store.getSnapshot().maxDate).toBeTruthy();
+    store.syncProps({
+      systems: [sys],
+      mode: 'single',
+      maxDate: max2,
+    });
+    // The store coerced both inputs into the active system; assert the
+    // resulting native year matches the second input so we know the
+    // branch fired.
+    const newMax = store.getSnapshot().maxDate;
+    expect(newMax && sys.year(newMax)).toBe(2025);
+    // Clear it back — exercises the "max was set, new is undefined" branch.
+    store.syncProps({ systems: [sys], mode: 'single' });
+    expect(store.getSnapshot().maxDate).toBeUndefined();
+  });
+
+  it('clear() is a no-op (no onChange) when there was nothing selected', () => {
+    const onChange = jest.fn();
+    const onClear = jest.fn();
+    const store = makeStore();
+    store.setExternalCallbacks({ onChange, onClear });
+    store.clear();
+    // onClear still fires for the explicit gesture; onChange does not,
+    // because the selection didn't mutate.
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a numeric month label when the system returns fewer than 12 labels', () => {
+    // Hand-craft a system whose `monthLabels()` is intentionally short so
+    // the `?? String(monthIndex + 1)` fallback fires.
+    const sparseLabels = createGregorianSystem();
+    sparseLabels.monthLabels = () => ['Jan', 'Feb'] as readonly string[];
+    const store = new CalendarStore<GregorianDate>({
+      systems: [sparseLabels],
+      mode: 'single',
+      initialDate: new Date(2024, 5, 1), // June → index 5, off the end
+    });
+    // The store should produce *some* label rather than `undefined`.
+    expect(store.getSnapshot().days.displayedMonthLabel).toBeTruthy();
+  });
+});
