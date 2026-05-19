@@ -13,13 +13,16 @@
 import { createContext, use, useMemo } from 'react';
 import { useSyncExternalStore } from 'react';
 
-import type { CalendarMonths, CalendarYears } from '../store';
 import type {
   SingleCalendarDays,
   SingleCalendarSnapshot,
 } from '../stores/SingleCalendarStore';
 import { SingleCalendarStore } from '../stores/SingleCalendarStore';
-import type { CalendarDateValue } from '../types';
+import type {
+  CalendarDateValue,
+  CalendarMonths,
+  CalendarYears,
+} from '../types';
 
 // ---------------------------------------------------------------------------
 // Internal context — the store instance.
@@ -98,6 +101,14 @@ export interface SingleCalendarActions {
   /** Step the year-grid forward one full page. */
   nextYearPage: () => void;
   /**
+   * Switch the active calendar system by id. No-op when the id already
+   * matches or is not present in the provider's `systems` array
+   * (warned in dev). Carries the current selection and displayed month
+   * across the swap by absolute instant — day-of-month may change
+   * between calendars (e.g. Hijri → Gregorian for the same point).
+   */
+  setActiveSystem: (id: string) => void;
+  /**
    * Synchronously read confirmability from inside an event handler.
    * Render-time consumers should subscribe via
    * `useSingleCalendarSelector(selectSingleCanConfirm)` instead.
@@ -120,6 +131,7 @@ export function useSingleCalendarActions(): SingleCalendarActions {
       selectYear: store.goToYear,
       prevYearPage: store.prevYearPage,
       nextYearPage: store.nextYearPage,
+      setActiveSystem: store.setActiveSystem,
       isConfirmable: store.isConfirmable,
     }),
     [store]

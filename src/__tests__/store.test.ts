@@ -1,4 +1,4 @@
-import { CalendarStore, type CalendarStoreOptions } from '../store';
+import { CalendarStore, type CalendarStoreOptions } from '../types';
 import {
   createGregorianSystem,
   type GregorianDate,

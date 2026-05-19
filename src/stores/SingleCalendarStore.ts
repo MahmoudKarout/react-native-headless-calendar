@@ -18,6 +18,7 @@ import type {
   CalendarModifiers,
   CalendarSystem,
   CalendarView,
+  DateParts,
   Weekday,
 } from '../types';
 import {
@@ -38,8 +39,20 @@ import {
 // ── Public payload + callback types ────────────────────────────────────────
 
 export interface SingleSelectionPayload {
-  /** Native JS Date for the selected day. `undefined` after `clear()`. */
+  /**
+   * Native JS Date for the selected day, at local-time midnight.
+   * `undefined` after `clear()`. Beware: `toISOString()` and
+   * `JSON.stringify()` print this in UTC, which can read as the
+   * previous calendar day in negative-UTC-offset zones. Prefer
+   * `parts` when timezone-free year/month/day values are needed.
+   */
   date: Date | undefined;
+  /**
+   * Timezone-free, calendar-system-native components of the selected
+   * day. Values are in the active system's namespace (e.g. Hijri
+   * year/month/day when `systemId === 'hijri'`).
+   */
+  parts: DateParts | undefined;
   /** Identifier of the active calendar system at the time of selection. */
   systemId: string;
 }
@@ -140,8 +153,8 @@ export class SingleCalendarStore<
   private cellCache = new Map<number, SingleDayCellInfo<T>>();
 
   // Flips to `true` after the first `configure(...)` completes. Initial-
-  // only options (`initialSystemId`, `initialDate`) are read while this
-  // is `false`; later calls ignore them.
+  // only options (`initialDate`) are read while this is `false`; later
+  // calls ignore them.
   private initialized = false;
 
   // -- construction ------------------------------------------------------
@@ -155,7 +168,6 @@ export class SingleCalendarStore<
    * snapshot.
    */
   constructor(opts: SingleCalendarStoreOptions<T>) {
-    console.log('SingleCalendarStore constructor');
     super();
     this.configure(opts);
   }
@@ -197,6 +209,7 @@ export class SingleCalendarStore<
   // -- first-call path ---------------------------------------------------
 
   private bootstrap(opts: SingleCalendarStoreOptions<T>): void {
+    this.systems = opts.systems;
     const { system, systemIndex } = resolveInitialSystem(opts);
     const displayed = opts.initialDate
       ? system.from(opts.initialDate)
@@ -226,8 +239,23 @@ export class SingleCalendarStore<
   // -- subsequent-call paths --------------------------------------------
 
   private reconcileSystem(opts: SingleCalendarStoreOptions<T>): void {
+    this.systems = opts.systems;
     const s = this.snapshot;
-    const currentId = s.system.id;
+
+    // Prefer the controlled `activeSystemId` when provided. Unknown ids
+    // are warned + ignored by `setActiveSystem`, falling through to the
+    // tracking logic below so a stale prop value doesn't strand the
+    // store on a system that's no longer in `opts.systems`.
+    if (opts.activeSystemId && opts.activeSystemId === s.system.id) {
+      // Already in sync — still verify index parity below.
+    } else if (opts.activeSystemId) {
+      this.setActiveSystem(opts.activeSystemId);
+    }
+
+    // Re-resolve the active system inside the new `systems` array. The
+    // `setActiveSystem` call above may have swapped, or the prop may be
+    // omitted — either way, we keep tracking the current id.
+    const currentId = this.snapshot.system.id;
     const idx = opts.systems.findIndex((sys) => sys.id === currentId);
 
     if (idx === -1) {
@@ -239,25 +267,26 @@ export class SingleCalendarStore<
           '[Calendar] At least one CalendarSystem must be provided.'
         );
       }
-      this.commitSystemSwap(next, 0);
+      this.replaceSystem(next, 0);
       return;
     }
 
     /* istanbul ignore next — `idx` is in-bounds by construction. */
     const nextSystem = opts.systems[idx]!;
-    if (nextSystem !== s.system) {
-      this.commitSystemSwap(nextSystem, idx);
-    } else if (idx !== s.systemIndex) {
+    if (nextSystem !== this.snapshot.system) {
+      this.replaceSystem(nextSystem, idx);
+    } else if (idx !== this.snapshot.systemIndex) {
       // Same system identity, just re-ordered within `systems`.
-      this.commit({ ...s, systemIndex: idx });
+      this.commit({ ...this.snapshot, systemIndex: idx });
     }
   }
 
-  private commitSystemSwap(
+  protected replaceSystem(
     nextSystem: CalendarSystem<T>,
     nextSystemIndex: number
   ): void {
     const s = this.snapshot;
+    if (s.system === nextSystem && s.systemIndex === nextSystemIndex) return;
     const prevSystem = s.system;
     const next = this.carrySharedSystemFields(s, nextSystem, nextSystemIndex);
     this.commit({
@@ -306,8 +335,16 @@ export class SingleCalendarStore<
 
   private buildPayload(): SingleSelectionPayload {
     const s = this.snapshot;
+    const sel = s.selectedDate;
     return {
-      date: s.selectedDate ? s.system.toNativeDate(s.selectedDate) : undefined,
+      date: sel ? s.system.toNativeDate(sel) : undefined,
+      parts: sel
+        ? {
+            year: s.system.year(sel),
+            month: s.system.month(sel),
+            day: s.system.day(sel),
+          }
+        : undefined,
       systemId: s.system.id,
     };
   }

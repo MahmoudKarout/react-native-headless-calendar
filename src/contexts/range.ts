@@ -13,13 +13,16 @@
 import { createContext, use, useMemo } from 'react';
 import { useSyncExternalStore } from 'react';
 
-import type { CalendarMonths, CalendarYears } from '../store';
 import type {
   RangeCalendarDays,
   RangeCalendarSnapshot,
 } from '../stores/RangeCalendarStore';
 import { RangeCalendarStore } from '../stores/RangeCalendarStore';
-import type { CalendarDateValue } from '../types';
+import type {
+  CalendarDateValue,
+  CalendarMonths,
+  CalendarYears,
+} from '../types';
 
 // ---------------------------------------------------------------------------
 // Internal context — the store instance.
@@ -60,9 +63,8 @@ export const selectRangeCanConfirm = (s: RangeCalendarSnapshot): boolean =>
   !!(s.rangeStart && s.rangeEnd);
 
 /** Day-grid view (cells, weekday labels, header labels). */
-export const selectRangeDays = (
-  s: RangeCalendarSnapshot
-): RangeCalendarDays => s.days;
+export const selectRangeDays = (s: RangeCalendarSnapshot): RangeCalendarDays =>
+  s.days;
 
 /** 12-cell month chooser view. */
 export const selectRangeMonths = (s: RangeCalendarSnapshot): CalendarMonths =>
@@ -103,6 +105,14 @@ export interface RangeCalendarActions {
   /** Step the year-grid forward one full page. */
   nextYearPage: () => void;
   /**
+   * Switch the active calendar system by id. No-op when the id already
+   * matches or is not present in the provider's `systems` array
+   * (warned in dev). Both endpoints, the displayed month, and bounds
+   * are carried across by absolute instant — day-of-month may change
+   * between calendars (e.g. Hijri → Gregorian for the same point).
+   */
+  setActiveSystem: (id: string) => void;
+  /**
    * Synchronously read confirmability from inside an event handler.
    * Render-time consumers should subscribe via
    * `useRangeCalendarSelector(selectRangeCanConfirm)` instead.
@@ -125,6 +135,7 @@ export function useRangeCalendarActions(): RangeCalendarActions {
       selectYear: store.goToYear,
       prevYearPage: store.prevYearPage,
       nextYearPage: store.nextYearPage,
+      setActiveSystem: store.setActiveSystem,
       isConfirmable: store.isConfirmable,
     }),
     [store]

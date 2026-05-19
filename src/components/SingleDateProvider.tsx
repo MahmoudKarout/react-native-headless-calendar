@@ -47,11 +47,18 @@ import {
 export interface SingleDateProviderProps {
   /**
    * One or more calendar systems. The first is used by default unless
-   * `initialSystemId` is set. Defaults to `[gregorianSystem]`.
+   * `activeSystemId` is set. Defaults to `[gregorianSystem]`.
    */
   systems?: readonly CalendarSystem[];
-  /** ID of the system to start on. Defaults to `systems[0].id`. */
-  initialSystemId?: string;
+  /**
+   * Live id of the active calendar system. Controlled: the store keeps
+   * its active system in sync with this value on every render. Omit to
+   * start on `systems[0]` and switch later via
+   * `useSingleCalendarActions().setActiveSystem(id)`. Unknown ids are
+   * warned + ignored.
+   * @default 'gregorian'
+   */
+  activeSystemId?: string;
 
   /** Initial selected date. */
   initialDate?: unknown;
@@ -98,7 +105,7 @@ const EMPTY_DISABLED_RANGES =
 
 export function SingleDateProvider({
   systems: systemsProp,
-  initialSystemId,
+  activeSystemId,
   initialDate,
   minDate,
   maxDate,
@@ -132,6 +139,7 @@ export function SingleDateProvider({
   const liveConfig = useMemo(
     () => ({
       systems: stableSystems,
+      activeSystemId,
       minDate,
       maxDate,
       disabledDates: hasDisabledDates ? stableDisabledDates : undefined,
@@ -145,6 +153,7 @@ export function SingleDateProvider({
     }),
     [
       stableSystems,
+      activeSystemId,
       minDate,
       maxDate,
       hasDisabledDates,
@@ -164,7 +173,6 @@ export function SingleDateProvider({
     () =>
       new SingleCalendarStore({
         ...liveConfig,
-        initialSystemId,
         initialDate,
       })
   );

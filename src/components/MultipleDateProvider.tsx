@@ -46,11 +46,17 @@ import {
 export interface MultipleDateProviderProps {
   /**
    * One or more calendar systems. The first is used by default unless
-   * `initialSystemId` is set. Defaults to `[gregorianSystem]`.
+   * `activeSystemId` is set. Defaults to `[gregorianSystem]`.
    */
   systems?: readonly CalendarSystem[];
-  /** ID of the system to start on. Defaults to `systems[0].id`. */
-  initialSystemId?: string;
+  /**
+   * Live id of the active calendar system. Controlled: the store keeps
+   * its active system in sync with this value on every render. Omit to
+   * start on `systems[0]` and switch later via
+   * `useMultipleCalendarActions().setActiveSystem(id)`. Unknown ids
+   * are warned + ignored.
+   */
+  activeSystemId?: string;
 
   /** Initial selection set (order preserved). */
   initialDates?: readonly unknown[];
@@ -100,7 +106,7 @@ const EMPTY_DISABLED_RANGES =
 
 export function MultipleDateProvider({
   systems: systemsProp,
-  initialSystemId,
+  activeSystemId,
   initialDates,
   maxSelected,
   minDate,
@@ -136,6 +142,7 @@ export function MultipleDateProvider({
   const liveConfig = useMemo(
     () => ({
       systems: stableSystems,
+      activeSystemId,
       maxSelected,
       minDate,
       maxDate,
@@ -150,6 +157,7 @@ export function MultipleDateProvider({
     }),
     [
       stableSystems,
+      activeSystemId,
       maxSelected,
       minDate,
       maxDate,
@@ -170,7 +178,6 @@ export function MultipleDateProvider({
     () =>
       new MultipleCalendarStore({
         ...liveConfig,
-        initialSystemId,
         initialDates,
       })
   );

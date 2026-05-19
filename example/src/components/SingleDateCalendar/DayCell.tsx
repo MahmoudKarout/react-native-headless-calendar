@@ -20,6 +20,9 @@ const dayCellTextVariant = tv({
     isSelected: {
       true: 'font-semibold text-on-primary',
     },
+    isDisabled: {
+      true: 'line-through',
+    },
   },
 });
 
@@ -28,6 +31,7 @@ const dayCellVariant = tv({
   variants: {
     isToday: { true: 'bg-surface-muted' },
     isSelected: { true: 'bg-primary' },
+    isDisabled: { true: 'opacity-40' },
   },
 });
 

@@ -46,11 +46,17 @@ import {
 export interface RangeDateProviderProps {
   /**
    * One or more calendar systems. The first is used by default unless
-   * `initialSystemId` is set. Defaults to `[gregorianSystem]`.
+   * `activeSystemId` is set. Defaults to `[gregorianSystem]`.
    */
   systems?: readonly CalendarSystem[];
-  /** ID of the system to start on. Defaults to `systems[0].id`. */
-  initialSystemId?: string;
+  /**
+   * Live id of the active calendar system. Controlled: the store keeps
+   * its active system in sync with this value on every render. Omit to
+   * start on `systems[0]` and switch later via
+   * `useRangeCalendarActions().setActiveSystem(id)`. Unknown ids are
+   * warned + ignored.
+   */
+  activeSystemId?: string;
 
   /** Initial range start. */
   initialStart?: unknown;
@@ -106,7 +112,7 @@ const EMPTY_DISABLED_RANGES =
 
 export function RangeDateProvider({
   systems: systemsProp,
-  initialSystemId,
+  activeSystemId,
   initialStart,
   initialEnd,
   allowSameDay,
@@ -144,6 +150,7 @@ export function RangeDateProvider({
   const liveConfig = useMemo(
     () => ({
       systems: stableSystems,
+      activeSystemId,
       allowSameDay,
       minRangeDays,
       maxRangeDays,
@@ -160,6 +167,7 @@ export function RangeDateProvider({
     }),
     [
       stableSystems,
+      activeSystemId,
       allowSameDay,
       minRangeDays,
       maxRangeDays,
@@ -182,7 +190,6 @@ export function RangeDateProvider({
     () =>
       new RangeCalendarStore({
         ...liveConfig,
-        initialSystemId,
         initialStart,
         initialEnd,
       })

@@ -14,6 +14,7 @@ export function Header() {
     (s) => s.days.displayedYearLabel
   );
   const systemId = useSingleCalendarSelector((s) => s.system.id);
+
   return (
     <View className="flex-row items-center justify-between mb-2">
       <IconButton onPress={goPrevMonth} label="‹" />

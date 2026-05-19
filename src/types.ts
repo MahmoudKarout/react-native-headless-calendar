@@ -76,6 +76,25 @@ export interface DateRange<T = CalendarDateValue> {
   end: T;
 }
 
+/**
+ * Calendar-system-native date components surfaced on selection
+ * payloads. Timezone-free and calendar-aware: values are the
+ * `year` / `month` / `day` of the active `CalendarSystem` at the time
+ * of the callback (i.e. for Hijri this is the Hijri year/month/day,
+ * not the underlying Gregorian projection). Pair with `systemId` on
+ * the payload to disambiguate.
+ *
+ * `month` is 0-based to match JavaScript's `Date#getMonth()`.
+ */
+export interface DateParts {
+  /** Year in the active calendar system. */
+  year: number;
+  /** Month in the active calendar system, 0-based (0 = first month). */
+  month: number;
+  /** Day of the month in the active calendar system, 1-based. */
+  day: number;
+}
+
 // ---------------------------------------------------------------------------
 // External callbacks
 // ---------------------------------------------------------------------------
@@ -163,4 +182,25 @@ export interface DayCellInfo<T = CalendarDateValue> {
   isDisabled: boolean;
   /** Per-modifier flags. Empty `{}` when no modifiers are configured. */
   modifiers: Readonly<Record<string, boolean>>;
+}
+
+export interface CalendarMonthEntry {
+  /** 0-based month index expected by `useCalendarActions().selectMonth`. */
+  index: number;
+  /** Localised name for that month, in the active system. */
+  label: string;
+}
+
+export interface CalendarMonths {
+  /** All 12 months for the active system. Identity-stable per system. */
+  months: readonly CalendarMonthEntry[];
+  /** 0-based index of the currently displayed month. */
+  activeMonth: number;
+}
+
+export interface CalendarYears {
+  /** Years on the page containing `activeYear` (length = YEAR_PAGE_SIZE). */
+  years: readonly number[];
+  /** Currently displayed year. */
+  activeYear: number;
 }

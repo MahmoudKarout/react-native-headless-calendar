@@ -14,13 +14,16 @@
 import { createContext, use, useMemo } from 'react';
 import { useSyncExternalStore } from 'react';
 
-import type { CalendarMonths, CalendarYears } from '../store';
 import type {
   MultipleCalendarDays,
   MultipleCalendarSnapshot,
 } from '../stores/MultipleCalendarStore';
 import { MultipleCalendarStore } from '../stores/MultipleCalendarStore';
-import type { CalendarDateValue } from '../types';
+import type {
+  CalendarDateValue,
+  CalendarMonths,
+  CalendarYears,
+} from '../types';
 
 // ---------------------------------------------------------------------------
 // Internal context — the store instance.
@@ -108,6 +111,15 @@ export interface MultipleCalendarActions {
   /** Step the year-grid forward one full page. */
   nextYearPage: () => void;
   /**
+   * Switch the active calendar system by id. No-op when the id already
+   * matches or is not present in the provider's `systems` array
+   * (warned in dev). The selection set, the displayed month, and
+   * bounds are carried across by absolute instant — day-of-month may
+   * change between calendars (e.g. Hijri → Gregorian for the same
+   * point).
+   */
+  setActiveSystem: (id: string) => void;
+  /**
    * Synchronously read confirmability from inside an event handler.
    * Render-time consumers should subscribe via
    * `useMultipleCalendarSelector(selectMultipleCanConfirm)` instead.
@@ -131,6 +143,7 @@ export function useMultipleCalendarActions(): MultipleCalendarActions {
       selectYear: store.goToYear,
       prevYearPage: store.prevYearPage,
       nextYearPage: store.nextYearPage,
+      setActiveSystem: store.setActiveSystem,
       isConfirmable: store.isConfirmable,
     }),
     [store]

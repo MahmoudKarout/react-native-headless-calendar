@@ -18,7 +18,11 @@
  * Shared navigation, view derivation, bounds evaluation, and
  * `useSyncExternalStore` plumbing live on `BaseCalendarStore`.
  */
-import type { CalendarDateValue, CalendarSystem } from '../types';
+import type {
+  CalendarDateValue,
+  CalendarSystem,
+  DateParts,
+} from '../types';
 import {
   buildMonthGrid,
   isExplicitlyDisabled,
@@ -37,8 +41,18 @@ import {
 // ── Public payload + callback types ────────────────────────────────────────
 
 export interface MultipleSelectionPayload {
-  /** Native JS Dates for every selected day. Empty array when none. */
+  /**
+   * Native JS Dates for every selected day, at local-time midnight.
+   * Empty array when no selection. Beware: `toISOString()` and
+   * `JSON.stringify()` print these in UTC. Prefer `parts` when
+   * timezone-free values are needed.
+   */
   dates: readonly Date[];
+  /**
+   * Timezone-free, calendar-system-native components of every
+   * selected day, in selection order. Empty array when no selection.
+   */
+  parts: readonly DateParts[];
   /** Identifier of the active calendar system at the time of selection. */
   systemId: string;
 }
@@ -128,8 +142,8 @@ export class MultipleCalendarStore<
   private cellCache = new Map<number, MultipleDayCellInfo<T>>();
 
   // Flips to `true` after the first `configure(...)` completes. Initial-
-  // only options (`initialSystemId`, `initialDates`) are read while
-  // this is `false`; later calls ignore them.
+  // only options (`initialDates`) are read while this is `false`;
+  // later calls ignore them.
   private initialized = false;
 
   // -- construction ------------------------------------------------------
@@ -179,6 +193,7 @@ export class MultipleCalendarStore<
   // -- first-call path ---------------------------------------------------
 
   private bootstrap(opts: MultipleCalendarStoreOptions<T>): void {
+    this.systems = opts.systems;
     const { system, systemIndex } = resolveInitialSystem(opts);
     const seedDate = opts.initialDates?.[0];
     const displayed = seedDate ? system.from(seedDate) : system.today();
@@ -213,8 +228,14 @@ export class MultipleCalendarStore<
   // -- subsequent-call paths --------------------------------------------
 
   private reconcileSystem(opts: MultipleCalendarStoreOptions<T>): void {
+    this.systems = opts.systems;
     const s = this.snapshot;
-    const currentId = s.system.id;
+
+    if (opts.activeSystemId && opts.activeSystemId !== s.system.id) {
+      this.setActiveSystem(opts.activeSystemId);
+    }
+
+    const currentId = this.snapshot.system.id;
     const idx = opts.systems.findIndex((sys) => sys.id === currentId);
 
     if (idx === -1) {
@@ -225,24 +246,25 @@ export class MultipleCalendarStore<
           '[Calendar] At least one CalendarSystem must be provided.'
         );
       }
-      this.commitSystemSwap(next, 0);
+      this.replaceSystem(next, 0);
       return;
     }
 
     /* istanbul ignore next — `idx` is in-bounds by construction. */
     const nextSystem = opts.systems[idx]!;
-    if (nextSystem !== s.system) {
-      this.commitSystemSwap(nextSystem, idx);
-    } else if (idx !== s.systemIndex) {
-      this.commit({ ...s, systemIndex: idx });
+    if (nextSystem !== this.snapshot.system) {
+      this.replaceSystem(nextSystem, idx);
+    } else if (idx !== this.snapshot.systemIndex) {
+      this.commit({ ...this.snapshot, systemIndex: idx });
     }
   }
 
-  private commitSystemSwap(
+  protected replaceSystem(
     nextSystem: CalendarSystem<T>,
     nextSystemIndex: number
   ): void {
     const s = this.snapshot;
+    if (s.system === nextSystem && s.systemIndex === nextSystemIndex) return;
     const prevSystem = s.system;
     const next = this.carrySharedSystemFields(s, nextSystem, nextSystemIndex);
     this.commit({
@@ -323,6 +345,11 @@ export class MultipleCalendarStore<
     const s = this.snapshot;
     return {
       dates: s.selectedDates.map((d) => s.system.toNativeDate(d)),
+      parts: s.selectedDates.map((d) => ({
+        year: s.system.year(d),
+        month: s.system.month(d),
+        day: s.system.day(d),
+      })),
       systemId: s.system.id,
     };
   }

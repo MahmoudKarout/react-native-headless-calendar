@@ -18,7 +18,11 @@
  * `useSyncExternalStore` plumbing live on `BaseCalendarStore`. Only
  * range-specific state and its hooks remain here.
  */
-import type { CalendarDateValue, CalendarSystem } from '../types';
+import type {
+  CalendarDateValue,
+  CalendarSystem,
+  DateParts,
+} from '../types';
 import {
   buildMonthGrid,
   isBetween,
@@ -38,10 +42,29 @@ import {
 // ── Public payload + callback types ────────────────────────────────────────
 
 export interface RangeSelectionPayload {
-  /** Native JS Date for the range start. `undefined` after `clear()`. */
+  /**
+   * Native JS Date for the range start, at local-time midnight.
+   * `undefined` after `clear()`. Beware: `toISOString()` and
+   * `JSON.stringify()` print this in UTC. Prefer `startParts` when
+   * timezone-free values are needed.
+   */
   startDate: Date | undefined;
-  /** Native JS Date for the range end. `undefined` until the user picks both. */
+  /**
+   * Native JS Date for the range end, at local-time midnight.
+   * `undefined` until the user picks both endpoints. Same UTC caveat
+   * as `startDate` — prefer `endParts` for timezone-free values.
+   */
   endDate: Date | undefined;
+  /**
+   * Timezone-free, calendar-system-native components of the range
+   * start. `undefined` while no start is selected.
+   */
+  startParts: DateParts | undefined;
+  /**
+   * Timezone-free, calendar-system-native components of the range
+   * end. `undefined` until both endpoints are selected.
+   */
+  endParts: DateParts | undefined;
   /** Identifier of the active calendar system at the time of selection. */
   systemId: string;
 }
@@ -157,8 +180,8 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
   private cellCache = new Map<number, RangeDayCellInfo<T>>();
 
   // Flips to `true` after the first `configure(...)` completes. Initial-
-  // only options (`initialSystemId`, `initialStart`, `initialEnd`) are
-  // read while this is `false`; later calls ignore them.
+  // only options (`initialStart`, `initialEnd`) are read while this is
+  // `false`; later calls ignore them.
   private initialized = false;
 
   // -- construction ------------------------------------------------------
@@ -208,6 +231,7 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
   // -- first-call path ---------------------------------------------------
 
   private bootstrap(opts: RangeCalendarStoreOptions<T>): void {
+    this.systems = opts.systems;
     const { system, systemIndex } = resolveInitialSystem(opts);
     // Open on a month that contains state: prefer `initialStart`, then
     // `initialEnd`, else today.
@@ -242,8 +266,14 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
   // -- subsequent-call paths --------------------------------------------
 
   private reconcileSystem(opts: RangeCalendarStoreOptions<T>): void {
+    this.systems = opts.systems;
     const s = this.snapshot;
-    const currentId = s.system.id;
+
+    if (opts.activeSystemId && opts.activeSystemId !== s.system.id) {
+      this.setActiveSystem(opts.activeSystemId);
+    }
+
+    const currentId = this.snapshot.system.id;
     const idx = opts.systems.findIndex((sys) => sys.id === currentId);
 
     if (idx === -1) {
@@ -254,24 +284,25 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
           '[Calendar] At least one CalendarSystem must be provided.'
         );
       }
-      this.commitSystemSwap(next, 0);
+      this.replaceSystem(next, 0);
       return;
     }
 
     /* istanbul ignore next — `idx` is in-bounds by construction. */
     const nextSystem = opts.systems[idx]!;
-    if (nextSystem !== s.system) {
-      this.commitSystemSwap(nextSystem, idx);
-    } else if (idx !== s.systemIndex) {
-      this.commit({ ...s, systemIndex: idx });
+    if (nextSystem !== this.snapshot.system) {
+      this.replaceSystem(nextSystem, idx);
+    } else if (idx !== this.snapshot.systemIndex) {
+      this.commit({ ...this.snapshot, systemIndex: idx });
     }
   }
 
-  private commitSystemSwap(
+  protected replaceSystem(
     nextSystem: CalendarSystem<T>,
     nextSystemIndex: number
   ): void {
     const s = this.snapshot;
+    if (s.system === nextSystem && s.systemIndex === nextSystemIndex) return;
     const prevSystem = s.system;
     const carry = (v: T | undefined): T | undefined =>
       v ? nextSystem.fromNativeDate(prevSystem.toNativeDate(v)) : undefined;
@@ -384,11 +415,18 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
 
   private buildPayload(): RangeSelectionPayload {
     const s = this.snapshot;
+    const toParts = (d: T): DateParts => ({
+      year: s.system.year(d),
+      month: s.system.month(d),
+      day: s.system.day(d),
+    });
     return {
       startDate: s.rangeStart
         ? s.system.toNativeDate(s.rangeStart)
         : undefined,
       endDate: s.rangeEnd ? s.system.toNativeDate(s.rangeEnd) : undefined,
+      startParts: s.rangeStart ? toParts(s.rangeStart) : undefined,
+      endParts: s.rangeEnd ? toParts(s.rangeEnd) : undefined,
       systemId: s.system.id,
     };
   }

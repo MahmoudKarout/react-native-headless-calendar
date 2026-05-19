@@ -1,48 +1,37 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import {
   SingleDateProvider,
-  type SingleOnChange,
-  type SingleOnClear,
-  type SingleOnConfirm,
+  type SingleDateProviderProps,
 } from 'react-native-fast-calendar';
 
 import { YearView } from './YearView';
 import { DayView } from './DayView';
 import { MonthView } from './MonthView';
 import { Header } from './Header';
-import { SystemSwitch } from './SystemSwitch';
+import { ViewSwitch } from './ViewSwitch';
 import { Footer } from './Footer';
+import { SystemSwitch } from './SystemSwitch';
 
-export interface SingleDateCalendarProps {
-  /** Optional caption shown above the navigation header. */
-  onChange?: SingleOnChange;
-  onClear?: SingleOnClear;
-  onConfirm?: SingleOnConfirm;
-}
+export type SingleDateCalendarProps = Omit<SingleDateProviderProps, 'children'>;
 
-export function SingleDateCalendar({
-  onChange,
-  onClear,
-  onConfirm,
-}: SingleDateCalendarProps) {
+export function SingleDateCalendar(props: SingleDateCalendarProps) {
   const [view, setView] = useState<'day' | 'month' | 'year'>('day');
 
   const toggleDayView = () => setView('day');
 
   return (
-    <SingleDateProvider
-      onClear={onClear}
-      onChange={onChange}
-      onConfirm={onConfirm}
-    >
-      <View className="bg-card border-hairline border-border rounded-xl p-4 shadow-sm">
-        <Header />
-        <SystemSwitch value={view} onChange={setView} />
-        {view === 'day' && <DayView />}
-        {view === 'month' && <MonthView onChange={toggleDayView} />}
-        {view === 'year' && <YearView onChange={toggleDayView} />}
+    <SingleDateProvider {...props}>
+      <View className="bg-card border-hairline border-border rounded-xl p-4 shadow-sm w-[326px] h-[483px] justify-between">
+        <View>
+          <SystemSwitch />
+          <Header />
+          <ViewSwitch value={view} onChange={setView} />
+          {view === 'day' && <DayView />}
+          {view === 'month' && <MonthView onChange={toggleDayView} />}
+          {view === 'year' && <YearView onChange={toggleDayView} />}
+        </View>
         <Footer />
       </View>
     </SingleDateProvider>

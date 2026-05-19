@@ -26,8 +26,9 @@ import type {
   CalendarSystem,
   CalendarView,
   Weekday,
+  CalendarMonths,
+  CalendarYears,
 } from '../types';
-import type { CalendarMonths, CalendarYears } from '../store';
 import {
   DEFAULT_FIRST_DAY_OF_WEEK,
   getYearPage,
@@ -56,7 +57,14 @@ export interface BaseCalendarSnapshotShared<T = CalendarDateValue> {
 /** Constructor options every mode-specific options interface must include. */
 export interface BaseCalendarStoreOptions<T = CalendarDateValue> {
   systems: readonly CalendarSystem<T>[];
-  initialSystemId?: string;
+  /**
+   * Live id of the active calendar system. Controlled: the store keeps
+   * `snapshot.system.id` in sync with this value across every
+   * `configure(...)` call. Unknown ids are ignored with a dev warning.
+   * Omit to start on `systems[0]` and switch later via
+   * `setActiveSystem(...)`.
+   */
+  activeSystemId?: string;
   minDate?: unknown;
   maxDate?: unknown;
   disabledDates?: readonly unknown[];
@@ -110,6 +118,14 @@ export abstract class BaseCalendarStore<
 > {
   // `snapshot` is assigned by the subclass constructor via `initSnapshot`.
   protected snapshot!: S;
+  /**
+   * Live `systems` array last applied via `configure(...)`. Cached so
+   * `setActiveSystem(id)` can resolve an id to a system without going
+   * through the snapshot (which only carries the active system, not the
+   * full list). Subclass `configure` is responsible for keeping this in
+   * sync on every call.
+   */
+  protected systems!: readonly CalendarSystem<T>[];
   private listeners = new Set<Listener>();
   protected batchDepth = 0;
   protected pendingEmit = false;
@@ -404,6 +420,42 @@ export abstract class BaseCalendarStore<
   // -- system replacement helpers ----------------------------------------
 
   /**
+   * Switch the active calendar system by id. No-op when the id already
+   * matches the current system, or when the id is not present in the
+   * cached `systems` list (dev warning, lookup-only). Selection,
+   * displayed month, and bounds are carried across by absolute instant
+   * — day-of-month may change between calendars (e.g. Hijri → Gregorian
+   * for the same point in time).
+   */
+  setActiveSystem = (id: string): void => {
+    const s = this.snapshot;
+    if (s.system.id === id) return;
+    const idx = this.systems.findIndex((sys) => sys.id === id);
+    if (idx === -1) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          `[Calendar] setActiveSystem: unknown system id "${id}". ` +
+            `Known ids: ${this.systems.map((sys) => sys.id).join(', ')}`
+        );
+      }
+      return;
+    }
+    /* istanbul ignore next — `idx` is in-bounds by construction. */
+    const nextSystem = this.systems[idx]!;
+    this.replaceSystem(nextSystem, idx);
+  };
+
+  /**
+   * Subclass hook — commit a system swap, layering mode-specific
+   * selection carry-over on top of `carrySharedSystemFields`. Called by
+   * `setActiveSystem` and by `configure(...)` reconciliation.
+   */
+  protected abstract replaceSystem(
+    nextSystem: CalendarSystem<T>,
+    nextSystemIndex: number
+  ): void;
+
+  /**
    * Apply the shared subset of a system swap to `s`. Returns a new
    * snapshot with `displayed`, `minDate`, `maxDate`, and the disable
    * lists round-tripped through native Date. Subclass `replaceSystem`
@@ -450,10 +502,10 @@ export function resolveInitialSystem<T>(opts: BaseCalendarStoreOptions<T>): {
   if (opts.systems.length === 0) {
     throw new Error('[Calendar] At least one CalendarSystem must be provided.');
   }
-  const systemIndex = opts.initialSystemId
+  const systemIndex = opts.activeSystemId
     ? Math.max(
         0,
-        opts.systems.findIndex((s) => s.id === opts.initialSystemId)
+        opts.systems.findIndex((s) => s.id === opts.activeSystemId)
       )
     : 0;
   /* istanbul ignore next — noUncheckedIndexedAccess fallback. */
