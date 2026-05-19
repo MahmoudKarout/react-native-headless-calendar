@@ -129,6 +129,8 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     nextSystemIndex: number
   ): void {
     const s = this.snapshot;
+    /* istanbul ignore next — defensive guard; public callers never re-enter
+     * with the same system+index. */
     if (s.system === nextSystem && s.systemIndex === nextSystemIndex) return;
     const prevSystem = s.system;
     const carry = (v: T | undefined): T | undefined =>

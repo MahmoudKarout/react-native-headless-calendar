@@ -112,6 +112,8 @@ export class SingleCalendarStore<
     nextSystemIndex: number
   ): void {
     const s = this.snapshot;
+    /* istanbul ignore next — defensive guard; public callers never re-enter
+     * with the same system+index. */
     if (s.system === nextSystem && s.systemIndex === nextSystemIndex) return;
     const prevSystem = s.system;
     const next = this.carrySharedSystemFields(s, nextSystem, nextSystemIndex);

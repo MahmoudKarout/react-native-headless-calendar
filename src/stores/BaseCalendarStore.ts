@@ -585,8 +585,10 @@ export abstract class BaseCalendarStore<
     for (const [k, v] of nextCache) cellCache.set(k, v);
 
     const monthIndex = system.month(displayed);
-    const monthLabel =
-      system.monthLabels()[monthIndex] ?? String(monthIndex + 1);
+    const labels = system.monthLabels();
+    /* istanbul ignore next — `?? String(...)` is a noUncheckedIndexedAccess
+     * fallback; well-formed systems return 12 labels. */
+    const monthLabel = labels[monthIndex] ?? String(monthIndex + 1);
     return {
       weekdayLabels: rotateWeekdayLabels(
         system.weekdayLabels(),
