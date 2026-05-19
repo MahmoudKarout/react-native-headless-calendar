@@ -30,10 +30,16 @@ import type {
   CalendarYears,
 } from '../types';
 import {
+  buildMonthGrid,
   DEFAULT_FIRST_DAY_OF_WEEK,
   getYearPage,
+  matchDate,
+  rotateWeekdayLabels,
   YEAR_PAGE_SIZE,
+  type GridCell,
 } from '../utils/grid';
+import { cellsAreEquivalent } from './cellUtils';
+import type { BaseDayCellFields, CalendarDaysView } from './storeTypes';
 
 // ── Shared shapes ─────────────────────────────────────────────────────────
 
@@ -324,8 +330,11 @@ export abstract class BaseCalendarStore<
    * from min/max bounds, the explicit lists, and the optional
    * `disabled` predicate (which receives the native JS Date).
    */
-  protected isDateDisabled(date: T): boolean {
-    const s = this.snapshot;
+  protected isDateDisabled(
+    date: T,
+    snapshot: SnapshotBody<S> = this.snapshot
+  ): boolean {
+    const s = snapshot;
     const system = s.system;
     if (s.minDate && system.isBefore(date, s.minDate)) return true;
     if (s.maxDate && system.isAfter(date, s.maxDate)) return true;
@@ -485,6 +494,107 @@ export abstract class BaseCalendarStore<
         start: nextSystem.fromNativeDate(prevSystem.toNativeDate(r.start)),
         end: nextSystem.fromNativeDate(prevSystem.toNativeDate(r.end)),
       })),
+    };
+  }
+
+  /**
+   * Keep the active system in sync with `opts.systems` and the controlled
+   * `activeSystemId`. Subclass `configure` calls this inside `batch(...)`.
+   */
+  protected reconcileSystem(opts: BaseCalendarStoreOptions<T>): void {
+    this.systems = opts.systems;
+    const s = this.snapshot;
+
+    if (opts.activeSystemId && opts.activeSystemId === s.system.id) {
+      // Already in sync — still verify index parity below.
+    } else if (opts.activeSystemId) {
+      this.setActiveSystem(opts.activeSystemId);
+    }
+
+    const currentId = this.snapshot.system.id;
+    const idx = opts.systems.findIndex((sys) => sys.id === currentId);
+
+    if (idx === -1) {
+      const next = opts.systems[0];
+      /* istanbul ignore if — bootstrap rejects empty `systems`. */
+      if (!next) {
+        throw new Error(
+          '[Calendar] At least one CalendarSystem must be provided.'
+        );
+      }
+      this.replaceSystem(next, 0);
+      return;
+    }
+
+    /* istanbul ignore next — `idx` is in-bounds by construction. */
+    const nextSystem = opts.systems[idx]!;
+    if (nextSystem !== this.snapshot.system) {
+      this.replaceSystem(nextSystem, idx);
+    } else if (idx !== this.snapshot.systemIndex) {
+      this.commit({ ...this.snapshot, systemIndex: idx });
+    }
+  }
+
+  protected buildCellModifiers(
+    system: CalendarSystem<T>,
+    date: T,
+    modifiers: CalendarModifiers | undefined
+  ): Record<string, boolean> {
+    if (!modifiers) return {};
+    const cellModifiers: Record<string, boolean> = {};
+    for (const [name, matcher] of Object.entries(modifiers)) {
+      if (matchDate(system, date, matcher)) cellModifiers[name] = true;
+    }
+    return cellModifiers;
+  }
+
+  /**
+   * Shared day-grid derivation: month grid, disabled state, modifiers,
+   * identity-stable cell cache, and header labels.
+   */
+  protected buildDaysFromGrid<TCell extends BaseDayCellFields<T>>(
+    s: SnapshotBody<S>,
+    cellCache: Map<number, TCell>,
+    buildCell: (
+      gridCell: GridCell<T>,
+      nativeDate: Date,
+      isDisabled: boolean,
+      modifiers: Readonly<Record<string, boolean>>
+    ) => TCell,
+    extraEqual?: (a: TCell, b: TCell) => boolean
+  ): CalendarDaysView<TCell> {
+    const { system, displayed, firstDayOfWeek, modifiers } = s;
+    const grid = buildMonthGrid(system, displayed, firstDayOfWeek);
+    const cache = cellCache;
+    const nextCache = new Map<number, TCell>();
+    const cells = grid.map((c) => {
+      const nativeDate = system.toNativeDate(c.date);
+      const isDisabled = this.isDateDisabled(c.date, s);
+      const cellModifiers = this.buildCellModifiers(system, c.date, modifiers);
+      const computed = buildCell(c, nativeDate, isDisabled, cellModifiers);
+      const key = nativeDate.getTime();
+      const prev = cache.get(key);
+      const reused =
+        prev && cellsAreEquivalent(prev, computed, extraEqual)
+          ? prev
+          : computed;
+      nextCache.set(key, reused);
+      return reused;
+    });
+    cellCache.clear();
+    for (const [k, v] of nextCache) cellCache.set(k, v);
+
+    const monthIndex = system.month(displayed);
+    const monthLabel =
+      system.monthLabels()[monthIndex] ?? String(monthIndex + 1);
+    return {
+      weekdayLabels: rotateWeekdayLabels(
+        system.weekdayLabels(),
+        firstDayOfWeek
+      ),
+      cells,
+      displayedMonthLabel: monthLabel,
+      displayedYearLabel: String(system.year(displayed)),
     };
   }
 }

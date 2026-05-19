@@ -1,139 +1,45 @@
-/**
- * Hooks for single-date selection — parallel surface to the legacy
- * `useCalendarSelector` / `useCalendarActions` but typed against
- * `SingleCalendarSnapshot`. Consumers reach `selectedDate` directly,
- * and TS won't suggest range-/multiple-only fields.
- *
- *   - useSingleCalendarSelector(selector) — read primitive.
- *   - useSingleCalendarActions()          — every mutator.
- *
- * Pre-built selectors mirror the original set: `selectSingleDays`,
- * `selectSingleMonths`, `selectSingleYears`, `selectSingleCanConfirm`.
- */
-import { createContext, use, useMemo } from 'react';
-import { useSyncExternalStore } from 'react';
-
 import type {
   SingleCalendarDays,
   SingleCalendarSnapshot,
 } from '../stores/SingleCalendarStore';
 import { SingleCalendarStore } from '../stores/SingleCalendarStore';
-import type {
-  CalendarDateValue,
-  CalendarMonths,
-  CalendarYears,
-} from '../types';
+import type { CalendarMonths, CalendarYears } from '../types';
+import {
+  createCalendarContext,
+  mapSharedStoreActions,
+} from './createCalendarContext';
 
-// ---------------------------------------------------------------------------
-// Internal context — the store instance.
-// ---------------------------------------------------------------------------
+const {
+  StoreContext: SingleCalendarStoreContext,
+  useCalendarSelector: useSingleCalendarSelector,
+  useCalendarActions: useSingleCalendarActions,
+} = createCalendarContext<
+  SingleCalendarStore,
+  SingleCalendarSnapshot,
+  SingleCalendarActions
+>({
+  modeLabel: 'single-mode',
+  providerName: 'SingleDateProvider',
+  mapActions: (store) => mapSharedStoreActions(store),
+});
 
-export const SingleCalendarStoreContext =
-  createContext<SingleCalendarStore | null>(null);
+export { SingleCalendarStoreContext, useSingleCalendarSelector };
 
-function useSingleStore(): SingleCalendarStore {
-  const store = use(SingleCalendarStoreContext);
-  if (!store) {
-    throw new Error(
-      '[Calendar] single-mode hooks must be used within <SingleDateProvider>'
-    );
-  }
-  return store;
-}
-
-// ---------------------------------------------------------------------------
-// useSingleCalendarSelector — the read primitive.
-// ---------------------------------------------------------------------------
-
-export function useSingleCalendarSelector<T>(
-  selector: (snapshot: SingleCalendarSnapshot) => T
-): T {
-  const store = useSingleStore();
-  return useSyncExternalStore(store.subscribe, () =>
-    selector(store.getSnapshot())
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Built-in selectors.
-// ---------------------------------------------------------------------------
-
-/** Render-time predicate: `true` when a date has been selected. */
 export const selectSingleCanConfirm = (s: SingleCalendarSnapshot): boolean =>
   !!s.selectedDate;
 
-/** Day-grid view (cells, weekday labels, header labels). */
 export const selectSingleDays = (
   s: SingleCalendarSnapshot
 ): SingleCalendarDays => s.days;
 
-/** 12-cell month chooser view. */
 export const selectSingleMonths = (s: SingleCalendarSnapshot): CalendarMonths =>
   s.months;
 
-/** Paginated year chooser view. */
 export const selectSingleYears = (s: SingleCalendarSnapshot): CalendarYears =>
   s.years;
 
-// ---------------------------------------------------------------------------
-// useSingleCalendarActions — every mutator, zero subscriptions.
-// ---------------------------------------------------------------------------
+export type SingleCalendarActions = ReturnType<
+  typeof mapSharedStoreActions<SingleCalendarStore>
+>;
 
-export interface SingleCalendarActions {
-  /** Pick a day. Coerces native Date / ISO string. No-op on disabled days. */
-  selectDate: (date: CalendarDateValue | Date | string | number) => void;
-  /** Wipe the current selection and fire `onClear` / `onChange`. */
-  clear: () => void;
-  /** Fire `onConfirm` with the current selection payload. No-op when unset. */
-  confirm: () => void;
-  /** Step the displayed month one back. */
-  goPrevMonth: () => void;
-  /** Step the displayed month one forward. */
-  goNextMonth: () => void;
-  /** Jump the displayed month to the given date. */
-  setDisplayedDate: (date: CalendarDateValue | Date | string | number) => void;
-  /** Jump to the given month (0-based) of the displayed year. */
-  selectMonth: (index: number) => void;
-  /** Jump directly to a specific year. */
-  selectYear: (year: number) => void;
-  /** Step the year-grid backward one full page. */
-  prevYearPage: () => void;
-  /** Step the year-grid forward one full page. */
-  nextYearPage: () => void;
-  /**
-   * Switch the active calendar system by id. No-op when the id already
-   * matches or is not present in the provider's `systems` array
-   * (warned in dev). Carries the current selection and displayed month
-   * across the swap by absolute instant — day-of-month may change
-   * between calendars (e.g. Hijri → Gregorian for the same point).
-   */
-  setActiveSystem: (id: string) => void;
-  /**
-   * Synchronously read confirmability from inside an event handler.
-   * Render-time consumers should subscribe via
-   * `useSingleCalendarSelector(selectSingleCanConfirm)` instead.
-   */
-  isConfirmable: () => boolean;
-}
-
-export function useSingleCalendarActions(): SingleCalendarActions {
-  const store = useSingleStore();
-  return useMemo<SingleCalendarActions>(
-    () => ({
-      selectDate: store.selectDate as SingleCalendarActions['selectDate'],
-      clear: store.clear,
-      confirm: store.confirm,
-      goPrevMonth: store.prevMonth,
-      goNextMonth: store.nextMonth,
-      setDisplayedDate:
-        store.setDisplayedDate as SingleCalendarActions['setDisplayedDate'],
-      selectMonth: store.goToMonth,
-      selectYear: store.goToYear,
-      prevYearPage: store.prevYearPage,
-      nextYearPage: store.nextYearPage,
-      setActiveSystem: store.setActiveSystem,
-      isConfirmable: store.isConfirmable,
-    }),
-    [store]
-  );
-}
+export { useSingleCalendarActions };

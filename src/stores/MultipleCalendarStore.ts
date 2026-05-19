@@ -1,22 +1,5 @@
 /**
  * MultipleCalendarStore — external store for multi-day selection.
- *
- * Snapshot fields and methods that only apply to single / range mode
- * are absent (no `selectedDate`, `rangeStart`, `rangeEnd`,
- * `allowSameDay`, `min/maxRangeDays`). Cell metadata uses
- * `MultipleDayCellInfo` — range fields are absent; `isSelected`
- * reflects membership in `selectedDates`. Selection callbacks receive
- * `MultipleSelectionPayload` (`dates: Date[]` + `systemId`).
- *
- * Selection semantics:
- *   - `selectDate(d)` toggles membership (set-like, ordered by tap).
- *   - `maxSelected` caps the set; further additions are silently
- *     ignored. Consumers wanting LRU eviction can subscribe to
- *     `onChange` and dispatch their own clear-then-select sequence.
- *   - `toggleDate(d)` is an alias surfaced for intent clarity.
- *
- * Shared navigation, view derivation, bounds evaluation, and
- * `useSyncExternalStore` plumbing live on `BaseCalendarStore`.
  */
 import type {
   CalendarDateValue,
@@ -24,36 +7,17 @@ import type {
   DateParts,
 } from '../types';
 import {
-  buildMonthGrid,
-  isExplicitlyDisabled,
-  matchDate,
-  rotateWeekdayLabels,
-} from '../utils/grid';
-import {
   BaseCalendarStore,
   type BaseCalendarSnapshotShared,
   type BaseCalendarStoreOptions,
   normalizeSharedInputs,
   resolveInitialSystem,
-  shallowModifiersEqual,
 } from './BaseCalendarStore';
-
-// ── Public payload + callback types ────────────────────────────────────────
+import type { BaseDayCellFields, CalendarDaysView } from './storeTypes';
 
 export interface MultipleSelectionPayload {
-  /**
-   * Native JS Dates for every selected day, at local-time midnight.
-   * Empty array when no selection. Beware: `toISOString()` and
-   * `JSON.stringify()` print these in UTC. Prefer `parts` when
-   * timezone-free values are needed.
-   */
   dates: readonly Date[];
-  /**
-   * Timezone-free, calendar-system-native components of every
-   * selected day, in selection order. Empty array when no selection.
-   */
   parts: readonly DateParts[];
-  /** Identifier of the active calendar system at the time of selection. */
   systemId: string;
 }
 
@@ -61,118 +25,45 @@ export type MultipleOnConfirm = (payload: MultipleSelectionPayload) => void;
 export type MultipleOnClear = () => void;
 export type MultipleOnChange = (payload: MultipleSelectionPayload) => void;
 
-// ── Cell + derived view shapes ────────────────────────────────────────────
-
-export interface MultipleDayCellInfo<T = CalendarDateValue> {
-  date: T;
-  nativeDate: Date;
-  label: string;
-  isCurrentMonth: boolean;
-  isToday: boolean;
-  /** True if the cell is a member of the current selection. */
+export interface MultipleDayCellInfo<T = CalendarDateValue>
+  extends BaseDayCellFields<T> {
   isSelected: boolean;
-  isDisabled: boolean;
-  modifiers: Readonly<Record<string, boolean>>;
 }
 
-export interface MultipleCalendarDays<T = CalendarDateValue> {
-  weekdayLabels: readonly string[];
-  cells: readonly MultipleDayCellInfo<T>[];
-  displayedMonthLabel: string;
-  displayedYearLabel: string;
-}
-
-// ── Snapshot + options ─────────────────────────────────────────────────────
+export type MultipleCalendarDays<T = CalendarDateValue> =
+  CalendarDaysView<MultipleDayCellInfo<T>>;
 
 export interface MultipleCalendarSnapshot<T = CalendarDateValue>
   extends BaseCalendarSnapshotShared<T> {
-  /** Discriminant — always `'multiple'` for this store. */
   readonly mode: 'multiple';
-  /** Selection set, ordered by tap. Append-only with `maxSelected` cap. */
   selectedDates: readonly T[];
-  /** Inclusive cap on the number of dates that can be selected. */
   maxSelected: number | undefined;
   days: MultipleCalendarDays<T>;
 }
 
 export interface MultipleCalendarStoreOptions<T = CalendarDateValue>
   extends BaseCalendarStoreOptions<T> {
-  /** Initial selection set. Read on the first `configure` call only. */
   initialDates?: readonly unknown[];
-
-  /** Inclusive cap on the number of dates that can be selected. */
   maxSelected?: number;
-
-  /** External callbacks. May change identity across configure calls
-   *  without triggering a snapshot bump. */
   onConfirm?: MultipleOnConfirm;
   onClear?: MultipleOnClear;
   onChange?: MultipleOnChange;
 }
 
-// ── Internal helpers ───────────────────────────────────────────────────────
-
-function cellsAreEquivalent<T>(
-  a: MultipleDayCellInfo<T>,
-  b: MultipleDayCellInfo<T>
-): boolean {
-  return (
-    a.label === b.label &&
-    a.isCurrentMonth === b.isCurrentMonth &&
-    a.isToday === b.isToday &&
-    a.isSelected === b.isSelected &&
-    a.isDisabled === b.isDisabled &&
-    a.nativeDate.getTime() === b.nativeDate.getTime() &&
-    shallowModifiersEqual(a.modifiers, b.modifiers)
-  );
-}
-
-// ── The store ──────────────────────────────────────────────────────────────
-
 export class MultipleCalendarStore<
   T = CalendarDateValue,
 > extends BaseCalendarStore<T, MultipleCalendarSnapshot<T>> {
-  // External callbacks held as fields so action methods can remain
-  // referentially stable for the lifetime of the store. Updated by
-  // every `configure(...)` call without bumping the snapshot.
   private onConfirmCb: MultipleOnConfirm | undefined;
   private onClearCb: MultipleOnClear | undefined;
   private onChangeCb: MultipleOnChange | undefined;
-
   private cellCache = new Map<number, MultipleDayCellInfo<T>>();
-
-  // Flips to `true` after the first `configure(...)` completes. Initial-
-  // only options (`initialDates`) are read while this is `false`;
-  // later calls ignore them.
   private initialized = false;
 
-  // -- construction ------------------------------------------------------
-
-  /**
-   * Run the first `configure(...)` synchronously so the snapshot is
-   * populated by the time the constructor returns. This guarantees
-   * that any consumer reading via `getSnapshot()` immediately after
-   * construction (e.g. children rendering inside
-   * `<MultipleDateProvider>` before its commit-phase effect fires)
-   * observes a fully-built snapshot.
-   */
   constructor(opts: MultipleCalendarStoreOptions<T>) {
     super();
     this.configure(opts);
   }
 
-  // -- single entry point ------------------------------------------------
-
-  /**
-   * Apply provider props. Idempotent: a second call with reference-
-   * equal slots emits zero notifications and produces zero snapshot
-   * churn. Order of operations:
-   *   1. Callback slots are written through (no commit).
-   *   2. On the first call: bootstrap the snapshot from `opts`.
-   *   3. On subsequent calls: reconcile system + shared + multiple-mode
-   *      props inside a single `batch(...)` so any internal commits
-   *      coalesce to one emit at the end.
-   */
   configure(opts: MultipleCalendarStoreOptions<T>): void {
     this.onConfirmCb = opts.onConfirm;
     this.onClearCb = opts.onClear;
@@ -189,8 +80,6 @@ export class MultipleCalendarStore<
       this.reconcileSharedProps(opts);
     });
   }
-
-  // -- first-call path ---------------------------------------------------
 
   private bootstrap(opts: MultipleCalendarStoreOptions<T>): void {
     this.systems = opts.systems;
@@ -225,40 +114,6 @@ export class MultipleCalendarStore<
     this.seedSharedInputs(opts);
   }
 
-  // -- subsequent-call paths --------------------------------------------
-
-  private reconcileSystem(opts: MultipleCalendarStoreOptions<T>): void {
-    this.systems = opts.systems;
-    const s = this.snapshot;
-
-    if (opts.activeSystemId && opts.activeSystemId !== s.system.id) {
-      this.setActiveSystem(opts.activeSystemId);
-    }
-
-    const currentId = this.snapshot.system.id;
-    const idx = opts.systems.findIndex((sys) => sys.id === currentId);
-
-    if (idx === -1) {
-      const next = opts.systems[0];
-      /* istanbul ignore if — bootstrap rejects empty `systems`. */
-      if (!next) {
-        throw new Error(
-          '[Calendar] At least one CalendarSystem must be provided.'
-        );
-      }
-      this.replaceSystem(next, 0);
-      return;
-    }
-
-    /* istanbul ignore next — `idx` is in-bounds by construction. */
-    const nextSystem = opts.systems[idx]!;
-    if (nextSystem !== this.snapshot.system) {
-      this.replaceSystem(nextSystem, idx);
-    } else if (idx !== this.snapshot.systemIndex) {
-      this.commit({ ...this.snapshot, systemIndex: idx });
-    }
-  }
-
   protected replaceSystem(
     nextSystem: CalendarSystem<T>,
     nextSystemIndex: number
@@ -283,8 +138,6 @@ export class MultipleCalendarStore<
     if (next !== this.snapshot) this.commit(next);
   }
 
-  // -- selection actions -------------------------------------------------
-
   selectDate = (input: unknown): void => {
     const s = this.snapshot;
     const system = s.system;
@@ -304,9 +157,6 @@ export class MultipleCalendarStore<
         s.maxSelected !== undefined &&
         s.selectedDates.length >= s.maxSelected
       ) {
-        // At cap — silently ignore the new pick. Consumers wanting LRU
-        // eviction can subscribe to `onChange` and dispatch their own
-        // clear-then-select sequence.
         return;
       }
       nextDates = [...s.selectedDates, date];
@@ -317,11 +167,6 @@ export class MultipleCalendarStore<
       displayed: date,
     });
     this.notifyChange();
-  };
-
-  /** Alias for `selectDate` — surfaced for intent clarity. */
-  toggleDate = (date: T): void => {
-    this.selectDate(date);
   };
 
   clear = (): void => {
@@ -338,8 +183,6 @@ export class MultipleCalendarStore<
   };
 
   isConfirmable = (): boolean => this.snapshot.selectedDates.length > 0;
-
-  // -- payload ------------------------------------------------------------
 
   private buildPayload(): MultipleSelectionPayload {
     const s = this.snapshot;
@@ -358,8 +201,6 @@ export class MultipleCalendarStore<
     if (!this.onChangeCb) return;
     this.onChangeCb(this.buildPayload());
   }
-
-  // -- day-grid derivation -----------------------------------------------
 
   protected daysInputsChanged(
     a: MultipleCalendarSnapshot<T>,
@@ -382,32 +223,12 @@ export class MultipleCalendarStore<
   protected buildDays(
     s: Omit<MultipleCalendarSnapshot<T>, 'days' | 'months' | 'years'>
   ): MultipleCalendarDays<T> {
-    const { system, displayed, firstDayOfWeek, modifiers } = s;
-    const grid = buildMonthGrid(system, displayed, firstDayOfWeek);
+    const { system } = s;
     const today = system.today();
-    const modifierEntries = modifiers ? Object.entries(modifiers) : null;
-    const cache = this.cellCache;
-    const nextCache = new Map<number, MultipleDayCellInfo<T>>();
-    const cells = grid.map((c) => {
-      const nativeDate = system.toNativeDate(c.date);
-      let isDisabled =
-        (!!s.minDate && system.isBefore(c.date, s.minDate)) ||
-        (!!s.maxDate && system.isAfter(c.date, s.maxDate)) ||
-        isExplicitlyDisabled(system, c.date, s.disabledDates, s.disabledRanges);
-      if (!isDisabled && s.disabled) {
-        try {
-          if (s.disabled(nativeDate)) isDisabled = true;
-        } catch {
-          // Be permissive — never crash consumers for buggy predicates.
-        }
-      }
-      const cellModifiers: Record<string, boolean> = {};
-      if (modifierEntries) {
-        for (const [name, matcher] of modifierEntries) {
-          if (matchDate(system, c.date, matcher)) cellModifiers[name] = true;
-        }
-      }
-      const computed: MultipleDayCellInfo<T> = {
+    return this.buildDaysFromGrid(
+      s,
+      this.cellCache,
+      (c, nativeDate, isDisabled, modifiers) => ({
         date: c.date,
         nativeDate,
         label: system.formatDay(c.date),
@@ -415,27 +236,9 @@ export class MultipleCalendarStore<
         isToday: system.isSame(c.date, today),
         isSelected: s.selectedDates.some((d) => system.isSame(d, c.date)),
         isDisabled,
-        modifiers: cellModifiers,
-      };
-      const key = nativeDate.getTime();
-      const prev = cache.get(key);
-      const reused =
-        prev && cellsAreEquivalent(prev, computed) ? prev : computed;
-      nextCache.set(key, reused);
-      return reused;
-    });
-    this.cellCache = nextCache;
-    const monthIndex = system.month(displayed);
-    const monthLabel =
-      system.monthLabels()[monthIndex] ?? String(monthIndex + 1);
-    return {
-      weekdayLabels: rotateWeekdayLabels(
-        system.weekdayLabels(),
-        firstDayOfWeek
-      ),
-      cells,
-      displayedMonthLabel: monthLabel,
-      displayedYearLabel: String(system.year(displayed)),
-    };
+        modifiers,
+      }),
+      (a, b) => a.isSelected === b.isSelected
+    );
   }
 }

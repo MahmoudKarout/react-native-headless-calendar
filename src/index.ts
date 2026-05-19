@@ -1,7 +1,4 @@
-// ── Single-mode dedicated surface ──────────────────────────────────────────
-// A type-narrowed alternative to <CalendarProvider mode="single">. Props
-// that don't apply to single selection are absent at the type level;
-// snapshot / payload shapes drop range- and multiple-only fields.
+// ── Single-mode surface ────────────────────────────────────────────────────
 
 export { SingleDateProvider } from './components/SingleDateProvider';
 export type { SingleDateProviderProps } from './components/SingleDateProvider';
@@ -26,10 +23,7 @@ export type {
   SingleSelectionPayload,
 } from './stores/SingleCalendarStore';
 
-// ── Range-mode dedicated surface ───────────────────────────────────────────
-// A type-narrowed alternative to <CalendarProvider mode="range">. Props
-// that don't apply to range selection are absent at the type level;
-// snapshot / payload shapes drop single- and multiple-only fields.
+// ── Range-mode surface ─────────────────────────────────────────────────────
 
 export { RangeDateProvider } from './components/RangeDateProvider';
 export type { RangeDateProviderProps } from './components/RangeDateProvider';
@@ -54,10 +48,7 @@ export type {
   RangeSelectionPayload,
 } from './stores/RangeCalendarStore';
 
-// ── Multiple-mode dedicated surface ────────────────────────────────────────
-// A type-narrowed alternative to <CalendarProvider mode="multiple">.
-// Props that don't apply to multi-pick are absent at the type level;
-// snapshot / payload shapes drop single- and range-only fields.
+// ── Multiple-mode surface ──────────────────────────────────────────────────
 
 export { MultipleDateProvider } from './components/MultipleDateProvider';
 export type { MultipleDateProviderProps } from './components/MultipleDateProvider';

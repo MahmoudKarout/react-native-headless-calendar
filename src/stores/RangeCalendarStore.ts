@@ -1,71 +1,26 @@
 /**
  * RangeCalendarStore — external store for date-range selection.
- *
- * Snapshot fields and methods that only apply to single / multiple
- * mode are absent (no `selectedDate`, `selectedDates`, `maxSelected`).
- * Cell metadata uses `RangeDayCellInfo` — `isSelected` is absent
- * (a range cell is either `isRangeStart`, `isRangeEnd`, or `inRange`).
- *
- * Progressive-selection semantics:
- *   - first tap sets `rangeStart`
- *   - second tap either completes the range or relocates the start
- *   - tapping the same day twice clears (or single-day range if
- *     `allowSameDay`)
- *   - tapping again after both endpoints are set restarts the range
- *   - `minRangeDays` / `maxRangeDays` reject completion when violated
- *
- * Shared navigation, view derivation, bounds evaluation, and
- * `useSyncExternalStore` plumbing live on `BaseCalendarStore`. Only
- * range-specific state and its hooks remain here.
  */
 import type {
   CalendarDateValue,
   CalendarSystem,
   DateParts,
 } from '../types';
-import {
-  buildMonthGrid,
-  isBetween,
-  isExplicitlyDisabled,
-  matchDate,
-  rotateWeekdayLabels,
-} from '../utils/grid';
+import { isBetween } from '../utils/grid';
 import {
   BaseCalendarStore,
   type BaseCalendarSnapshotShared,
   type BaseCalendarStoreOptions,
   normalizeSharedInputs,
   resolveInitialSystem,
-  shallowModifiersEqual,
 } from './BaseCalendarStore';
-
-// ── Public payload + callback types ────────────────────────────────────────
+import type { BaseDayCellFields, CalendarDaysView } from './storeTypes';
 
 export interface RangeSelectionPayload {
-  /**
-   * Native JS Date for the range start, at local-time midnight.
-   * `undefined` after `clear()`. Beware: `toISOString()` and
-   * `JSON.stringify()` print this in UTC. Prefer `startParts` when
-   * timezone-free values are needed.
-   */
   startDate: Date | undefined;
-  /**
-   * Native JS Date for the range end, at local-time midnight.
-   * `undefined` until the user picks both endpoints. Same UTC caveat
-   * as `startDate` — prefer `endParts` for timezone-free values.
-   */
   endDate: Date | undefined;
-  /**
-   * Timezone-free, calendar-system-native components of the range
-   * start. `undefined` while no start is selected.
-   */
   startParts: DateParts | undefined;
-  /**
-   * Timezone-free, calendar-system-native components of the range
-   * end. `undefined` until both endpoints are selected.
-   */
   endParts: DateParts | undefined;
-  /** Identifier of the active calendar system at the time of selection. */
   systemId: string;
 }
 
@@ -73,144 +28,54 @@ export type RangeOnConfirm = (payload: RangeSelectionPayload) => void;
 export type RangeOnClear = () => void;
 export type RangeOnChange = (payload: RangeSelectionPayload) => void;
 
-// ── Cell + derived view shapes ────────────────────────────────────────────
-
-export interface RangeDayCellInfo<T = CalendarDateValue> {
-  /** Date value in the active calendar system. */
-  date: T;
-  /** Native JS Date — convenient for downstream comparisons. */
-  nativeDate: Date;
-  /** Label to show inside the cell (e.g. "12"). */
-  label: string;
-  /** True if the cell falls within the currently displayed month. */
-  isCurrentMonth: boolean;
-  /** True if the cell represents today. */
-  isToday: boolean;
-  /** True if the cell is strictly between the two endpoints. */
+export interface RangeDayCellInfo<T = CalendarDateValue>
+  extends BaseDayCellFields<T> {
   inRange: boolean;
-  /** True if the cell is the start endpoint. */
   isRangeStart: boolean;
-  /** True if the cell is the end endpoint. */
   isRangeEnd: boolean;
-  /** True if the cell is disabled (min/max bound, list, or `disabled`). */
-  isDisabled: boolean;
-  /** Per-modifier flags. Empty `{}` when no modifiers are configured. */
-  modifiers: Readonly<Record<string, boolean>>;
 }
 
-export interface RangeCalendarDays<T = CalendarDateValue> {
-  weekdayLabels: readonly string[];
-  cells: readonly RangeDayCellInfo<T>[];
-  displayedMonthLabel: string;
-  displayedYearLabel: string;
-}
-
-// ── Snapshot + options ─────────────────────────────────────────────────────
+export type RangeCalendarDays<T = CalendarDateValue> =
+  CalendarDaysView<RangeDayCellInfo<T>>;
 
 export interface RangeCalendarSnapshot<T = CalendarDateValue>
   extends BaseCalendarSnapshotShared<T> {
-  /** Discriminant — always `'range'` for this store. */
   readonly mode: 'range';
-  /** Range start endpoint. */
   rangeStart: T | undefined;
-  /** Range end endpoint. `undefined` while only the start has been picked. */
   rangeEnd: T | undefined;
-  /** Allow tapping the same day twice to pick a 1-day range. */
   allowSameDay: boolean;
-  /** Inclusive minimum length, in days, of a confirmable range. */
   minRangeDays: number | undefined;
-  /** Inclusive maximum length, in days, of a confirmable range. */
   maxRangeDays: number | undefined;
   days: RangeCalendarDays<T>;
 }
 
 export interface RangeCalendarStoreOptions<T = CalendarDateValue>
   extends BaseCalendarStoreOptions<T> {
-  /** Initial range start. Read on the first `configure` call only. */
   initialStart?: unknown;
-  /** Initial range end. Read on the first `configure` call only. */
   initialEnd?: unknown;
-
-  /** Allow tapping the same day twice to pick a 1-day range. */
   allowSameDay?: boolean;
-  /** Inclusive minimum confirmable range length, in days. */
   minRangeDays?: number;
-  /** Inclusive maximum confirmable range length, in days. */
   maxRangeDays?: number;
-
-  /** External callbacks. May change identity across configure calls
-   *  without triggering a snapshot bump. */
   onConfirm?: RangeOnConfirm;
   onClear?: RangeOnClear;
   onChange?: RangeOnChange;
 }
 
-// ── Internal helpers ───────────────────────────────────────────────────────
-
-function cellsAreEquivalent<T>(
-  a: RangeDayCellInfo<T>,
-  b: RangeDayCellInfo<T>
-): boolean {
-  return (
-    a.label === b.label &&
-    a.isCurrentMonth === b.isCurrentMonth &&
-    a.isToday === b.isToday &&
-    a.inRange === b.inRange &&
-    a.isRangeStart === b.isRangeStart &&
-    a.isRangeEnd === b.isRangeEnd &&
-    a.isDisabled === b.isDisabled &&
-    a.nativeDate.getTime() === b.nativeDate.getTime() &&
-    shallowModifiersEqual(a.modifiers, b.modifiers)
-  );
-}
-
-// ── The store ──────────────────────────────────────────────────────────────
-
 export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore<
   T,
   RangeCalendarSnapshot<T>
 > {
-  // External callbacks held as fields so action methods can remain
-  // referentially stable for the lifetime of the store. Updated by
-  // every `configure(...)` call without bumping the snapshot.
   private onConfirmCb: RangeOnConfirm | undefined;
   private onClearCb: RangeOnClear | undefined;
   private onChangeCb: RangeOnChange | undefined;
-
   private cellCache = new Map<number, RangeDayCellInfo<T>>();
-
-  // Flips to `true` after the first `configure(...)` completes. Initial-
-  // only options (`initialStart`, `initialEnd`) are read while this is
-  // `false`; later calls ignore them.
   private initialized = false;
 
-  // -- construction ------------------------------------------------------
-
-  /**
-   * Run the first `configure(...)` synchronously so the snapshot is
-   * populated by the time the constructor returns. This guarantees
-   * that any consumer reading via `getSnapshot()` immediately after
-   * construction (e.g. children rendering inside `<RangeDateProvider>`
-   * before its commit-phase effect fires) observes a fully-built
-   * snapshot.
-   */
   constructor(opts: RangeCalendarStoreOptions<T>) {
     super();
     this.configure(opts);
   }
 
-  // -- single entry point ------------------------------------------------
-
-  /**
-   * Apply provider props. Idempotent: a second call with reference-
-   * equal slots emits zero notifications and produces zero snapshot
-   * churn. Order of operations:
-   *   1. Callback slots are written through (no commit).
-   *   2. On the first call: bootstrap the snapshot from `opts`.
-   *   3. On subsequent calls: reconcile system + shared + range-mode
-   *      props inside a single `batch(...)` so any internal commits
-   *      coalesce to one emit at the end.
-   */
   configure(opts: RangeCalendarStoreOptions<T>): void {
     this.onConfirmCb = opts.onConfirm;
     this.onClearCb = opts.onClear;
@@ -228,13 +93,9 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     });
   }
 
-  // -- first-call path ---------------------------------------------------
-
   private bootstrap(opts: RangeCalendarStoreOptions<T>): void {
     this.systems = opts.systems;
     const { system, systemIndex } = resolveInitialSystem(opts);
-    // Open on a month that contains state: prefer `initialStart`, then
-    // `initialEnd`, else today.
     const seedDate = opts.initialStart ?? opts.initialEnd;
     const displayed = seedDate ? system.from(seedDate) : system.today();
     const shared = normalizeSharedInputs(opts, system);
@@ -261,40 +122,6 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
       years: this.buildYears(body),
     });
     this.seedSharedInputs(opts);
-  }
-
-  // -- subsequent-call paths --------------------------------------------
-
-  private reconcileSystem(opts: RangeCalendarStoreOptions<T>): void {
-    this.systems = opts.systems;
-    const s = this.snapshot;
-
-    if (opts.activeSystemId && opts.activeSystemId !== s.system.id) {
-      this.setActiveSystem(opts.activeSystemId);
-    }
-
-    const currentId = this.snapshot.system.id;
-    const idx = opts.systems.findIndex((sys) => sys.id === currentId);
-
-    if (idx === -1) {
-      const next = opts.systems[0];
-      /* istanbul ignore if — bootstrap rejects empty `systems`. */
-      if (!next) {
-        throw new Error(
-          '[Calendar] At least one CalendarSystem must be provided.'
-        );
-      }
-      this.replaceSystem(next, 0);
-      return;
-    }
-
-    /* istanbul ignore next — `idx` is in-bounds by construction. */
-    const nextSystem = opts.systems[idx]!;
-    if (nextSystem !== this.snapshot.system) {
-      this.replaceSystem(nextSystem, idx);
-    } else if (idx !== this.snapshot.systemIndex) {
-      this.commit({ ...this.snapshot, systemIndex: idx });
-    }
   }
 
   protected replaceSystem(
@@ -327,8 +154,6 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     }
     if (next !== this.snapshot) this.commit(next);
   }
-
-  // -- selection actions -------------------------------------------------
 
   selectDate = (input: unknown): void => {
     const s = this.snapshot;
@@ -368,14 +193,10 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
         nextEnd = date;
       }
     } else {
-      // Both endpoints present — start fresh.
       nextStart = date;
       nextEnd = undefined;
     }
 
-    // Enforce min/max range-length only when the pick produced two
-    // endpoints; partial ranges are always allowed so consumers can see
-    // their selection grow.
     if (
       nextStart &&
       nextEnd &&
@@ -411,8 +232,6 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     return !!(s.rangeStart && s.rangeEnd);
   };
 
-  // -- payload ------------------------------------------------------------
-
   private buildPayload(): RangeSelectionPayload {
     const s = this.snapshot;
     const toParts = (d: T): DateParts => ({
@@ -436,8 +255,6 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     this.onChangeCb(this.buildPayload());
   }
 
-  // -- day-grid derivation -----------------------------------------------
-
   protected daysInputsChanged(
     a: RangeCalendarSnapshot<T>,
     b: RangeCalendarSnapshot<T>
@@ -460,69 +277,34 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
   protected buildDays(
     s: Omit<RangeCalendarSnapshot<T>, 'days' | 'months' | 'years'>
   ): RangeCalendarDays<T> {
-    const { system, displayed, firstDayOfWeek, modifiers } = s;
-    const grid = buildMonthGrid(system, displayed, firstDayOfWeek);
+    const { system } = s;
     const today = system.today();
-    const modifierEntries = modifiers ? Object.entries(modifiers) : null;
-    const cache = this.cellCache;
-    const nextCache = new Map<number, RangeDayCellInfo<T>>();
-    const cells = grid.map((c) => {
-      const isStart = !!s.rangeStart && system.isSame(c.date, s.rangeStart);
-      const isEnd = !!s.rangeEnd && system.isSame(c.date, s.rangeEnd);
-      const inRange = isBetween(system, c.date, s.rangeStart, s.rangeEnd);
-      const nativeDate = system.toNativeDate(c.date);
-      let isDisabled =
-        (!!s.minDate && system.isBefore(c.date, s.minDate)) ||
-        (!!s.maxDate && system.isAfter(c.date, s.maxDate)) ||
-        isExplicitlyDisabled(system, c.date, s.disabledDates, s.disabledRanges);
-      if (!isDisabled && s.disabled) {
-        try {
-          if (s.disabled(nativeDate)) isDisabled = true;
-        } catch {
-          // Be permissive — never crash consumers for buggy predicates.
-        }
-      }
-      const cellModifiers: Record<string, boolean> = {};
-      if (modifierEntries) {
-        for (const [name, matcher] of modifierEntries) {
-          if (matchDate(system, c.date, matcher)) cellModifiers[name] = true;
-        }
-      }
-      const computed: RangeDayCellInfo<T> = {
-        date: c.date,
-        nativeDate,
-        label: system.formatDay(c.date),
-        isCurrentMonth: c.isCurrentMonth,
-        isToday: system.isSame(c.date, today),
-        inRange: inRange && !isStart && !isEnd,
-        isRangeStart: isStart,
-        isRangeEnd: isEnd,
-        isDisabled,
-        modifiers: cellModifiers,
-      };
-      const key = nativeDate.getTime();
-      const prev = cache.get(key);
-      const reused =
-        prev && cellsAreEquivalent(prev, computed) ? prev : computed;
-      nextCache.set(key, reused);
-      return reused;
-    });
-    this.cellCache = nextCache;
-    const monthIndex = system.month(displayed);
-    const monthLabel =
-      system.monthLabels()[monthIndex] ?? String(monthIndex + 1);
-    return {
-      weekdayLabels: rotateWeekdayLabels(
-        system.weekdayLabels(),
-        firstDayOfWeek
-      ),
-      cells,
-      displayedMonthLabel: monthLabel,
-      displayedYearLabel: String(system.year(displayed)),
-    };
+    return this.buildDaysFromGrid(
+      s,
+      this.cellCache,
+      (c, nativeDate, isDisabled, modifiers) => {
+        const isStart = !!s.rangeStart && system.isSame(c.date, s.rangeStart);
+        const isEnd = !!s.rangeEnd && system.isSame(c.date, s.rangeEnd);
+        const inRange = isBetween(system, c.date, s.rangeStart, s.rangeEnd);
+        return {
+          date: c.date,
+          nativeDate,
+          label: system.formatDay(c.date),
+          isCurrentMonth: c.isCurrentMonth,
+          isToday: system.isSame(c.date, today),
+          inRange: inRange && !isStart && !isEnd,
+          isRangeStart: isStart,
+          isRangeEnd: isEnd,
+          isDisabled,
+          modifiers,
+        };
+      },
+      (a, b) =>
+        a.inRange === b.inRange &&
+        a.isRangeStart === b.isRangeStart &&
+        a.isRangeEnd === b.isRangeEnd
+    );
   }
-
-  // -- range-length validation -------------------------------------------
 
   private isRangeLengthAllowed(start: T, end: T): boolean {
     const { minRangeDays, maxRangeDays } = this.snapshot;
@@ -537,8 +319,6 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     const system = this.snapshot.system;
     const a = system.toNativeDate(start);
     const b = system.toNativeDate(end);
-    // Normalise to midnight UTC to avoid DST off-by-one when
-    // `toNativeDate` returns local-midnight Dates.
     const aUtc = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
     const bUtc = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
     const ms = Math.abs(bUtc - aUtc);
