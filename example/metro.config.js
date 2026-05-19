@@ -1,6 +1,5 @@
 const path = require('path');
 const { getDefaultConfig } = require('@expo/metro-config');
-const { withStorybook } = require('@storybook/react-native/withStorybook');
 const { withMetroConfig } = require('react-native-monorepo-config');
 const { withUniwindConfig } = require('uniwind/metro');
 
@@ -19,6 +18,6 @@ const config = withMetroConfig(getDefaultConfig(__dirname), {
 
 // `withUniwindConfig` must be the OUTERMOST wrapper so it sees the final
 // resolver/transformer chain (per the Uniwind setup guide).
-module.exports = withUniwindConfig(withStorybook(config), {
+module.exports = withUniwindConfig(config, {
   cssEntryFile: './global.css',
 });

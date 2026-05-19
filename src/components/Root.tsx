@@ -136,7 +136,7 @@ export const Root: React.FC<CalendarRootProps> = ({
   modifiers,
   firstDayOfWeek = DEFAULT_FIRST_DAY_OF_WEEK,
   onConfirm,
-  onClear,
+  onClear,       
   onChange,
   children,
 }) => {

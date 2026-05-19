@@ -12,7 +12,5 @@
     "./uniwind-types.d.ts",
     "./global.css.d.ts",
     "./src",
-    "./.rnstorybook",
-    "./.storybook"
   ]
 }

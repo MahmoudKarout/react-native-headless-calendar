@@ -87,8 +87,6 @@ nitrogen/
 coverage/
 example/ios/
 example/android/
-*storybook.log
-storybook-static
 
 # Docusaurus
 docs/.docusaurus/
