@@ -4,7 +4,7 @@
 
 Build the calendar your design system deserves: three mode-specific providers, two hooks each, typed selectors, and a store that owns grid math, bounds, disabled rules, and selection logic so you only wire pixels.
 
-[**Documentation**](https://mahmoudkarout.github.io/react-native-fast-calendar/) · [**Example app**](./example) · [**Contributing**](./CONTRIBUTING.md)
+[**Documentation**](https://mahmoudkarout.github.io/react-native-headless-calendar/) · [**Example app**](./example) · [**Contributing**](./CONTRIBUTING.md)
 
 ---
 
@@ -186,7 +186,7 @@ When a range would include disabled days in the interior, `disabledInRangeBehavi
 | `include` | Full range stored; interior disabled cells stay `isDisabled` + `inRange` |
 | `exclude` | `rangeEnd` clamped to the day before the first disabled interior day |
 
-[Full docs → disabled days inside a range](https://mahmoudkarout.github.io/react-native-fast-calendar/docs/hooks/providers#disabled-days-inside-a-range)
+[Full docs → disabled days inside a range](https://mahmoudkarout.github.io/react-native-headless-calendar/docs/hooks/providers#disabled-days-inside-a-range)
 
 ---
 

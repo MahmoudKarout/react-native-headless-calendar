@@ -334,7 +334,7 @@ export default function Home(): JSX.Element {
               </Link>
               <Link
                 className={styles.ctaSecondary}
-                to="https://github.com/MahmoudKarout/react-native-fast-calendar"
+                to="https://github.com/MahmoudKarout/react-native-headless-calendar"
               >
                 <svg
                   viewBox="0 0 24 24"

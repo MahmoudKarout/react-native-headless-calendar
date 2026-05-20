@@ -77,14 +77,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MahmoudKarout/react-native-fast-calendar.git"
+    "url": "git+https://github.com/MahmoudKarout/react-native-headless-calendar.git"
   },
   "author": "karout <mahmoudtkarout@gmail.com> (https://github.com/MahmoudKarout)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/MahmoudKarout/react-native-fast-calendar/issues"
+    "url": "https://github.com/MahmoudKarout/react-native-headless-calendar/issues"
   },
-  "homepage": "https://github.com/MahmoudKarout/react-native-fast-calendar#readme",
+  "homepage": "https://github.com/MahmoudKarout/react-native-headless-calendar#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },

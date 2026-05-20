@@ -3,9 +3,9 @@ import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const SITE_URL = 'https://mahmoudkarout.github.io';
-const SITE_BASE_URL = '/react-native-fast-calendar/';
+const SITE_BASE_URL = '/react-native-headless-calendar/';
 const GITHUB_URL =
-  'https://github.com/MahmoudKarout/react-native-fast-calendar';
+  'https://github.com/MahmoudKarout/react-native-headless-calendar';
 
 const SITE_TITLE = 'react-native-headless-calendar';
 const SITE_TAGLINE =
@@ -36,7 +36,7 @@ const config: Config = {
   trailingSlash: false,
 
   organizationName: 'MahmoudKarout',
-  projectName: 'react-native-fast-calendar',
+  projectName: 'react-native-headless-calendar',
   deploymentBranch: 'gh-pages',
 
   onBrokenLinks: 'throw',
