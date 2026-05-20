@@ -43,9 +43,6 @@ export function useStableCallback<TArgs extends unknown[], TReturn = void>(
   return cb ? wrapper : undefined;
 }
 
-/** @deprecated Use {@link useStableCallback} — identical implementation. */
-export const useStablePredicate = useStableCallback;
-
 /**
  * Returns the previous array reference when the new array's elements are
  * each strictly equal (===) to the previous one's, so inline literals

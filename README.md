@@ -104,7 +104,6 @@ npm install react-native-fast-calendar
 | --- | --- |
 | `@tabby_ai/hijri-converter` | `react-native-fast-calendar/systems/hijri` |
 | `moment-jalaali` | `react-native-fast-calendar/systems/jalali` |
-| `@shopify/flash-list` | optional, for virtualised month lists in your app |
 
 ---
 

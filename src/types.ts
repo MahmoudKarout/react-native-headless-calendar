@@ -75,7 +75,7 @@ export type CalendarMatcher =
 
 export type CalendarModifiers = Readonly<Record<string, CalendarMatcher>>;
 
-export interface CalendarMonthEntry {
+interface CalendarMonthEntry {
   index: number;
   label: string;
 }

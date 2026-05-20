@@ -5,7 +5,6 @@ import { Text, View } from 'react-native';
 import {
   useStableArray,
   useStableCallback,
-  useStablePredicate,
   useStableRecord,
 } from '../../utils/stableProps';
 
@@ -60,9 +59,6 @@ describe('useStableCallback()', () => {
     expect(refs[2]).toBeDefined();
   });
 
-  it('re-exports useStablePredicate as an alias', () => {
-    expect(useStablePredicate).toBe(useStableCallback);
-  });
 });
 
 // -- useStableArray ----------------------------------------------------------
