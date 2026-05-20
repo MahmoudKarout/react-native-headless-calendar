@@ -1,7 +1,7 @@
 {
-  "name": "react-native-fast-calendar",
+  "name": "react-native-headless-calendar",
   "version": "0.1.0",
-  "description": "A headless, calendar-system-agnostic, fully composable React Native calendar. Bring your own UI primitives, your own theme, your own calendar system (Gregorian, Hijri, Chinese, Ethiopian, …).",
+  "description": "A fast, headless, calendar-system-agnostic React Native calendar for building fully custom date pickers, range pickers, and multi-date calendars.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
   "exports": {
@@ -47,7 +47,7 @@
     "!**/.*"
   ],
   "scripts": {
-    "example": "yarn workspace react-native-fast-calendar-example",
+    "example": "yarn workspace react-native-headless-calendar-example",
     "clean": "del-cli lib",
     "prepare": "bob build",
     "typecheck": "tsc",

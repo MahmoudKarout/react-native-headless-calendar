@@ -4,7 +4,7 @@ import {
   selectMultipleCanConfirm,
   useMultipleCalendarActions,
   useMultipleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 
 export function Footer() {
   const { clear, confirm } = useMultipleCalendarActions();

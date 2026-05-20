@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "FastCalendar Example",
-    "slug": "react-native-fast-calendar-example",
+    "slug": "react-native-headless-calendar-example",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

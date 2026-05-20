@@ -302,7 +302,7 @@ import { Text } from 'react-native';
 import {
   SingleDateProvider,
   useSingleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 
 function Header() {
   const system = useSingleCalendarSelector((s) => s.system);

@@ -7,7 +7,7 @@ const SITE_BASE_URL = '/react-native-fast-calendar/';
 const GITHUB_URL =
   'https://github.com/MahmoudKarout/react-native-fast-calendar';
 
-const SITE_TITLE = 'react-native-fast-calendar';
+const SITE_TITLE = 'react-native-headless-calendar';
 const SITE_TAGLINE =
   'A headless, high-performance, multi-calendar-system primitive for React Native — Gregorian, Hijri, Jalali, custom — bring your own UI.';
 
@@ -148,9 +148,9 @@ const config: Config = {
       maxHeadingLevel: 4,
     },
     navbar: {
-      title: 'react-native-fast-calendar',
+      title: 'react-native-headless-calendar',
       logo: {
-        alt: 'react-native-fast-calendar logo',
+        alt: 'react-native-headless-calendar logo',
         src: 'img/logo.svg',
         srcDark: 'img/logo.svg',
       },
@@ -206,12 +206,12 @@ const config: Config = {
             { label: 'Issues', href: `${GITHUB_URL}/issues` },
             {
               label: 'npm',
-              href: 'https://www.npmjs.com/package/react-native-fast-calendar',
+              href: 'https://www.npmjs.com/package/react-native-headless-calendar',
             },
           ],
         },
       ],
-      copyright: `© ${new Date().getFullYear()} react-native-fast-calendar — MIT licensed. Built with Docusaurus.`,
+      copyright: `© ${new Date().getFullYear()} react-native-headless-calendar — MIT licensed. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

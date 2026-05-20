@@ -10,9 +10,9 @@ A **calendar system** is an adapter implementing `CalendarSystem<T>`. The store 
 
 | Import path | Export | Peer dependency |
 | --- | --- | --- |
-| `react-native-fast-calendar` | `gregorianSystem`, `createGregorianSystem` | none |
-| `react-native-fast-calendar/systems/hijri` | `hijriSystem` | `@tabby_ai/hijri-converter` |
-| `react-native-fast-calendar/systems/jalali` | `jalaliSystem` | `moment-jalaali` |
+| `react-native-headless-calendar` | `gregorianSystem`, `createGregorianSystem` | none |
+| `react-native-headless-calendar/systems/hijri` | `hijriSystem` | `@tabby_ai/hijri-converter` |
+| `react-native-headless-calendar/systems/jalali` | `jalaliSystem` | `moment-jalaali` |
 
 If you omit `systems`, every provider defaults to `[gregorianSystem]`.
 
@@ -21,9 +21,9 @@ If you omit `systems`, every provider defaults to `[gregorianSystem]`.
 Pass an array of systems and control which one is active:
 
 ```tsx
-import { SingleDateProvider } from 'react-native-fast-calendar';
-import { gregorianSystem } from 'react-native-fast-calendar';
-import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
+import { SingleDateProvider } from 'react-native-headless-calendar';
+import { gregorianSystem } from 'react-native-headless-calendar';
+import { hijriSystem } from 'react-native-headless-calendar/systems/hijri';
 
 <SingleDateProvider
   systems={[gregorianSystem, hijriSystem]}

@@ -3,7 +3,7 @@ import {
   selectRangeMonths,
   useRangeCalendarActions,
   useRangeCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 
 interface MonthViewProps {
   onChange: () => void;

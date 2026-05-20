@@ -3,7 +3,7 @@ import {
   selectSingleYears,
   useSingleCalendarActions,
   useSingleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 import { tv } from 'tailwind-variants/lite';
 import { IconButton } from '../Button/Button';
 

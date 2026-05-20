@@ -59,7 +59,7 @@ interface MultipleDayCellInfo extends BaseDayCellFields {
 ```tsx
 import { memo } from 'react';
 import { Pressable, Text } from 'react-native';
-import type { RangeDayCellInfo } from 'react-native-fast-calendar';
+import type { RangeDayCellInfo } from 'react-native-headless-calendar';
 
 export const DayCell = memo(function DayCell({
   cell,

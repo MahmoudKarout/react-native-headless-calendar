@@ -9,7 +9,7 @@ You can implement any calendar system by creating a `CalendarSystem<T>` adapter.
 ## Interface Implementation
 
 ```ts
-import type { CalendarSystem, Weekday } from 'react-native-fast-calendar';
+import type { CalendarSystem, Weekday } from 'react-native-headless-calendar';
 
 interface EthiopianDate {
   readonly year: number;

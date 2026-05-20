@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import {
   SingleDateProvider,
   type SingleDateProviderProps,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 
 import { YearView } from './YearView';
 import { DayView } from './DayView';

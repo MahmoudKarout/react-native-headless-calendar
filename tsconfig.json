@@ -2,12 +2,12 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "react-native-fast-calendar": ["./src/index"],
-      "react-native-fast-calendar/systems/gregorian": [
+      "react-native-headless-calendar": ["./src/index"],
+      "react-native-headless-calendar/systems/gregorian": [
         "./src/systems/gregorian"
       ],
-      "react-native-fast-calendar/systems/hijri": ["./src/systems/hijri"],
-      "react-native-fast-calendar/systems/jalali": ["./src/systems/jalali"]
+      "react-native-headless-calendar/systems/hijri": ["./src/systems/hijri"],
+      "react-native-headless-calendar/systems/jalali": ["./src/systems/jalali"]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,

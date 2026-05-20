@@ -23,7 +23,7 @@ import {
   type JalaliDate,
   type JalaliSystemOptions,
   type JalaliConverter,
-} from 'react-native-fast-calendar/systems/jalali';
+} from 'react-native-headless-calendar/systems/jalali';
 ```
 
 ## Usage
@@ -109,8 +109,8 @@ interface JalaliDate {
 ## Multi-System Calendar
 
 ```tsx
-import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
-import { jalaliSystem } from 'react-native-fast-calendar/systems/jalali';
+import { gregorianSystem } from 'react-native-headless-calendar/systems/gregorian';
+import { jalaliSystem } from 'react-native-headless-calendar/systems/jalali';
 
 function PersianCalendar() {
   return (

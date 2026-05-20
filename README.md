@@ -1,4 +1,4 @@
-# react-native-fast-calendar
+# react-native-headless-calendar
 
 **Headless calendar primitives for React Native** — single date, date range, and multi-date selection with zero bundled UI, surgical re-renders, and pluggable calendar systems (Gregorian, Hijri, Jalali, or your own).
 
@@ -10,7 +10,7 @@ Build the calendar your design system deserves: three mode-specific providers, t
 
 ## Why this library?
 
-Most React Native calendars ship opinionated chrome you fight to restyle, or they re-render the whole grid on every tap. **react-native-fast-calendar** is the opposite:
+Most React Native calendars ship opinionated chrome you fight to restyle, or they re-render the whole grid on every tap. **react-native-headless-calendar** is the opposite:
 
 - **Headless** — no `<Calendar>` component, no theme object, no label dictionary.
 - **Fast** — `useSyncExternalStore` + identity-stable day cells; action callers never subscribe.
@@ -61,8 +61,8 @@ Works on **iOS**, **Android**, and **React Native Web**.
 ### Calendar systems
 
 - **Gregorian** — built in, zero extra date-library deps.
-- **Hijri** — opt-in sub-path `react-native-fast-calendar/systems/hijri` (`@tabby_ai/hijri-converter`).
-- **Jalali (Persian)** — opt-in sub-path `react-native-fast-calendar/systems/jalali` (`moment-jalaali`).
+- **Hijri** — opt-in sub-path `react-native-headless-calendar/systems/hijri` (`@tabby_ai/hijri-converter`).
+- **Jalali (Persian)** — opt-in sub-path `react-native-headless-calendar/systems/jalali` (`moment-jalaali`).
 - **Custom systems** — implement `CalendarSystem<T>` for any calendar.
 - **Runtime switch** — `activeSystemId` + `setActiveSystem()`; selection and bounds carry across systems by absolute instant.
 - **Accurate built-ins** — Gregorian, Hijri, and Jalali use dedicated converters; not hand-rolled approximations.
@@ -86,9 +86,9 @@ Works on **iOS**, **Android**, and **React Native Web**.
 ## Install
 
 ```bash
-yarn add react-native-fast-calendar
+yarn add react-native-headless-calendar
 # or
-npm install react-native-fast-calendar
+npm install react-native-headless-calendar
 ```
 
 ### Requirements
@@ -102,8 +102,8 @@ npm install react-native-fast-calendar
 
 | Package | Import path |
 | --- | --- |
-| `@tabby_ai/hijri-converter` | `react-native-fast-calendar/systems/hijri` |
-| `moment-jalaali` | `react-native-fast-calendar/systems/jalali` |
+| `@tabby_ai/hijri-converter` | `react-native-headless-calendar/systems/hijri` |
+| `moment-jalaali` | `react-native-headless-calendar/systems/jalali` |
 
 ---
 
@@ -116,7 +116,7 @@ import {
   selectSingleDays,
   useSingleCalendarActions,
   useSingleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 
 function DayGrid() {
   const days = useSingleCalendarSelector(selectSingleDays);
@@ -193,10 +193,10 @@ When a range would include disabled days in the interior, `disabledInRangeBehavi
 ## Multi-calendar systems
 
 ```tsx
-import { SingleDateProvider } from 'react-native-fast-calendar';
-import { gregorianSystem } from 'react-native-fast-calendar';
-import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
-import { jalaliSystem } from 'react-native-fast-calendar/systems/jalali';
+import { SingleDateProvider } from 'react-native-headless-calendar';
+import { gregorianSystem } from 'react-native-headless-calendar';
+import { hijriSystem } from 'react-native-headless-calendar/systems/hijri';
+import { jalaliSystem } from 'react-native-headless-calendar/systems/jalali';
 
 <SingleDateProvider
   systems={[gregorianSystem, hijriSystem, jalaliSystem]}

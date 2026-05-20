@@ -11,7 +11,7 @@ import {
   selectSingleDays,
   useSingleCalendarActions,
   useSingleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 
 export function PickerScreen() {
   return (
@@ -54,7 +54,7 @@ import {
   selectRangeDays,
   useRangeCalendarActions,
   useRangeCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 
 export function CustomCalendar() {
   return (
@@ -96,10 +96,10 @@ function Footer() {
   );
 }`;
 
-const SYSTEMS_EXAMPLE = `import { SingleDateProvider } from 'react-native-fast-calendar';
-import { gregorianSystem } from 'react-native-fast-calendar';
-import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
-import { jalaliSystem } from 'react-native-fast-calendar/systems/jalali';
+const SYSTEMS_EXAMPLE = `import { SingleDateProvider } from 'react-native-headless-calendar';
+import { gregorianSystem } from 'react-native-headless-calendar';
+import { hijriSystem } from 'react-native-headless-calendar/systems/hijri';
+import { jalaliSystem } from 'react-native-headless-calendar/systems/jalali';
 
 const systems = [gregorianSystem, hijriSystem, jalaliSystem];
 
@@ -283,7 +283,7 @@ const STATS = [
 export default function Home(): JSX.Element {
   return (
     <Layout
-      title="react-native-fast-calendar"
+      title="react-native-headless-calendar"
       description="Headless React Native calendar with zero wasted re-renders and 100% accurate Gregorian, Hijri, and Jalali systems. We handle selection logic — you focus on UI only."
     >
       <main className={styles.page}>
@@ -356,7 +356,7 @@ export default function Home(): JSX.Element {
             <div className={styles.installRow}>
               <span className={styles.installLabel}>$</span>
               <code className={styles.installCmd}>
-                yarn add react-native-fast-calendar
+                yarn add react-native-headless-calendar
               </code>
             </div>
           </div>

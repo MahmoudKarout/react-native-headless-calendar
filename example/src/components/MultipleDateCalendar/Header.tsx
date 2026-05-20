@@ -3,7 +3,7 @@ import { IconButton } from '../Button/Button';
 import {
   useMultipleCalendarActions,
   useMultipleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 
 export function Header() {
   const { goPrevMonth, goNextMonth } = useMultipleCalendarActions();

@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 import { Pressable, Text } from 'react-native';
-import type { RangeDayCellInfo } from 'react-native-fast-calendar';
+import type { RangeDayCellInfo } from 'react-native-headless-calendar';
 import { tv } from 'tailwind-variants/lite';
 
 export const CELL_SIZE = 42;

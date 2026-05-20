@@ -1,5 +1,5 @@
 /**
- * Public type surface for react-native-fast-calendar.
+ * Public type surface for react-native-headless-calendar.
  *
  * The package is a hooks-only library: there are no opinions about UI,
  * theming, labels, or copy. Everything is computed from the active

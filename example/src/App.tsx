@@ -18,10 +18,10 @@ import type {
   RangeDateProviderProps,
   RangeSelectionPayload,
   SingleSelectionPayload,
-} from 'react-native-fast-calendar';
-import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
-import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
-import { jalaliSystem } from 'react-native-fast-calendar/systems/jalali';
+} from 'react-native-headless-calendar';
+import { gregorianSystem } from 'react-native-headless-calendar/systems/gregorian';
+import { hijriSystem } from 'react-native-headless-calendar/systems/hijri';
+import { jalaliSystem } from 'react-native-headless-calendar/systems/jalali';
 
 const onInsetChange = ({ insets }: { insets: EdgeInsets }) => {
   Uniwind?.updateInsets(insets);

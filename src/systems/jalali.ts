@@ -6,8 +6,8 @@
  *
  *   yarn add moment-jalaali
  *
- *   import { jalaliSystem } from "react-native-fast-calendar/systems/jalali";
- *   import { gregorianSystem } from "react-native-fast-calendar";
+ *   import { jalaliSystem } from "react-native-headless-calendar/systems/jalali";
+ *   import { gregorianSystem } from "react-native-headless-calendar";
  *
  *   <SimpleCalendar systems={[gregorianSystem, jalaliSystem]} />
  *
@@ -23,7 +23,7 @@
  *
  * To write a calendar system without going through this plugin at all,
  * implement the `CalendarSystem<T>` interface from
- * `react-native-fast-calendar` directly. See README ("Add your own
+ * `react-native-headless-calendar` directly. See README ("Add your own
  * calendar") for the recipe.
  */
 import type { CalendarSystem } from '../types';
@@ -137,14 +137,14 @@ export interface JalaliSystemOptions {
 }
 
 const MISSING_CONVERTER_ERROR =
-  '[react-native-fast-calendar/systems/jalali] could not load the default ' +
+  '[react-native-headless-calendar/systems/jalali] could not load the default ' +
   'Jalali converter.\n\n' +
   'Either install the optional peer dependency:\n\n' +
   '    yarn add moment-jalaali\n\n' +
   '…and use the ready-made instance:\n\n' +
-  '    import { jalaliSystem } from "react-native-fast-calendar/systems/jalali";\n\n' +
+  '    import { jalaliSystem } from "react-native-headless-calendar/systems/jalali";\n\n' +
   '…or pass your own converter to the factory:\n\n' +
-  '    import { createJalaliSystem } from "react-native-fast-calendar/systems/jalali";\n' +
+  '    import { createJalaliSystem } from "react-native-headless-calendar/systems/jalali";\n' +
   '    const jalali = createJalaliSystem({ converter: myConverter });\n\n' +
   'A custom converter only needs `gregorianToJalali` and `jalaliToGregorian` ' +
   'methods (1-based months on both sides).';

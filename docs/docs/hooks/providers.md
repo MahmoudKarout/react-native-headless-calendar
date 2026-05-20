@@ -106,7 +106,7 @@ When the user picks a second endpoint that would span one or more disabled days 
 
 **Length rules:** After the policy runs, `minRangeDays` / `maxRangeDays` still apply. A clamped range that is too short or too long is rejected the same as any other invalid span.
 
-Exported type: `DisabledInRangeBehavior` from `react-native-fast-calendar`.
+Exported type: `DisabledInRangeBehavior` from `react-native-headless-calendar`.
 
 **Payload** (`RangeSelectionPayload`):
 

@@ -6,8 +6,8 @@
  *
  *   yarn add @tabby_ai/hijri-converter
  *
- *   import { hijriSystem } from "react-native-fast-calendar/systems/hijri";
- *   import { gregorianSystem } from "react-native-fast-calendar";
+ *   import { hijriSystem } from "react-native-headless-calendar/systems/hijri";
+ *   import { gregorianSystem } from "react-native-headless-calendar";
  *
  *   <SimpleCalendar systems={[gregorianSystem, hijriSystem]} />
  *
@@ -22,7 +22,7 @@
  *
  * To write a calendar system without going through this plugin at all,
  * implement the `CalendarSystem<T>` interface from
- * `react-native-fast-calendar` directly. See README ("Add your own
+ * `react-native-headless-calendar` directly. See README ("Add your own
  * calendar") for the recipe.
  */
 import type { CalendarSystem } from '../types';
@@ -128,14 +128,14 @@ export interface HijriSystemOptions {
 }
 
 const MISSING_CONVERTER_ERROR =
-  '[react-native-fast-calendar/systems/hijri] could not load the default ' +
+  '[react-native-headless-calendar/systems/hijri] could not load the default ' +
   'Hijri converter.\n\n' +
   'Either install the optional peer dependency:\n\n' +
   '    yarn add @tabby_ai/hijri-converter\n\n' +
   '…and use the ready-made instance:\n\n' +
-  '    import { hijriSystem } from "react-native-fast-calendar/systems/hijri";\n\n' +
+  '    import { hijriSystem } from "react-native-headless-calendar/systems/hijri";\n\n' +
   '…or pass your own converter to the factory:\n\n' +
-  '    import { createHijriSystem } from "react-native-fast-calendar/systems/hijri";\n' +
+  '    import { createHijriSystem } from "react-native-headless-calendar/systems/hijri";\n' +
   '    const hijri = createHijriSystem({ converter: myConverter });\n\n' +
   'A custom converter only needs `gregorianToHijri` and `hijriToGregorian` ' +
   'methods (1-based months on both sides).';

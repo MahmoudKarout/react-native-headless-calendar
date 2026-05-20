@@ -56,10 +56,10 @@ An empty array matches nothing.
 
 ## Grid Utilities
 
-The same matching logic powers `matchDate` in `react-native-fast-calendar` for advanced use outside the store:
+The same matching logic powers `matchDate` in `react-native-headless-calendar` for advanced use outside the store:
 
 ```ts
-import { matchDate, createGregorianSystem } from 'react-native-fast-calendar';
+import { matchDate, createGregorianSystem } from 'react-native-headless-calendar';
 
 const sys = createGregorianSystem();
 matchDate(sys, date, (d) => d.getMonth() === 5);

@@ -14,7 +14,7 @@ import {
   createGregorianSystem,
   type GregorianDate,
   type GregorianSystemOptions,
-} from 'react-native-fast-calendar/systems/gregorian';
+} from 'react-native-headless-calendar/systems/gregorian';
 ```
 
 ## Default Instance
@@ -113,8 +113,8 @@ const weekNumber = gregorianSystem.weekNumber({ y: 2024, m: 4, d: 15 });
 Combine with other calendar systems:
 
 ```tsx
-import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
-import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
+import { gregorianSystem } from 'react-native-headless-calendar/systems/gregorian';
+import { hijriSystem } from 'react-native-headless-calendar/systems/hijri';
 
 <SingleDateProvider
   systems={[gregorianSystem, hijriSystem]}
@@ -125,8 +125,8 @@ import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
 ## Complete Example
 
 ```tsx
-import { SingleDateProvider } from 'react-native-fast-calendar';
-import { createGregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
+import { SingleDateProvider } from 'react-native-headless-calendar';
+import { createGregorianSystem } from 'react-native-headless-calendar/systems/gregorian';
 
 const spanishSystem = createGregorianSystem({
   label: 'Gregorian',

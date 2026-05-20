@@ -23,7 +23,7 @@ import {
   type HijriDate,
   type HijriSystemOptions,
   type HijriConverter,
-} from 'react-native-fast-calendar/systems/hijri';
+} from 'react-native-headless-calendar/systems/hijri';
 ```
 
 ## Usage
@@ -108,8 +108,8 @@ interface HijriDate {
 ## Multi-System Calendar
 
 ```tsx
-import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
-import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
+import { gregorianSystem } from 'react-native-headless-calendar/systems/gregorian';
+import { hijriSystem } from 'react-native-headless-calendar/systems/hijri';
 
 function DualCalendar() {
   return (

@@ -5,7 +5,7 @@ sidebar_position: 2
 # Installation
 
 ```bash
-yarn add react-native-fast-calendar
+yarn add react-native-headless-calendar
 ```
 
 ### Optional — Hijri Calendar
@@ -14,7 +14,7 @@ yarn add react-native-fast-calendar
 yarn add @tabby_ai/hijri-converter
 ```
 
-Required only when you import `react-native-fast-calendar/systems/hijri`.
+Required only when you import `react-native-headless-calendar/systems/hijri`.
 
 ### Optional — Jalali (Persian) Calendar
 
@@ -22,7 +22,7 @@ Required only when you import `react-native-fast-calendar/systems/hijri`.
 yarn add moment-jalaali
 ```
 
-Required only when you import `react-native-fast-calendar/systems/jalali`.
+Required only when you import `react-native-headless-calendar/systems/jalali`.
 
 
 ## Requirements
@@ -39,7 +39,7 @@ import {
   selectSingleDays,
   useSingleCalendarActions,
   useSingleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 ```
 
 Pick the provider that matches your selection mode — see [Providers](./hooks/providers).

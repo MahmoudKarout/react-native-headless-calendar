@@ -5,7 +5,7 @@ import {
   type SingleDayCellInfo,
   useSingleCalendarActions,
   useSingleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 import { DayCell } from './DayCell';
 
 function WeekdayLabels() {

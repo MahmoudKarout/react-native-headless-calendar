@@ -3,7 +3,7 @@ import {
   selectSingleMonths,
   useSingleCalendarActions,
   useSingleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 import { tv } from 'tailwind-variants/lite';
 
 interface MonthViewProps {

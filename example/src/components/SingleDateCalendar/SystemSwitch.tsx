@@ -2,7 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import {
   useSingleCalendarActions,
   useSingleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 import { tv } from 'tailwind-variants/lite';
 
 const systemKinds = ['gregorian', 'hijri', 'jalali'] as const;

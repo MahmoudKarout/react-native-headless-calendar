@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 title: Introduction
-description: react-native-fast-calendar is a headless, hooks-only calendar primitive for React Native — one provider per selection mode, two hooks, typed selectors.
+description: react-native-headless-calendar is a headless, hooks-only calendar primitive for React Native — one provider per selection mode, two hooks, typed selectors.
 keywords:
   - react native calendar
   - headless calendar
@@ -11,7 +11,7 @@ keywords:
 
 # Introduction
 
-`react-native-fast-calendar` is a **headless, hooks-only calendar primitive** for React Native. Pick a provider for your selection mode, read state with one hook, mutate with another — you bring every pixel of UI.
+`react-native-headless-calendar` is a **headless, hooks-only calendar primitive** for React Native. Pick a provider for your selection mode, read state with one hook, mutate with another — you bring every pixel of UI.
 
 ## The API at a Glance
 
@@ -30,7 +30,7 @@ import {
   selectSingleCanConfirm,
   useSingleCalendarActions,
   useSingleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 ```
 
 There is no bundled `<Calendar>`, no theme object, and no label dictionary. You render your own components with the data the hooks expose.
@@ -45,7 +45,7 @@ import {
   selectSingleDays,
   useSingleCalendarActions,
   useSingleCalendarSelector,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 
 function Calendar() {
   const days = useSingleCalendarSelector(selectSingleDays);

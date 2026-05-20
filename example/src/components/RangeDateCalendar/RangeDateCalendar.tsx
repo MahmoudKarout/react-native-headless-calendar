@@ -7,7 +7,7 @@ import {
   type RangeOnChange,
   type RangeOnClear,
   type RangeOnConfirm,
-} from 'react-native-fast-calendar';
+} from 'react-native-headless-calendar';
 
 import { YearView } from './YearView';
 import { DayView } from './DayView';

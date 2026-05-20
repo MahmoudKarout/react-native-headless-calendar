@@ -10530,9 +10530,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-fast-calendar-docs@workspace:.":
+"react-native-headless-calendar-docs@workspace:.":
   version: 0.0.0-use.local
-  resolution: "react-native-fast-calendar-docs@workspace:."
+  resolution: "react-native-headless-calendar-docs@workspace:."
   dependencies:
     "@docusaurus/core": "npm:^3.10.1"
     "@docusaurus/module-type-aliases": "npm:^3.10.1"

@@ -1,4 +1,4 @@
-# react-native-fast-calendar — documentation site
+# react-native-headless-calendar — documentation site
 
 Static docs built with [Docusaurus](https://docusaurus.io/), published to GitHub Pages.
 

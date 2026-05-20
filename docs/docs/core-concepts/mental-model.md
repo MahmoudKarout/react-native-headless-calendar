@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Mental Model
 
-`react-native-fast-calendar` is a **state primitive**, not a UI kit. Once you internalise the model below, any calendar UI is a thin layer of your own components on top of the same two hooks.
+`react-native-headless-calendar` is a **state primitive**, not a UI kit. Once you internalise the model below, any calendar UI is a thin layer of your own components on top of the same two hooks.
 
 ## One Provider Per Mode, Two Hooks, A Handful of Selectors
 
