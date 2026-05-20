@@ -25,22 +25,32 @@ yarn add moment-jalaali
 Required only when you import `react-native-fast-calendar/systems/jalali`.
 
 
-### Optional — Vertical List Recipe
-```bash
-yarn add @shopify/flash-list
-```
-
 ## Requirements
 
 - React `>= 18.0.0`
 - React Native `>= 0.70.0`
 - TypeScript types ship with the package.
 
+## Quick Start
+
+```tsx
+import {
+  SingleDateProvider,
+  selectSingleDays,
+  useSingleCalendarActions,
+  useSingleCalendarSelector,
+} from 'react-native-fast-calendar';
+```
+
+Pick the provider that matches your selection mode — see [Providers](./hooks/providers).
+
+**Note:** `firstDayOfWeek` defaults to **Monday (`1`)**. Pass `0` for a Sunday-first grid.
+
 ## Web Support
 
-Works out of the box with React Native Web — including the live demos in this docset.
+Works out of the box with React Native Web.
 
 ## Next Steps
 
 - [Mental Model](./core-concepts/mental-model)
-- [Single date picker recipe](./recipes/single-date-picker)
+- [Providers](./hooks/providers)

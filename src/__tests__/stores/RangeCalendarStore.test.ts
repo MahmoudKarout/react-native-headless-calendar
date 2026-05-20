@@ -339,4 +339,211 @@ describe('RangeCalendarStore — configure / reconcile', () => {
     store.configure({ systems: [sys], allowSameDay: true, minRangeDays: 2 });
     expect(listener).not.toHaveBeenCalled();
   });
+
+  it('updates disabledInRangeBehavior via configure', () => {
+    const store = makeStore();
+    expect(store.getSnapshot().disabledInRangeBehavior).toBe('reject');
+    store.configure({ systems: [sys], disabledInRangeBehavior: 'include' });
+    expect(store.getSnapshot().disabledInRangeBehavior).toBe('include');
+  });
+
+  it('resets disabledInRangeBehavior to "reject" when omitted from configure', () => {
+    const store = makeStore({ disabledInRangeBehavior: 'exclude' });
+    store.configure({ systems: [sys] });
+    expect(store.getSnapshot().disabledInRangeBehavior).toBe('reject');
+  });
+});
+
+describe('RangeCalendarStore — disabledInRangeBehavior=reject (default)', () => {
+  it('refuses a range whose interior contains a disabledDates entry', () => {
+    const onChange = jest.fn();
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      disabledDates: [new Date(2024, 4, 15)],
+      onChange,
+    });
+    store.selectDate(new Date(2024, 4, 20));
+    expect(store.getSnapshot().rangeStart).toEqual(d(2024, 4, 10));
+    expect(store.getSnapshot().rangeEnd).toBeUndefined();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('refuses a range whose interior crosses a disabledRanges entry', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      disabledRanges: [
+        { start: new Date(2024, 4, 14), end: new Date(2024, 4, 16) },
+      ],
+    });
+    store.selectDate(new Date(2024, 4, 20));
+    expect(store.getSnapshot().rangeEnd).toBeUndefined();
+  });
+
+  it('refuses a range whose interior fails the disabled() predicate', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      disabled: (date) => date.getDate() === 15,
+    });
+    store.selectDate(new Date(2024, 4, 20));
+    expect(store.getSnapshot().rangeEnd).toBeUndefined();
+  });
+
+  it('accepts a range whose interior is clean', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      disabledDates: [new Date(2024, 4, 25)],
+    });
+    store.selectDate(new Date(2024, 4, 20));
+    expect(store.getSnapshot().rangeEnd).toEqual(d(2024, 4, 20));
+  });
+
+  it('applies the policy when the new pick lands BEFORE the existing start (swap path)', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 20),
+      disabledDates: [new Date(2024, 4, 15)],
+    });
+    store.selectDate(new Date(2024, 4, 10));
+    expect(store.getSnapshot().rangeStart).toEqual(d(2024, 4, 20));
+    expect(store.getSnapshot().rangeEnd).toBeUndefined();
+  });
+
+  it('drops the end on bootstrap when initialStart..initialEnd interior is disabled', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      initialEnd: new Date(2024, 4, 20),
+      disabledDates: [new Date(2024, 4, 15)],
+    });
+    expect(store.getSnapshot().rangeStart).toEqual(d(2024, 4, 10));
+    expect(store.getSnapshot().rangeEnd).toBeUndefined();
+  });
+
+  it('orders an inverted initialEnd<initialStart pair before validating', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 20),
+      initialEnd: new Date(2024, 4, 10),
+    });
+    expect(store.getSnapshot().rangeStart).toEqual(d(2024, 4, 10));
+    expect(store.getSnapshot().rangeEnd).toEqual(d(2024, 4, 20));
+  });
+});
+
+describe('RangeCalendarStore — disabledInRangeBehavior=include', () => {
+  it('accepts a range whose interior contains disabled days', () => {
+    const onChange = jest.fn();
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      disabledDates: [new Date(2024, 4, 15)],
+      disabledInRangeBehavior: 'include',
+      onChange,
+    });
+    store.selectDate(new Date(2024, 4, 20));
+    expect(store.getSnapshot().rangeStart).toEqual(d(2024, 4, 10));
+    expect(store.getSnapshot().rangeEnd).toEqual(d(2024, 4, 20));
+    expect(onChange).toHaveBeenCalled();
+  });
+
+  it('keeps disabled interior cells marked with isDisabled and inRange', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      initialEnd: new Date(2024, 4, 20),
+      disabledDates: [new Date(2024, 4, 15)],
+      disabledInRangeBehavior: 'include',
+    });
+    const cell15 = store
+      .getSnapshot()
+      .days.cells.find((c) => c.isCurrentMonth && c.nativeDate.getDate() === 15);
+    expect(cell15?.isDisabled).toBe(true);
+    expect(cell15?.inRange).toBe(true);
+  });
+
+  it('reports the range as confirmable even with disabled interior', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      initialEnd: new Date(2024, 4, 20),
+      disabledDates: [new Date(2024, 4, 15)],
+      disabledInRangeBehavior: 'include',
+    });
+    expect(store.isConfirmable()).toBe(true);
+  });
+});
+
+describe('RangeCalendarStore — disabledInRangeBehavior=exclude', () => {
+  it('clamps the end to the day before the first disabled interior day', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      disabledDates: [new Date(2024, 4, 15)],
+      disabledInRangeBehavior: 'exclude',
+    });
+    store.selectDate(new Date(2024, 4, 20));
+    expect(store.getSnapshot().rangeStart).toEqual(d(2024, 4, 10));
+    expect(store.getSnapshot().rangeEnd).toEqual(d(2024, 4, 14));
+  });
+
+  it('clamps to before the start of a disabledRanges entry', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      disabledRanges: [
+        { start: new Date(2024, 4, 14), end: new Date(2024, 4, 16) },
+      ],
+      disabledInRangeBehavior: 'exclude',
+    });
+    store.selectDate(new Date(2024, 4, 20));
+    expect(store.getSnapshot().rangeEnd).toEqual(d(2024, 4, 13));
+  });
+
+  it('does not clamp when the interior is already clean', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      disabledDates: [new Date(2024, 4, 25)],
+      disabledInRangeBehavior: 'exclude',
+    });
+    store.selectDate(new Date(2024, 4, 20));
+    expect(store.getSnapshot().rangeEnd).toEqual(d(2024, 4, 20));
+  });
+
+  it('drops rangeEnd when clamping would create a degenerate same-day range without allowSameDay', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      disabledDates: [new Date(2024, 4, 11)],
+      disabledInRangeBehavior: 'exclude',
+    });
+    store.selectDate(new Date(2024, 4, 15));
+    expect(store.getSnapshot().rangeStart).toEqual(d(2024, 4, 10));
+    expect(store.getSnapshot().rangeEnd).toBeUndefined();
+  });
+
+  it('produces a same-day range when clamp degenerates and allowSameDay is true', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      disabledDates: [new Date(2024, 4, 11)],
+      disabledInRangeBehavior: 'exclude',
+      allowSameDay: true,
+    });
+    store.selectDate(new Date(2024, 4, 15));
+    expect(store.getSnapshot().rangeStart).toEqual(d(2024, 4, 10));
+    expect(store.getSnapshot().rangeEnd).toEqual(d(2024, 4, 10));
+  });
+
+  it('also rejects a clamped range that violates minRangeDays', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      disabledDates: [new Date(2024, 4, 13)],
+      disabledInRangeBehavior: 'exclude',
+      minRangeDays: 5,
+    });
+    store.selectDate(new Date(2024, 4, 20));
+    // Clamped to Aug 12, but [Aug 10, Aug 12] has length 3 < 5 — rejected.
+    expect(store.getSnapshot().rangeEnd).toBeUndefined();
+  });
+
+  it('clamps on bootstrap when initial range has disabled interior', () => {
+    const store = makeStore({
+      initialStart: new Date(2024, 4, 10),
+      initialEnd: new Date(2024, 4, 20),
+      disabledDates: [new Date(2024, 4, 15)],
+      disabledInRangeBehavior: 'exclude',
+    });
+    expect(store.getSnapshot().rangeStart).toEqual(d(2024, 4, 10));
+    expect(store.getSnapshot().rangeEnd).toEqual(d(2024, 4, 14));
+  });
 });

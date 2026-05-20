@@ -39,6 +39,7 @@ export {
 export type { RangeCalendarActions } from './contexts/range';
 
 export type {
+  DisabledInRangeBehavior,
   RangeCalendarDays,
   RangeCalendarSnapshot,
   RangeDayCellInfo,

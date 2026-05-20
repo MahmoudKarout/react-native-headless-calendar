@@ -2,13 +2,13 @@
 
 A headless, calendar-system-agnostic React Native calendar.
 
-**One provider, two hooks, four selectors.** You bring the UI; the library brings the data, the math, and the store.
+**Three providers, two hooks per mode, built-in selectors.** You bring the UI; the library brings the data, the math, and the store.
 
-- 📦 Zero deps on a date library — Gregorian is built in, Hijri / Jalali / custom are opt-in
-- ⚡ `useSyncExternalStore` under the hood — surgical re-renders, action callers never subscribe
-- 🎨 Headless — every cell, header, footer is yours to style
-- 🔀 Single, range, or multiple selection in one API
-- 📚 [Full docs and recipes](https://your-docs-url) · [Live examples](./example)
+- Zero required date-library deps — Gregorian is built in; Hijri / Jalali are opt-in sub-paths
+- `useSyncExternalStore` under the hood — surgical re-renders; action callers never subscribe
+- Headless — every cell, header, and footer is yours to style
+- Single, range, or multiple selection via dedicated providers
+- [Full docs](https://mahmoudkarout.github.io/react-native-fast-calendar/) · [Example app](./example)
 
 ## Install
 
@@ -19,34 +19,32 @@ yarn add react-native-fast-calendar
 ### Requirements
 
 | Peer | Minimum | Why |
-|---|---|---|
-| `react` | **≥ 18.0** | the library imports `useSyncExternalStore` directly from `react` |
-| `react-native` | **≥ 0.70** | first RN line that ships with React 18 by default |
+| --- | --- | --- |
+| `react` | **≥ 18.0** | `useSyncExternalStore` |
+| `react-native` | **≥ 0.70** | React 18 baseline |
 
-Optional peers, only if you import the matching system:
+Optional peers (only when you import the matching system):
 
-| Peer | Minimum | Needed for |
-|---|---|---|
-| `@tabby_ai/hijri-converter` | `>= 1` | `react-native-fast-calendar/systems/hijri` |
-| `moment-jalaali` | `>= 0.10` | `react-native-fast-calendar/systems/jalali` |
-| `@shopify/flash-list` | `>= 2.3` | vertical-list / swipeable recipes |
+| Peer | Needed for |
+| --- | --- |
+| `@tabby_ai/hijri-converter` | `react-native-fast-calendar/systems/hijri` |
+| `moment-jalaali` | `react-native-fast-calendar/systems/jalali` |
+| `@shopify/flash-list` | optional, for virtualised month lists in your app |
 
-Nothing else is required.
-
-## 30-second tour
+## 30-second tour (single date)
 
 ```tsx
 import { Pressable, Text, View } from 'react-native';
 import {
-  CalendarProvider,
-  selectDays,
-  useCalendarActions,
-  useCalendarSelector,
+  SingleDateProvider,
+  selectSingleDays,
+  useSingleCalendarActions,
+  useSingleCalendarSelector,
 } from 'react-native-fast-calendar';
 
 function Calendar() {
-  const days = useCalendarSelector(selectDays);
-  const { selectDate, goPrevMonth, goNextMonth } = useCalendarActions();
+  const days = useSingleCalendarSelector(selectSingleDays);
+  const { selectDate, goPrevMonth, goNextMonth } = useSingleCalendarActions();
 
   return (
     <View>
@@ -80,184 +78,80 @@ function Calendar() {
 
 export default function Screen() {
   return (
-    <CalendarProvider mode="single" onConfirm={({ date }) => console.log(date)}>
+    <SingleDateProvider onConfirm={({ date }) => console.log(date)}>
       <Calendar />
-    </CalendarProvider>
+    </SingleDateProvider>
   );
 }
 ```
 
-That's a working date picker. Header, weekday row, grid, selection — all from `selectDays` + `useCalendarActions`.
-
 ## API surface
 
-The entire public API:
-
 ```ts
-import {
-  // 1. Provider
-  CalendarProvider,
-  // 2. Hooks
-  useCalendarSelector,
-  useCalendarActions,
-  // 3. Built-in selectors
-  selectDays, selectMonths, selectYears, selectCanConfirm,
-  // 4. Calendar systems
-  gregorianSystem, createGregorianSystem,
-  // (+ types and a few grid utilities)
+// Single
+export {
+  SingleDateProvider,
+  useSingleCalendarSelector,
+  useSingleCalendarActions,
+  selectSingleDays,
+  selectSingleMonths,
+  selectSingleYears,
+  selectSingleCanConfirm,
 } from 'react-native-fast-calendar';
+
+// Range
+export {
+  RangeDateProvider,
+  useRangeCalendarSelector,
+  useRangeCalendarActions,
+  selectRangeDays,
+  // …
+} from 'react-native-fast-calendar';
+
+// Multiple
+export {
+  MultipleDateProvider,
+  useMultipleCalendarSelector,
+  useMultipleCalendarActions,
+  selectMultipleDays,
+  // …
+} from 'react-native-fast-calendar';
+
+// Systems + grid utilities
+export { gregorianSystem, createGregorianSystem, buildMonthGrid, /* … */ } from 'react-native-fast-calendar';
 ```
 
-### `<CalendarProvider>`
+### Providers
 
-```tsx
-<CalendarProvider
-  mode="single"                              // "single" | "range" | "multiple"
-  systems={[gregorianSystem]}                // optional, Gregorian is default
-  initialDate={new Date()}
-  firstDayOfWeek={1}                         // 0=Sun (default), 1=Mon, ...
+| Provider | Use when |
+| --- | --- |
+| `SingleDateProvider` | One date |
+| `RangeDateProvider` | Start + end (hotels, travel) |
+| `MultipleDateProvider` | Many unrelated days |
 
-  // Bounds (all compose with OR)
-  minDate={new Date()}
-  maxDate={...}
-  disabledDates={[...]}
-  disabledRanges={[{ start, end }]}
-  disabled={(d) => d.getDay() === 0}
+Shared props: `systems`, `activeSystemId`, `minDate`, `maxDate`, `disabledDates`, `disabledRanges`, `disabled`, `modifiers`, `firstDayOfWeek` (default **Monday**), `onChange`, `onConfirm`, `onClear`.
 
-  // Modifiers — named flags surfaced on every cell
-  modifiers={{
-    booked:  [new Date(2024, 4, 7)],
-    holiday: { start: ..., end: ... },
-    weekend: (d) => d.getDay() === 0 || d.getDay() === 6,
-  }}
+Range-only: `allowSameDay`, `minRangeDays`, `maxRangeDays`.  
+Multiple-only: `maxSelected`.
 
-  // Range-only
-  minRangeDays={2}
-  maxRangeDays={14}
-  allowSameDay
+### Hooks
 
-  // Multiple-only
-  maxSelected={5}
+| Hook | Re-renders on |
+| --- | --- |
+| `use*CalendarSelector(fn)` | When `fn(snapshot)` return changes |
+| `use*CalendarActions()` | **Never** — stable for the provider lifetime |
 
-  // Callbacks
-  onChange={(payload) => {}}                 // every selectDate / clear
-  onConfirm={(payload) => {}}                // actions.confirm()
-  onClear={() => {}}                         // actions.clear()
->
-  {/* your UI */}
-</CalendarProvider>
-```
-
-`payload` shape per mode:
-
-```ts
-{ date?: Date; startDate?: Date; endDate?: Date; dates?: Date[]; systemId: string }
-```
-
-### The two hooks
-
-| Hook | Returns | Re-renders on |
-|---|---|---|
-| `useCalendarSelector(fn)` | `fn(snapshot)` | when `fn`'s return changes (`Object.is`) |
-| `useCalendarActions()` | every mutator | **never** — stable for the lifetime of the provider |
-
-```tsx
-// Read — granular
-const selectedDate = useCalendarSelector((s) => s.selectedDate);
-const count        = useCalendarSelector((s) => s.selectedDates.length);
-const days         = useCalendarSelector(selectDays);
-
-// Write — subscription-free
-const {
-  selectDate, clear, confirm,
-  goPrevMonth, goNextMonth, setDisplayedDate,
-  selectMonth, selectYear, prevYearPage, nextYearPage,
-  isConfirmable, // synchronous read for handlers
-} = useCalendarActions();
-```
-
-Rule of thumb: **components that only need to *act* should call only `useCalendarActions`**. They never re-render on selection changes.
-
-### Built-in selectors
-
-Pre-built derived views. Pass to `useCalendarSelector`.
-
-| Selector | Shape |
-|---|---|
-| `selectCanConfirm` | `boolean` — current selection is committable |
-| `selectDays` | `{ weekdayLabels, cells, displayedMonthLabel, displayedYearLabel }` |
-| `selectMonths` | `{ months: { index, label }[], activeMonth }` |
-| `selectYears` | `{ years: number[], activeYear }` |
-
-Every `cell` in `selectDays.cells` is a `DayCellInfo`:
-
-```ts
-interface DayCellInfo {
-  date: CalendarDateValue;       // active-system value (pass back to selectDate)
-  nativeDate: Date;              // for keys, comparisons, formatting
-  label: string;                 // already localised
-  isCurrentMonth: boolean;
-  isToday: boolean;
-  isSelected: boolean;
-  inRange: boolean;              // strictly between range endpoints
-  isRangeStart: boolean;
-  isRangeEnd: boolean;
-  isDisabled: boolean;
-  modifiers: Record<string, boolean>;
-}
-```
-
-For anything bespoke, write your own narrow selector: `useCalendarSelector((s) => s.system.id)`.
-
-### Calendar systems
-
-Gregorian is built in. Hijri and Jalali ship pre-configured behind sub-paths so the core stays dependency-free:
-
-```tsx
-// Gregorian — implicit or explicit
-<CalendarProvider />
-<CalendarProvider systems={[gregorianSystem]} />
-
-// Localised Gregorian
-const french = createGregorianSystem({
-  label: 'Grégorien',
-  monthLabels: ['Janvier', 'Février', /* … */],
-  weekdayLabels: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
-});
-
-// Hijri (needs `@tabby_ai/hijri-converter`)
-import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
-
-// Jalali (needs `moment-jalaali`)
-import { jalaliSystem } from 'react-native-fast-calendar/systems/jalali';
-
-// Multi-system — first one is the default; user picks via your UI
-<CalendarProvider systems={[gregorianSystem, hijriSystem, jalaliSystem]} />
-```
-
-For Chinese, Ethiopian, or anything else, implement `CalendarSystem<T>` — it's an 18-method interface with no library coupling.
-
-## Recipes
-
-Eleven first-party recipes covering common shapes — see [`/example`](./example) for runnable source and the [docs site](https://your-docs-url/docs/recipes/single-date-picker) for walkthroughs:
-
-- Single / range / multi-date pickers
-- Bounded selection (min/max, disabled days, disabled ranges)
-- Multi-month grid · Week numbers · Custom day cell
-- Bottom-sheet picker · Wheel date picker
-- Vertical infinite list (iOS-Calendar style)
-- Flight-price calendar · Horoscope calendar
+Rule of thumb: cells and headers that only call `selectDate` should use **actions only**.
 
 ## Architecture
 
-`<CalendarProvider>` owns a single store powered by `useSyncExternalStore`. External callbacks live on the store (not in context), so the action object is identity-stable for the lifetime of the provider — pass it straight to `React.memo`'d cells, `useEffect` deps, or out-of-tree handlers without re-renders.
+Each provider owns one external store (`useSyncExternalStore`). Callbacks live on the store, not in context, so the actions object stays identity-stable.
 
 ```
-CalendarProvider
- ├── CalendarStore (useSyncExternalStore)
- │    ├── snapshot          ← read via useCalendarSelector
- │    └── actions           ← read via useCalendarActions
- └── CalendarConfig         ← firstDayOfWeek + modifiers (static)
+SingleDateProvider / RangeDateProvider / MultipleDateProvider
+ └── *CalendarStore
+      ├── snapshot  ← use*CalendarSelector
+      └── actions   ← use*CalendarActions (no subscription)
 ```
 
 ## Contributing

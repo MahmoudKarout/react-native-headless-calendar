@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 import {
+  selectSingleDays,
   type SingleDayCellInfo,
   useSingleCalendarActions,
   useSingleCalendarSelector,
@@ -24,7 +25,7 @@ function WeekdayLabels() {
 }
 
 function DaysGrid() {
-  const cells = useSingleCalendarSelector((s) => s.days.cells);
+  const days = useSingleCalendarSelector(selectSingleDays);
   const { selectDate } = useSingleCalendarActions();
 
   const handlePress = useCallback(
@@ -36,7 +37,7 @@ function DaysGrid() {
 
   return (
     <View className={'flex-row flex-wrap w-[294px]'}>
-      {cells.map((cell) => (
+      {days.cells.map((cell) => (
         <DayCell
           key={cell.nativeDate.toISOString()}
           cell={cell}

@@ -1,6 +1,6 @@
 import {
   createContext,
-  use,
+  useContext,
   useMemo,
   useSyncExternalStore,
   type Context,
@@ -34,7 +34,7 @@ export function createCalendarContext<
   const StoreContext = createContext<Store | null>(null);
 
   function useStore(): Store {
-    const store = use(StoreContext);
+    const store = useContext(StoreContext);
     if (!store) {
       throw new Error(
         `[Calendar] ${config.modeLabel} hooks must be used within <${config.providerName}>`

@@ -1,47 +1,55 @@
 ---
-sidebar_position: 4
+sidebar_position: 3
+title: use*CalendarActions
 ---
 
-# useCalendarActions
+# use*CalendarActions
 
-`useCalendarActions` returns every mutator the calendar exposes — selection, navigation, confirm, and clear — as a single, **subscription-free, identity-stable** object. The returned reference does not change for the lifetime of the enclosing `<CalendarProvider>`, and reading it never re-renders the consumer.
+Returns every mutator the calendar exposes — selection, navigation, confirm, clear, and system switching — as a single **subscription-free, identity-stable** object.
 
-This is the hook you use whenever a component only needs to *call* the calendar (a tappable cell, a "Today" button, a confirm bar) without caring about the current state.
+| Provider | Hook |
+| --- | --- |
+| `SingleDateProvider` | `useSingleCalendarActions` |
+| `RangeDateProvider` | `useRangeCalendarActions` |
+| `MultipleDateProvider` | `useMultipleCalendarActions` |
+
+Use this hook when a component only needs to **act** (tap a cell, press "Done", flip a month) without reading state. It never causes re-renders on selection changes.
 
 ## Signature
 
 ```ts
 interface CalendarActions {
-  selectDate: (date: CalendarDateValue | Date | string | number) => void;
+  selectDate: (input: unknown) => void;
   clear: () => void;
   confirm: () => void;
   goPrevMonth: () => void;
   goNextMonth: () => void;
-  setDisplayedDate: (date: CalendarDateValue | Date | string | number) => void;
+  setDisplayedDate: (input: unknown) => void;
   selectMonth: (index: number) => void;
   selectYear: (year: number) => void;
   prevYearPage: () => void;
   nextYearPage: () => void;
-  isConfirmable: () => boolean; // synchronous, for handlers — see below
+  setActiveSystem: (id: string) => void;
+  isConfirmable: () => boolean;
 }
-
-function useCalendarActions(): CalendarActions;
 ```
+
+The shape is identical across modes (`CalendarActions` type alias per mode).
 
 ## Usage
 
 ```tsx
 import { Pressable, Text, View } from 'react-native';
 import {
-  CalendarProvider,
-  selectCanConfirm,
-  useCalendarActions,
-  useCalendarSelector,
+  SingleDateProvider,
+  selectSingleCanConfirm,
+  useSingleCalendarActions,
+  useSingleCalendarSelector,
 } from 'react-native-fast-calendar';
 
 function Footer() {
-  const { confirm, clear } = useCalendarActions();
-  const canConfirm = useCalendarSelector(selectCanConfirm);
+  const { confirm, clear } = useSingleCalendarActions();
+  const canConfirm = useSingleCalendarSelector(selectSingleCanConfirm);
 
   return (
     <View style={{ flexDirection: 'row' }}>
@@ -52,82 +60,50 @@ function Footer() {
     </View>
   );
 }
-
-export default function Screen() {
-  return (
-    <CalendarProvider
-      mode="range"
-      onChange={({ startDate, endDate }) => {
-        // fires on every selection mutation
-      }}
-      onConfirm={({ startDate, endDate }) => {
-        console.log({ startDate, endDate });
-      }}
-      onClear={() => console.log('cleared')}
-    >
-      {/* ... your day-grid component ... */}
-      <Footer />
-    </CalendarProvider>
-  );
-}
 ```
-
-## canConfirm
-
-`canConfirm` is **not** part of `useCalendarActions` — it's reactive state, not an action. Subscribe to it with `useCalendarSelector(selectCanConfirm)`:
-
-| Mode | `canConfirm` is `true` when |
-| --- | --- |
-| `single` | a date is selected |
-| `multiple` | at least one date is selected |
-| `range` | both endpoints are selected |
-
-For one-shot reads inside event handlers, call `actions.isConfirmable()` instead — it returns the same boolean without subscribing.
 
 ## selectDate(input)
 
-Routes the tap to the right place based on `mode`:
+Coerces `input` through the active system's `from()`. Disabled dates are ignored silently.
 
-| Mode | Behaviour |
+| Provider | Behaviour |
 | --- | --- |
-| `single` | Replace `selectedDate`. |
-| `multiple` | Toggle the date in `selectedDates` (capped by `maxSelected`). |
-| `range` | Pick start, then end (with `allowSameDay` / `minRangeDays` / `maxRangeDays` honoured). |
+| Single | Sets `selectedDate` and moves `displayed` to that month. |
+| Range | Two-tap range selection with swap, reset, and length guards. |
+| Multiple | Toggles membership; respects `maxSelected`. |
 
-Disabled dates are silently ignored. The argument is coerced via the active system's `from(...)` adapter, so it accepts native `Date`, ISO string, or the system-native value.
+Each successful mutation fires `onChange` with the mode's payload.
 
-Each successful call fires the provider's `onChange` callback with the latest `CalendarSelectionPayload`.
+## confirm() / clear()
 
-## confirm()
+- `confirm()` calls `onConfirm` with the latest payload. No-op if `onConfirm` was not passed.
+- `clear()` wipes selection, calls `onClear`, and fires `onChange` when something was cleared.
 
-Reads the latest store snapshot and calls the provider's `onConfirm` with a `CalendarSelectionPayload`:
+## isConfirmable() vs select*CanConfirm
 
-```ts
-interface CalendarSelectionPayload {
-  date?: Date;             // single mode
-  startDate?: Date;        // range mode
-  endDate?: Date;          // range mode
-  dates?: Date[];          // multiple mode
-  systemId: string;        // active calendar system id
-}
-```
+| | `select*CanConfirm` | `actions.isConfirmable()` |
+| --- | --- | --- |
+| Reactive | Yes — re-renders when gate changes | No — read once in a handler |
+| Use in JSX `disabled` | Preferred | — |
+| Use in `onPress` | — | Preferred |
 
-If `onConfirm` was not provided to `<CalendarProvider>`, `confirm()` is a silent no-op.
-
-## clear()
-
-Wipes single, range, and multiple selection state in one batch and fires `onClear()` and (when the selection actually changed) `onChange()`.
+| Mode | Confirmable when |
+| --- | --- |
+| Single | `selectedDate` is set |
+| Range | both `rangeStart` and `rangeEnd` are set |
+| Multiple | `selectedDates.length > 0` |
 
 ## Navigation
 
 | Action | Effect |
 | --- | --- |
-| `goPrevMonth()` / `goNextMonth()` | Step the displayed month by one. |
-| `setDisplayedDate(input)` | Jump the grid to the month containing `input`. |
-| `selectMonth(index)` | Jump to a specific 0-based month of the displayed year. |
-| `selectYear(year)` | Jump to a specific year. |
-| `prevYearPage()` / `nextYearPage()` | Step the year-grid by `YEAR_PAGE_SIZE`. |
+| `goPrevMonth()` / `goNextMonth()` | Step displayed month by ±1. |
+| `setDisplayedDate(input)` | Jump grid to the month containing `input`. |
+| `selectMonth(index)` | Set month (0-based) and switch to day view. |
+| `selectYear(year)` | Set year and switch to day view. |
+| `prevYearPage()` / `nextYearPage()` | Step year pager by `YEAR_PAGE_SIZE` (12). |
+| `setActiveSystem(id)` | Swap calendar system; carries selection across. |
 
 ## Stable Identities
 
-The returned object and every method on it have stable identities for the lifetime of the provider. Pass them straight to `React.memo`'d components, `useEffect` deps, or out-of-tree event handlers — they never change.
+The returned object and every method keep the same reference for the provider's lifetime. Pass them to `React.memo` children, `useEffect` dependency arrays, and out-of-tree handlers without churn.

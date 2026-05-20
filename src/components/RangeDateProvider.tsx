@@ -3,6 +3,7 @@ import { useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
 import { RangeCalendarStoreContext } from '../contexts/range';
 import {
   RangeCalendarStore,
+  type DisabledInRangeBehavior,
   type RangeOnChange,
   type RangeOnClear,
   type RangeOnConfirm,
@@ -19,6 +20,12 @@ export interface RangeDateProviderProps extends SharedProviderInputProps {
   allowSameDay?: boolean;
   minRangeDays?: number;
   maxRangeDays?: number;
+  /**
+   * Policy applied when a candidate range crosses a disabled day in its
+   * interior. Defaults to `'reject'` — the candidate end is refused and
+   * the user must pick a different one. See `DisabledInRangeBehavior`.
+   */
+  disabledInRangeBehavior?: DisabledInRangeBehavior;
   onConfirm?: RangeOnConfirm;
   onClear?: RangeOnClear;
   onChange?: RangeOnChange;
@@ -31,6 +38,7 @@ export function RangeDateProvider({
   allowSameDay,
   minRangeDays,
   maxRangeDays,
+  disabledInRangeBehavior,
   children,
   onConfirm,
   onClear,
@@ -50,8 +58,15 @@ export function RangeDateProvider({
       allowSameDay,
       minRangeDays,
       maxRangeDays,
+      disabledInRangeBehavior,
     }),
-    [sharedLiveConfig, allowSameDay, minRangeDays, maxRangeDays]
+    [
+      sharedLiveConfig,
+      allowSameDay,
+      minRangeDays,
+      maxRangeDays,
+      disabledInRangeBehavior,
+    ]
   );
 
   const [store] = useState(

@@ -4,94 +4,128 @@ sidebar_position: 1
 
 # Mental Model
 
-`react-native-fast-calendar` is a **state primitive**, not a UI kit. Once you internalise the model below, every recipe in this docset is just a thin layer of your own components on top of the same two hooks.
+`react-native-fast-calendar` is a **state primitive**, not a UI kit. Once you internalise the model below, any calendar UI is a thin layer of your own components on top of the same two hooks.
 
-## One Provider, Two Hooks, A Handful of Selectors
+## One Provider Per Mode, Two Hooks, A Handful of Selectors
 
 ```
-                    ┌────────────────────────────────────────────┐
-                    │            <CalendarProvider>              │
-                    │   owns the store + per-render config       │
-                    └────────────────────────────────────────────┘
-                                       │
-                       ┌───────────────┴────────────────┐
-                       ▼                                ▼
-              useCalendarSelector(fn)         useCalendarActions()
-              arbitrary slices of the         every mutator
-              store snapshot                  (subscription-free)
-                       │
-        ┌──────────────┼───────────────┬────────────────┐
-        ▼              ▼               ▼                ▼
-   selectDays    selectMonths    selectYears    selectCanConfirm
-   day grid      12-cell month   paginated      confirm gate
-   data          chooser data    years data
+         ┌─────────────────────────────────────────────────────────┐
+         │  SingleDateProvider  │  RangeDateProvider  │  Multiple… │
+         │         each owns an external store (useSyncExternalStore) │
+         └─────────────────────────────────────────────────────────┘
+                                    │
+                    ┌───────────────┴────────────────┐
+                    ▼                                ▼
+           use*CalendarSelector(fn)          use*CalendarActions()
+           read any snapshot slice            every mutator
+           (re-renders when fn's              (subscription-free,
+            return changes)                    stable identity)
+                    │
+     ┌──────────────┼───────────────┬────────────────┐
+     ▼              ▼               ▼                ▼
+select*Days   select*Months   select*Years   select*CanConfirm
+day grid      month chooser   year pager     confirm gate
 ```
+
+Replace `*` with `Single`, `Range`, or `Multiple` depending on which provider wraps your tree.
 
 ## What Lives Where
 
-### `<CalendarProvider>`
+### The provider (`SingleDateProvider`, `RangeDateProvider`, or `MultipleDateProvider`)
 
-Holds:
+Each provider:
 
-- The active `CalendarSystem` (defaults to Gregorian).
-- The selection mode (`single`, `range`, `multiple`).
-- All declarative inputs: `minDate`, `maxDate`, `disabled`, `disabledDates`, `disabledRanges`, `modifiers`, `minRangeDays`, `maxRangeDays`, `maxSelected`, `allowSameDay`, `firstDayOfWeek`, `initialDate / initialStart / initialEnd / initialDates`.
-- External callbacks: `onChange`, `onConfirm`, `onClear`.
+- Creates exactly one store instance (lazily, on first mount).
+- Syncs live props into `store.configure(...)` on every render via `useLayoutEffect`.
+- Exposes the store through React context — nothing else.
 
-The provider renders nothing. It is just the boundary every hook reads from.
+Shared props (all three modes):
 
-### `useCalendarSelector(selector)`
+| Prop | Role |
+| --- | --- |
+| `systems` | Calendar adapters; defaults to `[gregorianSystem]`. |
+| `activeSystemId` | Controlled active system id. |
+| `minDate` / `maxDate` | Inclusive bounds. |
+| `disabledDates` | Explicit list of disabled days. |
+| `disabledRanges` | Inclusive disabled ranges. |
+| `disabled` | Predicate on native `Date`. |
+| `modifiers` | Named matchers → boolean flags on each cell. |
+| `firstDayOfWeek` | `0` = Sunday … `6` = Saturday; **defaults to Monday (`1`)**. |
+| `onChange` / `onConfirm` / `onClear` | Selection lifecycle callbacks. |
 
-The universal read primitive. Subscribe to any field of `CalendarSnapshot`, or one of the pre-built selectors, with granular memoisation:
+Mode-specific props are documented on [Providers](../hooks/providers).
+
+The provider renders **only** `{children}` — no DOM, no RN views.
+
+### `use*CalendarSelector(selector)`
+
+The universal read primitive for that mode. Subscribe to any field on the snapshot, or pass a built-in selector:
 
 ```tsx
-const rangeStart = useCalendarSelector((s) => s.rangeStart);
-const systemId   = useCalendarSelector((s) => s.system.id);
-const days       = useCalendarSelector(selectDays);
-const months     = useCalendarSelector(selectMonths);
-const years      = useCalendarSelector(selectYears);
-const canConfirm = useCalendarSelector(selectCanConfirm);
+// Single mode
+const days = useSingleCalendarSelector(selectSingleDays);
+const selected = useSingleCalendarSelector((s) => s.selectedDate);
+
+// Range mode
+const start = useRangeCalendarSelector((s) => s.rangeStart);
+const days = useRangeCalendarSelector(selectRangeDays);
+
+// Multiple mode
+const count = useMultipleCalendarSelector((s) => s.selectedDates.length);
 ```
 
-Components only re-render when the selector's return value actually changes (`Object.is`).
+Components re-render only when the selector's return value changes (`Object.is`).
 
-### Pre-built selectors
+### Built-in selectors
 
-The snapshot ships with derived views that the store maintains for you. Pass them straight to `useCalendarSelector`:
+Pre-derived views maintained by the store. Pass them straight to the selector hook:
 
-| Selector | Returns | Re-renders on |
+| Selector | Returns | Typical use |
 | --- | --- | --- |
-| `selectDays` | `{ weekdayLabels, cells, displayedMonthLabel, displayedYearLabel }` | day-grid slices (selection, displayed month, bounds, modifiers) |
-| `selectMonths` | `{ months, activeMonth }` | system or displayed-month changes |
-| `selectYears` | `{ years, activeYear }` | displayed-year changes |
-| `selectCanConfirm` | `boolean` | the slices that gate confirm |
+| `select*Days` | `{ weekdayLabels, cells, displayedMonthLabel, displayedYearLabel }` | Month grid |
+| `select*Months` | `{ months, activeMonth }` | Month picker |
+| `select*Years` | `{ years, activeYear }` | Year pager |
+| `select*CanConfirm` | `boolean` | Enable "Done" button |
 
-`selectDays` reads from the snapshot's pre-derived `days` view: the cell array is identity-stable across commits that don't touch the day grid, and individual cells keep their reference when their state is unchanged. Wrap your `DayCell` in `React.memo` and you get free skip-renders.
+The `cells` array is **identity-stable**: unchanged cells keep the same object reference across commits. Wrap your day cell in `React.memo` for free skip-renders.
 
-### `useCalendarActions()`
+### `use*CalendarActions()`
 
-Every mutator (`selectDate`, `goPrevMonth`, `confirm`, `clear`, `selectMonth`, `selectYear`, `prevYearPage`, `nextYearPage`, …). Subscription-free, identity-stable for the lifetime of the provider — safe in `useEffect` deps and `React.memo` props.
+Every mutator — `selectDate`, `goPrevMonth`, `confirm`, `clear`, `setActiveSystem`, … — on a single object that is **subscription-free** and **identity-stable** for the provider's lifetime.
 
-`confirm()` fires the provider's `onConfirm` with a `CalendarSelectionPayload`. `clear()` wipes selection state and fires `onClear`. For the render-time "is the current selection committable?" gate, read `useCalendarSelector(selectCanConfirm)`.
+```tsx
+const { selectDate, confirm } = useSingleCalendarActions();
+// safe in React.memo props, useEffect deps, and out-of-tree handlers
+```
+
+For reactive "can the user press Done?" UI, use `use*CalendarSelector(select*CanConfirm)`. For one-shot reads inside handlers, call `actions.isConfirmable()`.
 
 ## Re-render Boundaries
 
-Each selector subscribes only to the slices it needs. Tapping a day:
+Tapping a day updates selection state and usually `displayed`, which recomputes `days.cells`. Components that only read `select*Months` or `select*Years` stay still unless the displayed month/year actually changed.
 
-- updates `selectedDate` / `rangeStart` / `rangeEnd` / `selectedDates` and `displayed`,
-- which causes `selectDays` to return a new value (recomputed `cells`),
-- but `selectMonths` / `selectYears` only return a new value if `displayed`'s month / year actually changed — components reading them stay still.
+Navigation components that only call `use*CalendarActions()` **never** re-render on selection changes.
 
-That's how the perf demo's per-cell counters stay frozen at `1×` for cells that didn't change state.
+## Ranges that cross disabled days
 
-## A Recipe is Just Provider + Hooks + JSX
+Range mode only. Endpoints are always blocked when disabled; the question is what happens to **days between** start and end.
+
+Set `disabledInRangeBehavior` on `RangeDateProvider`:
+
+- **`reject`** (default) — refuse the second tap; keep `rangeStart` only.
+- **`include`** — accept the range; interior disabled cells expose `isDisabled` + `inRange` for custom UI.
+- **`exclude`** — clamp `rangeEnd` to the last selectable day before the first disabled interior day.
+
+See [Providers — RangeDateProvider](../hooks/providers#disabled-days-inside-a-range) for examples and bootstrap behavior.
+
+## Typical Layout
 
 ```tsx
-<CalendarProvider mode="range" minRangeDays={2} maxRangeDays={14}>
-  <MyHeader />     {/* useCalendarSelector(selectDays) for month/year labels + nav */}
-  <MyDayGrid />    {/* useCalendarSelector(selectDays) for cells */}
-  <MyFooter />     {/* useCalendarActions for confirm/clear */}
-</CalendarProvider>
+<RangeDateProvider minRangeDays={2} maxRangeDays={14} disabledInRangeBehavior="reject">
+  <MyHeader />   {/* useRangeCalendarSelector(selectRangeDays) */}
+  <MyDayGrid />  {/* cells + useRangeCalendarActions().selectDate */}
+  <MyFooter />   {/* useRangeCalendarActions().confirm / clear */}
+</RangeDateProvider>
 ```
 
-Every recipe in this docset is a variant of that template.
+Split header, grid, and footer into separate components so each can subscribe only to what it needs.

@@ -1,5 +1,5 @@
 import '../global.css';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, ScrollView } from 'react-native';
 import {
   SingleDateCalendar,
   type SingleDateCalendarProps,
@@ -8,7 +8,6 @@ import {
   RangeDateCalendar,
   type RangeDateCalendarProps,
 } from './components/RangeDateCalendar/RangeDateCalendar';
-import { MultipleDateCalendar } from './components/MultipleDateCalendar/MultipleDateCalendar';
 import {
   SafeAreaListener,
   type EdgeInsets,
@@ -16,7 +15,8 @@ import {
 import { Uniwind } from 'uniwind';
 import type {
   DateParts,
-  SingleDateProviderProps,
+  RangeDateProviderProps,
+  RangeSelectionPayload,
   SingleSelectionPayload,
 } from 'react-native-fast-calendar';
 import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
@@ -38,16 +38,24 @@ const onClear = () => {
 
 const singleDateCalendar: SingleDateCalendarProps = {
   activeSystemId: 'gregorian',
+
   onConfirm: onConfirm,
+
   firstDayOfWeek: 1,
   onClear: onClear,
   initialDate: new Date(),
   systems: [gregorianSystem, hijriSystem, jalaliSystem],
 };
 
-const rangeDateCalendar: Partial<RangeDateCalendarProps> = {
+const onRangeConfirm = (payload: RangeSelectionPayload) => {
+  const { month, day, year } = payload?.startParts as DateParts;
+  Alert.alert('onConfirm', `${day}-${month}-${year}`);
+};
+
+const rangeDateCalendar: Partial<RangeDateProviderProps> = {
   onClear: onClear,
-  onConfirm: onConfirm,
+  onConfirm: onRangeConfirm,
+  disabledInRangeBehavior: 'reject',
   allowSameDay: true,
   initialStart: new Date().setDate(new Date().getDate() - 10),
   initialEnd: new Date().setDate(new Date().getDate() + 10),
@@ -76,7 +84,10 @@ const App = () => {
           />
         </ScrollView>
         <ScrollView horizontal contentContainerClassName="p-4 gap-5">
-          <RangeDateCalendar {...rangeDateCalendar} />
+          <RangeDateCalendar
+            disabledInRangeBehavior="reject"
+            {...rangeDateCalendar}
+          />
           <RangeDateCalendar {...rangeDateCalendar} />
         </ScrollView>
       </ScrollView>

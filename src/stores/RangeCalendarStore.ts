@@ -28,6 +28,28 @@ export type RangeOnConfirm = (payload: RangeSelectionPayload) => void;
 export type RangeOnClear = () => void;
 export type RangeOnChange = (payload: RangeSelectionPayload) => void;
 
+/**
+ * Policy applied when the user (or initial props) would produce a range
+ * whose interior contains one or more disabled days.
+ *
+ * - `reject`  (default) The candidate end is refused. `rangeEnd` stays
+ *             undefined; `rangeStart` is preserved so the user can pick
+ *             a different end. No `onChange` fires.
+ * - `include` The range is accepted verbatim. Cells in the interior keep
+ *             their `isDisabled` flag, letting consumer UIs render them
+ *             differently. `selectRangeCanConfirm` still returns true —
+ *             scope the confirm rules to your own UI if you need to.
+ * - `exclude` The end is clamped to the day before the first disabled
+ *             day in the interior, producing the largest clean range on
+ *             the start side. If the clamp degenerates to a same-day
+ *             range and `allowSameDay` is false, `rangeEnd` is dropped
+ *             instead.
+ *
+ * Endpoints (`start`, `end`) are always validated against `isDateDisabled`
+ * before this policy runs — a disabled endpoint is never accepted.
+ */
+export type DisabledInRangeBehavior = 'reject' | 'include' | 'exclude';
+
 export interface RangeDayCellInfo<T = CalendarDateValue>
   extends BaseDayCellFields<T> {
   inRange: boolean;
@@ -46,6 +68,7 @@ export interface RangeCalendarSnapshot<T = CalendarDateValue>
   allowSameDay: boolean;
   minRangeDays: number | undefined;
   maxRangeDays: number | undefined;
+  disabledInRangeBehavior: DisabledInRangeBehavior;
   days: RangeCalendarDays<T>;
 }
 
@@ -56,10 +79,18 @@ export interface RangeCalendarStoreOptions<T = CalendarDateValue>
   allowSameDay?: boolean;
   minRangeDays?: number;
   maxRangeDays?: number;
+  disabledInRangeBehavior?: DisabledInRangeBehavior;
   onConfirm?: RangeOnConfirm;
   onClear?: RangeOnClear;
   onChange?: RangeOnChange;
 }
+
+const DEFAULT_DISABLED_IN_RANGE_BEHAVIOR: DisabledInRangeBehavior = 'reject';
+
+type RangeSnapshotBody<T> = Omit<
+  RangeCalendarSnapshot<T>,
+  'days' | 'months' | 'years'
+>;
 
 export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore<
   T,
@@ -99,22 +130,62 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     const seedDate = opts.initialStart ?? opts.initialEnd;
     const displayed = seedDate ? system.from(seedDate) : system.today();
     const shared = normalizeSharedInputs(opts, system);
+    const allowSameDay = opts.allowSameDay ?? false;
+    const disabledInRangeBehavior =
+      opts.disabledInRangeBehavior ?? DEFAULT_DISABLED_IN_RANGE_BEHAVIOR;
 
-    const body: Omit<RangeCalendarSnapshot<T>, 'days' | 'months' | 'years'> = {
+    let initialStart = opts.initialStart
+      ? system.from(opts.initialStart)
+      : undefined;
+    let initialEnd = opts.initialEnd ? system.from(opts.initialEnd) : undefined;
+
+    // Order the seed pair so downstream interior checks are well-defined.
+    if (initialStart && initialEnd && system.isBefore(initialEnd, initialStart)) {
+      [initialStart, initialEnd] = [initialEnd, initialStart];
+    }
+
+    const body: RangeSnapshotBody<T> = {
       mode: 'range',
       system,
       systemIndex,
       displayed,
       view: 'day',
-      rangeStart: opts.initialStart
-        ? system.from(opts.initialStart)
-        : undefined,
-      rangeEnd: opts.initialEnd ? system.from(opts.initialEnd) : undefined,
-      allowSameDay: opts.allowSameDay ?? false,
+      rangeStart: initialStart,
+      rangeEnd: initialEnd,
+      allowSameDay,
       minRangeDays: opts.minRangeDays,
       maxRangeDays: opts.maxRangeDays,
+      disabledInRangeBehavior,
       ...shared,
     };
+
+    // Apply the disabled-interior policy to the initial pair.
+    //
+    // `selectDate` rejects an entire candidate selection so the prior
+    // snapshot is preserved. At bootstrap there is no "prior" — the
+    // sensible fallback for a rejected initial pair is to keep the
+    // start (which is valid on its own) and drop the offending end,
+    // mirroring the state the user would land in after a refused tap.
+    //
+    // Endpoint validation against `isDateDisabled` is intentionally
+    // not done here — initial seeds are trusted as a best-effort
+    // starting state, and consumers may legitimately need to pre-fill
+    // disabled endpoints in edge UIs.
+    if (initialStart && initialEnd) {
+      const sanitized = this.applyDisabledInteriorPolicy(
+        body,
+        initialStart,
+        initialEnd
+      );
+      if (sanitized.rejected) {
+        body.rangeStart = initialStart;
+        body.rangeEnd = undefined;
+      } else {
+        body.rangeStart = sanitized.start;
+        body.rangeEnd = sanitized.end;
+      }
+    }
+
     this.initSnapshot({
       ...body,
       days: this.buildDays(body),
@@ -153,6 +224,11 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     }
     if (opts.maxRangeDays !== next.maxRangeDays) {
       next = { ...next, maxRangeDays: opts.maxRangeDays };
+    }
+    const nextBehavior =
+      opts.disabledInRangeBehavior ?? DEFAULT_DISABLED_IN_RANGE_BEHAVIOR;
+    if (nextBehavior !== next.disabledInRangeBehavior) {
+      next = { ...next, disabledInRangeBehavior: nextBehavior };
     }
     if (next !== this.snapshot) this.commit(next);
   }
@@ -197,6 +273,20 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     } else {
       nextStart = date;
       nextEnd = undefined;
+    }
+
+    // Apply the disabled-interior policy when both endpoints are set
+    // and they straddle at least one day. Same-day ranges have no
+    // interior to validate.
+    if (nextStart && nextEnd && !system.isSame(nextStart, nextEnd)) {
+      const sanitized = this.applyDisabledInteriorPolicy(
+        s,
+        nextStart,
+        nextEnd
+      );
+      if (sanitized.rejected) return;
+      nextStart = sanitized.start;
+      nextEnd = sanitized.end;
     }
 
     if (
@@ -276,9 +366,7 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     );
   }
 
-  protected buildDays(
-    s: Omit<RangeCalendarSnapshot<T>, 'days' | 'months' | 'years'>
-  ): RangeCalendarDays<T> {
+  protected buildDays(s: RangeSnapshotBody<T>): RangeCalendarDays<T> {
     const { system } = s;
     const today = system.today();
     return this.buildDaysFromGrid(
@@ -306,6 +394,84 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
         a.isRangeStart === b.isRangeStart &&
         a.isRangeEnd === b.isRangeEnd
     );
+  }
+
+  /**
+   * Apply `disabledInRangeBehavior` to a candidate ordered pair. Caller
+   * must ensure `start` is before `end` and that they are different
+   * days — same-day pairs short-circuit before this runs.
+   *
+   * Bootstrap callers ignore `rejected` and read `start`/`end` directly
+   * (a rejected initial pair simply drops the end). `selectDate` checks
+   * `rejected` to early-exit so it can preserve the previous snapshot.
+   */
+  private applyDisabledInteriorPolicy(
+    s: RangeSnapshotBody<T>,
+    start: T,
+    end: T
+  ): { start: T | undefined; end: T | undefined; rejected: boolean } {
+    const firstDisabled = this.findFirstDisabledInInterior(s, start, end);
+    if (!firstDisabled) {
+      return { start, end, rejected: false };
+    }
+    switch (s.disabledInRangeBehavior) {
+      case 'include':
+        return { start, end, rejected: false };
+      case 'exclude': {
+        const clampedEnd = this.dayBefore(s.system, firstDisabled);
+        if (s.system.isSame(clampedEnd, start)) {
+          return s.allowSameDay
+            ? { start, end: clampedEnd, rejected: false }
+            : { start, end: undefined, rejected: false };
+        }
+        return { start, end: clampedEnd, rejected: false };
+      }
+      case 'reject':
+      default:
+        return { start: undefined, end: undefined, rejected: true };
+    }
+  }
+
+  /**
+   * Walks strictly between `start` (exclusive) and `end` (exclusive)
+   * and returns the first day that fails `isDateDisabled`, or
+   * undefined if the interior is clean.
+   *
+   * Iteration uses native local `Date` day-stepping then re-projects
+   * each step through `system.fromNativeDate`. `Date#setDate(d + 1)`
+   * is calendar-day-correct across DST transitions, and re-projection
+   * keeps the disabled check in the active system's domain.
+   */
+  private findFirstDisabledInInterior(
+    s: RangeSnapshotBody<T>,
+    start: T,
+    end: T
+  ): T | undefined {
+    const system = s.system;
+    const startN = system.toNativeDate(start);
+    const endN = system.toNativeDate(end);
+    const cursor = new Date(
+      startN.getFullYear(),
+      startN.getMonth(),
+      startN.getDate() + 1
+    );
+    const stop = new Date(
+      endN.getFullYear(),
+      endN.getMonth(),
+      endN.getDate()
+    );
+    while (cursor < stop) {
+      const dateT = system.fromNativeDate(cursor);
+      if (this.isDateDisabled(dateT, s)) return dateT;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return undefined;
+  }
+
+  private dayBefore(system: CalendarSystem<T>, d: T): T {
+    const n = system.toNativeDate(d);
+    const prev = new Date(n.getFullYear(), n.getMonth(), n.getDate() - 1);
+    return system.fromNativeDate(prev);
   }
 
   private isRangeLengthAllowed(start: T, end: T): boolean {

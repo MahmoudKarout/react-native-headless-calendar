@@ -4,53 +4,63 @@ sidebar_position: 4
 
 # CalendarMatcher
 
-Predicate or list of dates that selects a subset of the calendar's days. Used by `<CalendarProvider disabled>` and by every entry in `<CalendarProvider modifiers={…}>`.
-
-## Type
+A `CalendarMatcher` selects which native dates match a modifier or disabled rule. Three shapes are supported uniformly:
 
 ```ts
 type CalendarMatcher =
-  | readonly DisabledDateInput[]
-  | readonly DisabledDateRangeInput[]
-  | ((nativeDate: Date) => boolean);
+  | readonly DisabledDateInput[]           // individual days
+  | readonly DisabledDateRangeInput[]      // inclusive ranges
+  | ((nativeDate: Date) => boolean);       // predicate
 ```
 
-Three shapes are supported uniformly:
+`DisabledDateInput` is `unknown` — the active system's `from()` normalises each value.
 
-| Shape | Match condition |
-| --- | --- |
-| `readonly DisabledDateInput[]` | any element is the same calendar day |
-| `readonly DisabledDateRangeInput[]` | any inclusive range covers the cell |
-| `(nativeDate: Date) => boolean` | predicate returns `true` |
-
-Mixed arrays (dates + ranges in one matcher) are not supported — pick one shape per usage.
-
-## Examples
-
-### List of dates
+## Date List
 
 ```tsx
-<CalendarProvider
-  disabledDates={[new Date(2024, 4, 5), new Date(2024, 4, 12)]}
-/>
+modifiers={{
+  booked: [
+    new Date(2024, 4, 7),
+    '2024-05-15', // if your system's from() accepts strings
+  ],
+}}
 ```
 
-### List of inclusive ranges
+## Range List
+
+Discriminated by a `start` + `end` field on the first entry:
 
 ```tsx
-<CalendarProvider
-  disabledRanges={[
-    { start: new Date(2024, 4, 1), end: new Date(2024, 4, 7) },
-  ]}
-/>
+modifiers={{
+  holiday: [
+    { start: new Date(2024, 11, 24), end: new Date(2024, 11, 26) },
+  ],
+}}
 ```
 
-### Predicate
+Ranges are **inclusive** on both ends.
+
+## Predicate
 
 ```tsx
-<CalendarProvider
-  disabled={(d) => d.getDay() === 0 || d.getDay() === 6}
-/>
+modifiers={{
+  weekend: (d) => d.getDay() === 0 || d.getDay() === 6,
+}}
 ```
 
-Predicates are evaluated against the **native** `Date` representation regardless of the active calendar system, so the same matcher works for Gregorian, Hijri, Jalali, etc.
+Predicates receive a native `Date`. If the function throws, the library treats the day as **not** matched (never crashes the grid).
+
+## Empty Arrays
+
+An empty array matches nothing.
+
+## Grid Utilities
+
+The same matching logic powers `matchDate` in `react-native-fast-calendar` for advanced use outside the store:
+
+```ts
+import { matchDate, createGregorianSystem } from 'react-native-fast-calendar';
+
+const sys = createGregorianSystem();
+matchDate(sys, date, (d) => d.getMonth() === 5);
+```

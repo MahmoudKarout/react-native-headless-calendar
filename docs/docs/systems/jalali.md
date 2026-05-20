@@ -31,7 +31,7 @@ import {
 ### Default Instance
 
 ```tsx
-<CalendarProvider systems={[jalaliSystem]} />
+<SingleDateProvider systems={[jalaliSystem]} />
 ```
 
 ### With Custom Converter
@@ -42,7 +42,7 @@ const customJalaliSystem = createJalaliSystem({
   label: 'Jalali',
 });
 
-<CalendarProvider systems={[customJalaliSystem]} />
+<SingleDateProvider systems={[customJalaliSystem]} />
 ```
 
 ## Converter Interface
@@ -114,12 +114,12 @@ import { jalaliSystem } from 'react-native-fast-calendar/systems/jalali';
 
 function PersianCalendar() {
   return (
-    <CalendarProvider
+    <SingleDateProvider
       systems={[jalaliSystem, gregorianSystem]}
-      initialSystemId="jalali"
+      activeSystemId="jalali"
     >
-      {/* render your own day grid with `useCalendarSelector(selectDays)` */}
-    </CalendarProvider>
+      {/* render your own day grid with `useSingleCalendarSelector(selectSingleDays)` */}
+    </SingleDateProvider>
   );
 }
 ```
