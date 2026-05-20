@@ -31,7 +31,7 @@ import {
 ### Default Instance
 
 ```tsx
-<CalendarProvider systems={[hijriSystem]} />
+<SingleDateProvider systems={[hijriSystem]} />
 ```
 
 ### With Custom Converter
@@ -44,7 +44,7 @@ const customHijriSystem = createHijriSystem({
   label: 'Hijri',
 });
 
-<CalendarProvider systems={[customHijriSystem]} />
+<SingleDateProvider systems={[customHijriSystem]} />
 ```
 
 ## Converter Interface
@@ -113,12 +113,12 @@ import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
 
 function DualCalendar() {
   return (
-    <CalendarProvider
+    <SingleDateProvider
       systems={[gregorianSystem, hijriSystem]}
-      initialSystemId="hijri"
+      activeSystemId="hijri"
     >
       {/* render your own UI built from the public hooks */}
-    </CalendarProvider>
+    </SingleDateProvider>
   );
 }
 ```

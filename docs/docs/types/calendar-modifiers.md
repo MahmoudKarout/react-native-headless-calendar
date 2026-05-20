@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # CalendarModifiers
 
-Named matchers evaluated per cell. The boolean result is exposed as `DayCellInfo.modifiers[name]` so consumers can style cells without imperative date comparisons.
+Named flags you attach to days for styling (dots, tints, badges). Modifiers are evaluated when the day grid is built and exposed on each cell as `cell.modifiers[name]`.
 
 ## Type
 
@@ -12,47 +12,38 @@ Named matchers evaluated per cell. The boolean result is exposed as `DayCellInfo
 type CalendarModifiers = Readonly<Record<string, CalendarMatcher>>;
 ```
 
-A matcher is one of:
-
-```ts
-type CalendarMatcher =
-  | readonly DisabledDateInput[]
-  | readonly DisabledDateRangeInput[]
-  | ((nativeDate: Date) => boolean);
-```
-
-Mixed arrays (dates + ranges in one matcher) are not supported — pick one shape per modifier name.
+See [CalendarMatcher](./calendar-matcher) for matcher shapes.
 
 ## Usage
 
 ```tsx
-import { CalendarProvider } from 'react-native-fast-calendar';
-
-<CalendarProvider
+<RangeDateProvider
   modifiers={{
-    booked: [
-      new Date(2024, 4, 5),
-      new Date(2024, 4, 12),
-    ],
+    booked: [new Date(2024, 4, 7), new Date(2024, 4, 8)],
     holiday: [
       { start: new Date(2024, 11, 24), end: new Date(2024, 11, 26) },
     ],
     weekend: (d) => d.getDay() === 0 || d.getDay() === 6,
   }}
 >
-  {/* ... */}
-</CalendarProvider>
+  <Grid />
+</RangeDateProvider>
 ```
 
-Inside the cell:
+Inside a cell:
 
 ```tsx
 {cell.modifiers.booked && <View style={styles.bookedDot} />}
-{cell.modifiers.weekend && <View style={styles.weekendTint} />}
+{cell.modifiers.weekend && <View style={styles.weekendBg} />}
 ```
 
-## Tips
+## Performance
 
-- Modifier names are arbitrary — pick something readable in your styles.
-- Predicates run for every visible cell, so keep them cheap. Closures over arrays of `Date` objects are fine; date-fns calls are usually fine; calling into a database is not.
-- Modifier results are surfaced through `selectDays` (read via `useCalendarSelector(selectDays)`), so they re-evaluate only when the displayed month or modifier identity changes.
+Modifier lists are identity-gated inside the store. Inline objects work — the provider stabilises them — but memoising large matcher arrays avoids unnecessary grid rebuilds:
+
+```tsx
+const modifiers = useMemo(
+  () => ({ booked: bookedDates, weekend: isWeekend }),
+  [bookedDates]
+);
+```

@@ -298,11 +298,15 @@ const native = system.toNativeDate(date);
 ## Usage Example
 
 ```tsx
-import { Calendar, useCalendarSelector } from 'react-native-fast-calendar';
+import { Text } from 'react-native';
+import {
+  SingleDateProvider,
+  useSingleCalendarSelector,
+} from 'react-native-fast-calendar';
 
-function MyComponent() {
-  const system = useCalendarSelector(s => s.system);
-  const displayed = useCalendarSelector(s => s.displayed);
+function Header() {
+  const system = useSingleCalendarSelector((s) => s.system);
+  const displayed = useSingleCalendarSelector((s) => s.displayed);
 
   const year = system.year(displayed);
   const month = system.month(displayed);
@@ -312,6 +316,14 @@ function MyComponent() {
     <Text>
       {monthName} {year}
     </Text>
+  );
+}
+
+export default function Screen() {
+  return (
+    <SingleDateProvider>
+      <Header />
+    </SingleDateProvider>
   );
 }
 ```

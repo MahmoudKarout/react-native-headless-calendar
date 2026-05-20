@@ -1,14 +1,13 @@
 /**
- * Tiny helpers used by <Calendar.Root> to keep its context value identity-
+ * Tiny helpers used by date providers to keep configure inputs identity-
  * stable when consumers pass inline arrow functions / inline arrays.
  *
  * Why this matters
  * ----------------
- * <Calendar.Root> publishes `primitives`, `theme`, `labels`, `systems`, the
- * action callbacks (`onConfirm`, `onClear`, …) and `testID` through a single
- * context. If any of those values change reference, every consumer of
- * `useCalendarConfig` (and the derived theme/labels/primitives hooks) re-
- * renders.
+ * Providers forward `systems`, callbacks (`onConfirm`, `onClear`, …), and
+ * other inline-prone props into `store.configure(...)`. If any of those
+ * values change reference on every parent render, the store reconciles more
+ * often than necessary.
  *
  * Inline arrow callbacks like `onConfirm={({ date }) => setPicked(date)}`
  * are recreated on every parent render — and `setPicked` IS a parent
@@ -30,29 +29,7 @@ import { useCallback, useLayoutEffect, useRef } from 'react';
  * `useLayoutEffect`. By the time any handler is invoked (always after
  * commit, e.g. inside an `onPress`), the ref is guaranteed to be current.
  */
-export function useStableCallback<TArgs extends unknown[]>(
-  cb: ((...args: TArgs) => void) | undefined
-): ((...args: TArgs) => void) | undefined {
-  const ref = useRef(cb);
-  useLayoutEffect(() => {
-    ref.current = cb;
-  });
-  // Identity-stable wrapper — created once. The non-null assertion is
-  // safe: the wrapper is only handed out below when `cb` is defined, and
-  // `useRef(cb)` seeds the ref with that same defined value on the
-  // render we hand it out.
-  const wrapper = useCallback((...args: TArgs) => {
-    ref.current!(...args);
-  }, []);
-  return cb ? wrapper : undefined;
-}
-
-/**
- * Same contract as {@link useStableCallback} but for predicates / mappers
- * that return a value. Used for `disabled?: (date) => boolean` and
- * similarly typed props on `<Calendar.Root>`.
- */
-export function useStablePredicate<TArgs extends unknown[], TReturn>(
+export function useStableCallback<TArgs extends unknown[], TReturn = void>(
   cb: ((...args: TArgs) => TReturn) | undefined
 ): ((...args: TArgs) => TReturn) | undefined {
   const ref = useRef(cb);
@@ -65,6 +42,9 @@ export function useStablePredicate<TArgs extends unknown[], TReturn>(
   ) as (...args: TArgs) => TReturn;
   return cb ? wrapper : undefined;
 }
+
+/** @deprecated Use {@link useStableCallback} — identical implementation. */
+export const useStablePredicate = useStableCallback;
 
 /**
  * Returns the previous array reference when the new array's elements are

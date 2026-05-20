@@ -3,64 +3,71 @@ import Link from '@docusaurus/Link';
 import Layout from '@theme/Layout';
 import CodeBlock from '@theme/CodeBlock';
 
-import CalendarDemo from '@site/src/components/CalendarDemo';
-import PerfCalendarDemo from '@site/src/components/PerfCalendarDemo';
 import styles from './index.module.css';
 
-const SIMPLE_EXAMPLE = `import {
-  CalendarProvider,
-  selectCanConfirm,
-  selectDays,
-  useCalendarActions,
-  useCalendarSelector,
+const SINGLE_EXAMPLE = `import { Pressable, Text, View } from 'react-native';
+import {
+  SingleDateProvider,
+  selectSingleDays,
+  useSingleCalendarActions,
+  useSingleCalendarSelector,
 } from 'react-native-fast-calendar';
 
-export function BookingScreen() {
+export function PickerScreen() {
   return (
-    <CalendarProvider
-      mode="range"
-      minRangeDays={2}
-      onConfirm={({ startDate, endDate }) => {
-        console.log('Booked', startDate, endDate);
-      }}
-    >
-      <Grid />
-    </CalendarProvider>
+    <SingleDateProvider onConfirm={({ date }) => console.log(date)}>
+      <DayGrid />
+    </SingleDateProvider>
   );
 }
 
-function Grid() {
-  const days = useCalendarSelector(selectDays);
-  const { confirm } = useCalendarActions();
-  const canConfirm = useCalendarSelector(selectCanConfirm);
+function DayGrid() {
+  const days = useSingleCalendarSelector(selectSingleDays);
+  const { selectDate, goPrevMonth, goNextMonth } = useSingleCalendarActions();
+
   return (
     <View>
-      {/* render days.cells with your own components */}
-      <Button title="Done" onPress={confirm} disabled={!canConfirm} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Pressable onPress={goPrevMonth}><Text>‹</Text></Pressable>
+        <Text>{days.displayedMonthLabel} {days.displayedYearLabel}</Text>
+        <Pressable onPress={goNextMonth}><Text>›</Text></Pressable>
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {days.cells.map((cell) => (
+          <Pressable
+            key={cell.nativeDate.toISOString()}
+            onPress={() => selectDate(cell.date)}
+            disabled={cell.isDisabled}
+          >
+            <Text>{cell.label}</Text>
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 }`;
 
-const HEADLESS_EXAMPLE = `import {
-  CalendarProvider,
-  selectCanConfirm,
-  selectDays,
-  useCalendarActions,
-  useCalendarSelector,
+const RANGE_EXAMPLE = `import { Pressable, Text, View } from 'react-native';
+import {
+  RangeDateProvider,
+  selectRangeCanConfirm,
+  selectRangeDays,
+  useRangeCalendarActions,
+  useRangeCalendarSelector,
 } from 'react-native-fast-calendar';
 
 export function CustomCalendar() {
   return (
-    <CalendarProvider mode="range">
+    <RangeDateProvider>
       <Grid />
       <Footer />
-    </CalendarProvider>
+    </RangeDateProvider>
   );
 }
 
 function Grid() {
-  const days = useCalendarSelector(selectDays);
-  const { selectDate } = useCalendarActions(); // stable, zero subscriptions
+  const days = useRangeCalendarSelector(selectRangeDays);
+  const { selectDate } = useRangeCalendarActions(); // stable, zero subscriptions
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
       {days.cells.map((cell) => (
@@ -76,19 +83,21 @@ function Grid() {
 }
 
 function Footer() {
-  const start = useCalendarSelector((s) => s.rangeStart);
-  const { confirm } = useCalendarActions();
-  const canConfirm = useCalendarSelector(selectCanConfirm);
+  const start = useRangeCalendarSelector((s) => s.rangeStart);
+  const { confirm } = useRangeCalendarActions();
+  const canConfirm = useRangeCalendarSelector(selectRangeCanConfirm);
   return (
     <View>
       <Text>{start ? 'Pick checkout' : 'Pick check-in'}</Text>
-      <Button title="Done" onPress={confirm} disabled={!canConfirm} />
+      <Pressable onPress={confirm} disabled={!canConfirm}>
+        <Text>Done</Text>
+      </Pressable>
     </View>
   );
 }`;
 
-const SYSTEMS_EXAMPLE = `import { CalendarProvider } from 'react-native-fast-calendar';
-import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
+const SYSTEMS_EXAMPLE = `import { SingleDateProvider } from 'react-native-fast-calendar';
+import { gregorianSystem } from 'react-native-fast-calendar';
 import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
 import { jalaliSystem } from 'react-native-fast-calendar/systems/jalali';
 
@@ -96,9 +105,9 @@ const systems = [gregorianSystem, hijriSystem, jalaliSystem];
 
 export function MultiSystemPicker() {
   return (
-    <CalendarProvider systems={systems} mode="single">
+    <SingleDateProvider systems={systems} activeSystemId="hijri">
       <MyDayGrid />
-    </CalendarProvider>
+    </SingleDateProvider>
   );
 }`;
 
@@ -110,28 +119,9 @@ type FeatureProps = {
 
 const FEATURES: FeatureProps[] = [
   {
-    title: 'Headless by design',
+    title: 'Zero wasted re-renders',
     description:
-      'Bring your own UI. Hooks expose exactly the state you need, when you need it.',
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M4 7h16M4 12h16M4 17h10"
-        />
-      </svg>
-    ),
-  },
-  {
-    title: 'Granular subscriptions',
-    description:
-      'Tap a day and only that day re-renders. Header, footer, and pickers stay still.',
+      'Tap a day and only that cell updates — every other day gets 0 wasted re-renders. Header, footer, and month chrome never wake up.',
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -148,9 +138,47 @@ const FEATURES: FeatureProps[] = [
     ),
   },
   {
+    title: 'You focus on UI only',
+    description:
+      'No grid math, no range rules, no confirm/clear state machines. The provider owns selection logic — you wire hooks to your design system.',
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M4 7h16M4 12h16M4 17h10"
+        />
+      </svg>
+    ),
+  },
+  {
+    title: 'Tedious logic, handled',
+    description:
+      'Disabled dates, min/max ranges, multi-select caps, month navigation, and calendar-system switching — all built in so you never reimplement them.',
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+        />
+      </svg>
+    ),
+  },
+  {
     title: 'Multi-calendar systems',
     description:
-      'Gregorian, Hijri, and Jalali built-in. Plug in any custom system you like.',
+      'Gregorian, Hijri, and Jalali are 100% accurate and ship built-in. Plug in any custom system via the same adapter API.',
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -170,7 +198,7 @@ const FEATURES: FeatureProps[] = [
   {
     title: 'TypeScript first',
     description:
-      'Every prop, hook, and slot is fully typed with discriminated unions you can lean on.',
+      'Typed providers, per-mode snapshots, cell info, and selection payloads — no `any` in the hot path.',
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -208,9 +236,9 @@ const FEATURES: FeatureProps[] = [
     ),
   },
   {
-    title: 'Hooks-only API',
+    title: 'Headless by design',
     description:
-      'Two hooks plus a handful of named selectors. No DayGrid, no SimpleCalendar, no theming object — bring your own components.',
+      'No bundled chrome. Two hooks per mode expose exactly what your cells need — nothing more, nothing less.',
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -227,56 +255,36 @@ const FEATURES: FeatureProps[] = [
   },
 ];
 
-const RECIPES = [
+const MODES = [
   {
-    title: 'Date Range Picker',
-    description: 'Hotel-style range with min/max nights.',
-    href: '/docs/recipes/date-range-picker',
+    name: 'SingleDateProvider',
+    blurb: 'One selected day — date pickers, forms, filters.',
+    href: '/docs/hooks/providers#singledateprovider',
   },
   {
-    title: 'Flight Price Calendar',
-    description: 'Dark, fare-aware range picker with per-day prices.',
-    href: '/docs/recipes/flight-price-calendar',
+    name: 'RangeDateProvider',
+    blurb: 'Start and end — hotels, travel, booking flows.',
+    href: '/docs/hooks/providers#rangedateprovider',
   },
   {
-    title: 'Multi-Date Picker',
-    description: 'Toggle multiple dates with a hard cap.',
-    href: '/docs/recipes/multi-date-picker',
-  },
-  {
-    title: 'Multi-Month Grid',
-    description: 'Two months side-by-side, like Airbnb.',
-    href: '/docs/recipes/multi-month-grid',
-  },
-  {
-    title: 'Custom Day Cell',
-    description: 'Modifier dots, prices, status badges.',
-    href: '/docs/recipes/custom-day-cell',
-  },
-  {
-    title: 'Bottom Sheet Picker',
-    description: 'Mobile-first modal date picker.',
-    href: '/docs/recipes/bottom-sheet-picker',
-  },
-  {
-    title: 'Wheel Date Picker',
-    description: 'iOS drum-roll wheel — day, month, year columns.',
-    href: '/docs/recipes/wheel-date-picker',
+    name: 'MultipleDateProvider',
+    blurb: 'Many days — shifts, multi-day events, caps via maxSelected.',
+    href: '/docs/hooks/providers#multipledateprovider',
   },
 ];
 
 const STATS = [
-  { value: '0', label: 'runtime deps in core' },
-  { value: '2', label: 'public hooks' },
-  { value: '60fps', label: 'on every day tap' },
-  { value: '∞', label: 'calendar systems' },
+  { value: '0', label: 'wasted re-renders on idle cells' },
+  { value: '1', label: 'cell updates per tap' },
+  { value: '2', label: 'hooks per mode' },
+  { value: '100%', label: 'accurate built-in systems' },
 ];
 
 export default function Home(): JSX.Element {
   return (
     <Layout
       title="react-native-fast-calendar"
-      description="A headless, high-performance calendar library for React Native — built for speed, composition, and any calendar system."
+      description="Headless React Native calendar with zero wasted re-renders and 100% accurate Gregorian, Hijri, and Jalali systems. We handle selection logic — you focus on UI only."
     >
       <main className={styles.page}>
         {/* HERO */}
@@ -291,19 +299,24 @@ export default function Home(): JSX.Element {
             </div>
 
             <h1 className={styles.heroTitle}>
-              The headless calendar built for speed.
+              You build the UI.
+              <br />
+              We handle the logic — at zero wasted re-renders.
             </h1>
 
             <p className={styles.heroSubtitle}>
-              A composable calendar primitive for React Native. Granular state,
-              multi-calendar systems, and zero opinions about your UI — ship
-              single date pickers, range bookings, and infinite vertical grids
-              without re-rendering the universe.
+              Selection state, grid layout, range rules, disabled dates, and
+              100% accurate Gregorian, Hijri, and Jalali systems are all built
+              in. Tap a day and only that
+              cell re-renders — every other day gets{' '}
+              <strong>0 wasted re-renders</strong>. No more rewriting tedious
+              calendar
+              code; just compose your design system on top of two hooks.
             </p>
 
             <div className={styles.ctaRow}>
               <Link className={styles.ctaPrimary} to="/docs/intro">
-                Get started
+                Read the docs
                 <svg
                   viewBox="0 0 24 24"
                   width="14"
@@ -348,19 +361,6 @@ export default function Home(): JSX.Element {
             </div>
           </div>
 
-          <div className={styles.heroDemoWrapper}>
-            <div className={styles.heroDemoFrame}>
-              <div className={styles.heroDemoBar}>
-                <span className={styles.heroDemoDot} />
-                <span className={styles.heroDemoDot} />
-                <span className={styles.heroDemoDot} />
-                <span className={styles.heroDemoLabel}>
-                  CalendarProvider · mode="range"
-                </span>
-              </div>
-              <CalendarDemo mode="range" minRangeDays={2} maxRangeDays={14} />
-            </div>
-          </div>
         </section>
 
         {/* STATS */}
@@ -377,38 +377,53 @@ export default function Home(): JSX.Element {
           </div>
         </section>
 
-        {/* PERF DEMO */}
+        {/* MODES */}
+        <section className={styles.section}>
+          <div className={styles.container}>
+            <SectionHeader
+              eyebrow="Pick your mode"
+              title="Three providers, one mental model"
+              description="Each mode ships its own selection engine — range min/max, multi-select caps, confirm/clear, and view state are handled for you. You only wire the UI."
+            />
+            <div className={styles.modeGrid}>
+              {MODES.map((mode) => (
+                <Link key={mode.name} className={styles.modeCard} to={mode.href}>
+                  <h3 className={styles.modeCardTitle}>
+                    <code>{mode.name}</code>
+                  </h3>
+                  <p className={styles.modeCardDescription}>{mode.blurb}</p>
+                  <span className={styles.modeCardCta}>
+                    View API
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 12h14M13 5l7 7-7 7"
+                      />
+                    </svg>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* PERFORMANCE */}
         <section className={`${styles.section} ${styles.sectionMuted}`}>
           <div className={styles.container}>
             <SectionHeader
-              eyebrow="Granular re-renders"
-              title="One tap. One re-render."
-              description="Every day cell is an isolated reactive unit wrapped in React.memo. The tiny counter inside each cell shows exactly how many times it has rendered since the month was loaded — click any date and watch only the affected cells update."
+              eyebrow="High performance"
+              title="One tap. Zero wasted re-renders."
+              description="Each day cell is an isolated reactive unit with stable props via useSyncExternalStore. Tap a date and only the cells whose selection or range state changed update — header, footer, and every idle day get zero wasted re-renders."
             />
-            <div className={styles.perfDemoWrapper}>
-              <PerfCalendarDemo />
-              <div className={styles.perfDemoCaption}>
-                <svg
-                  className={styles.perfDemoCaptionIcon}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M13 2 3 14h8l-1 8 10-12h-8l1-8Z"
-                  />
-                </svg>
-                <span>
-                  Cells frozen at <strong>1×</strong> never re-rendered. Only
-                  the cells whose state changed update — the header, footer, and
-                  every other day stay completely still.
-                </span>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -417,8 +432,8 @@ export default function Home(): JSX.Element {
           <div className={styles.container}>
             <SectionHeader
               eyebrow="Why this calendar"
-              title="Designed to disappear"
-              description="A small surface area you compose into the calendar your product actually needs — no more fighting opinionated UI to look like your design system."
+              title="Stop rewriting calendar logic"
+              description="Most calendar libraries make you own the hard parts — or ship opinionated UI you fight against. This one takes the tedious logic off your plate and leaves performance and pixels to you."
             />
             <div className={styles.featureGrid}>
               {FEATURES.map((feature) => (
@@ -439,32 +454,32 @@ export default function Home(): JSX.Element {
           <div className={styles.container}>
             <SectionHeader
               eyebrow="Two layers, one library"
-              title="Batteries-included or completely custom"
-              description="Wrap your tree in CalendarProvider, then compose the calendar your design system actually needs from the two public hooks and a handful of named selectors."
+              title="Your components. Our state machine."
+              description="Wrap a provider once — it owns selection, navigation, and constraints. You map hooks to Pressables and Text. No grid math in your codebase."
             />
 
             <div className={styles.codeGrid}>
               <div className={styles.codeCard}>
                 <div className={styles.codeCardHeader}>
-                  <div className={styles.codeCardTitle}>Booking screen</div>
+                  <div className={styles.codeCardTitle}>Date picker</div>
                   <div className={styles.codeCardSubtitle}>
-                    one provider · range mode · your own UI
+                    SingleDateProvider · your own UI
                   </div>
                 </div>
                 <div className={styles.codeCardBody}>
-                  <CodeBlock language="tsx">{SIMPLE_EXAMPLE}</CodeBlock>
+                  <CodeBlock language="tsx">{SINGLE_EXAMPLE}</CodeBlock>
                 </div>
               </div>
 
               <div className={styles.codeCard}>
                 <div className={styles.codeCardHeader}>
-                  <div className={styles.codeCardTitle}>Headless grid</div>
+                  <div className={styles.codeCardTitle}>Booking screen</div>
                   <div className={styles.codeCardSubtitle}>
-                    useCalendarSelector(selectDays) · useCalendarActions
+                    RangeDateProvider · grid + confirm footer
                   </div>
                 </div>
                 <div className={styles.codeCardBody}>
-                  <CodeBlock language="tsx">{HEADLESS_EXAMPLE}</CodeBlock>
+                  <CodeBlock language="tsx">{RANGE_EXAMPLE}</CodeBlock>
                 </div>
               </div>
 
@@ -474,7 +489,8 @@ export default function Home(): JSX.Element {
                     Multiple calendar systems
                   </div>
                   <div className={styles.codeCardSubtitle}>
-                    Gregorian, Hijri, Jalali — or your own. Switch at runtime.
+                    100% accurate Gregorian, Hijri, and Jalali — or your own.
+                    Switch at runtime.
                   </div>
                 </div>
                 <div className={styles.codeCardBody}>
@@ -485,58 +501,18 @@ export default function Home(): JSX.Element {
           </div>
         </section>
 
-        {/* RECIPES */}
-        <section className={styles.section}>
-          <div className={styles.container}>
-            <SectionHeader
-              eyebrow="Recipes"
-              title="What you can build"
-              description="Production-ready patterns with interactive demos you can poke at right in the docs."
-            />
-            <div className={styles.recipeGrid}>
-              {RECIPES.map((recipe) => (
-                <Link
-                  key={recipe.title}
-                  to={recipe.href}
-                  className={styles.recipeCard}
-                >
-                  <div className={styles.recipeCardTitle}>{recipe.title}</div>
-                  <div className={styles.recipeCardDescription}>
-                    {recipe.description}
-                  </div>
-                  <div className={styles.recipeCardCta}>
-                    Read recipe
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="14"
-                      height="14"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 12h14M13 5l7 7-7 7"
-                      />
-                    </svg>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
 
         {/* CTA */}
         <section className={styles.ctaSection}>
           <div className={styles.container}>
             <div className={styles.ctaCard}>
               <h2 className={styles.ctaTitle}>
-                Ship the calendar your design system deserves.
+                Ship a fast calendar without the tedious logic.
               </h2>
               <p className={styles.ctaDescription}>
-                Read the docs, copy a recipe, or drop in{' '}
-                <code>CalendarProvider</code> and start picking dates.
+                Drop in a provider, subscribe with two hooks, and style your
+                cells — <strong>0 wasted re-renders</strong> on idle days,{' '}
+                <strong>100% focus</strong> on the UI your product needs.
               </p>
               <div className={styles.ctaRow}>
                 <Link className={styles.ctaPrimary} to="/docs/intro">
@@ -544,9 +520,9 @@ export default function Home(): JSX.Element {
                 </Link>
                 <Link
                   className={styles.ctaSecondary}
-                  to="/docs/recipes/single-date-picker"
+                  to="/docs/hooks/providers"
                 >
-                  Browse recipes
+                  API reference
                 </Link>
               </div>
             </div>

@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 title: Introduction
-description: react-native-fast-calendar is a headless, hooks-only calendar primitive for React Native — one provider, two hooks, infinite UI.
+description: react-native-fast-calendar is a headless, hooks-only calendar primitive for React Native — one provider per selection mode, two hooks, typed selectors.
 keywords:
   - react native calendar
   - headless calendar
@@ -11,58 +11,47 @@ keywords:
 
 # Introduction
 
-`react-native-fast-calendar` is a **hooks-only, headless calendar primitive** for React Native. The entire public API is one provider component plus two hooks (and a handful of pre-built selectors) — bring your own UI.
+`react-native-fast-calendar` is a **headless, hooks-only calendar primitive** for React Native. Pick a provider for your selection mode, read state with one hook, mutate with another — you bring every pixel of UI.
 
-import CalendarDemo from '@site/src/components/CalendarDemo';
+## The API at a Glance
 
-## Try It Out
+The library exports **three providers** (one per selection mode), **two hooks per mode**, and **built-in selectors** for the shapes you'll render most often.
 
-<CalendarDemo mode="single" />
-
-## The Whole API in One Glance
+| Mode | Provider | Read hook | Write hook |
+| --- | --- | --- | --- |
+| Single date | `SingleDateProvider` | `useSingleCalendarSelector` | `useSingleCalendarActions` |
+| Date range | `RangeDateProvider` | `useRangeCalendarSelector` | `useRangeCalendarActions` |
+| Multiple dates | `MultipleDateProvider` | `useMultipleCalendarSelector` | `useMultipleCalendarActions` |
 
 ```tsx
 import {
-  CalendarProvider,
-  useCalendarActions,
-  useCalendarSelector,
-  // Pre-built selectors for the common shapes.
-  selectCanConfirm,
-  selectDays,
-  selectMonths,
-  selectYears,
+  SingleDateProvider,
+  selectSingleDays,
+  selectSingleCanConfirm,
+  useSingleCalendarActions,
+  useSingleCalendarSelector,
 } from 'react-native-fast-calendar';
 ```
 
-| Symbol | Purpose |
-| --- | --- |
-| `CalendarProvider` | Required boundary. Owns the store and the per-render config. |
-| `useCalendarSelector` | Subscribe to any slice of the store with granular re-renders. |
-| `useCalendarActions` | Every mutator: `selectDate`, navigation, `confirm`, `clear`. Subscription-free. |
-| `selectDays` | Day-grid cells, weekday labels, displayed-month/year labels. |
-| `selectMonths` | 12 month entries + active month. |
-| `selectYears` | Paginated year list + active year. |
-| `selectCanConfirm` | `true` when the current selection is committable. |
-
-There is no `<Calendar.DayGrid>`, no `<SimpleCalendar>`, no theme, no labels object. You render your own components with the data the hooks expose.
+There is no bundled `<Calendar>`, no theme object, and no label dictionary. You render your own components with the data the hooks expose.
 
 ## Quickest Possible Example
 
 ```tsx
 import { Pressable, Text, View } from 'react-native';
 import {
-  CalendarProvider,
-  selectCanConfirm,
-  selectDays,
-  useCalendarActions,
-  useCalendarSelector,
+  SingleDateProvider,
+  selectSingleCanConfirm,
+  selectSingleDays,
+  useSingleCalendarActions,
+  useSingleCalendarSelector,
 } from 'react-native-fast-calendar';
 
 function Calendar() {
-  const days = useCalendarSelector(selectDays);
-  const { selectDate, goPrevMonth, goNextMonth, confirm } =
-    useCalendarActions();
-  const canConfirm = useCalendarSelector(selectCanConfirm);
+  const days = useSingleCalendarSelector(selectSingleDays);
+  const { selectDate, goPrevMonth, goNextMonth, confirm, clear } =
+    useSingleCalendarActions();
+  const canConfirm = useSingleCalendarSelector(selectSingleCanConfirm);
 
   return (
     <View>
@@ -71,46 +60,63 @@ function Calendar() {
         <Text>{days.displayedMonthLabel} {days.displayedYearLabel}</Text>
         <Pressable onPress={goNextMonth}><Text>›</Text></Pressable>
       </View>
+
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {days.cells.map((cell) => (
           <Pressable
             key={cell.nativeDate.toISOString()}
             onPress={() => selectDate(cell.date)}
             disabled={cell.isDisabled}
-            style={{ width: 40, height: 40, opacity: cell.isCurrentMonth ? 1 : 0.4 }}
+            style={{
+              width: 40,
+              height: 40,
+              opacity: cell.isCurrentMonth ? 1 : 0.4,
+              backgroundColor: cell.isSelected ? '#0f172a' : 'transparent',
+            }}
           >
-            <Text style={{ fontWeight: cell.isSelected ? '700' : '400' }}>
+            <Text style={{ color: cell.isSelected ? '#fff' : '#0f172a' }}>
               {cell.label}
             </Text>
           </Pressable>
         ))}
       </View>
+
       <Pressable onPress={confirm} disabled={!canConfirm}>
         <Text>Done</Text>
       </Pressable>
+      <Pressable onPress={clear}><Text>Clear</Text></Pressable>
     </View>
   );
 }
 
 export default function Screen() {
   return (
-    <CalendarProvider mode="single" onConfirm={({ date }) => console.log(date)}>
+    <SingleDateProvider onConfirm={({ date }) => console.log(date)}>
       <Calendar />
-    </CalendarProvider>
+    </SingleDateProvider>
   );
 }
 ```
 
+## Why Three Providers?
+
+Each mode has its own store and snapshot type. That keeps TypeScript precise (`selectedDate` on single, `rangeStart` / `rangeEnd` on range, `selectedDates` on multiple) and avoids a single mega-snapshot full of optional fields you'll never use.
+
+Use `RangeDateProvider` for check-in / check-out flows and `MultipleDateProvider` when users pick several unrelated days.
+
+For ranges, `disabledInRangeBehavior` (`'reject'` | `'include'` | `'exclude'`) controls what happens when the span between start and end includes disabled days — see [Providers](./hooks/providers#disabled-days-inside-a-range).
+
 ## Key Properties
 
-- **Headless.** Zero opinions about how a calendar looks.
-- **Hooks-only.** Two primitives plus named selectors compose into every recipe in this docset.
-- **Granular re-renders.** Each selector subscribes only to the slice it needs.
-- **Multi-system.** Built-in Gregorian; bundled adapters for Hijri and Jalali.
-- **TypeScript-first.** Every hook return type is exported.
+- **Headless.** Zero opinions about layout, colour, or copy.
+- **Hooks-only.** Two primitives per mode plus named selectors for common views.
+- **Granular re-renders.** `useSyncExternalStore` under the hood; day cells keep stable references when their state is unchanged.
+- **Multi-system.** Built-in Gregorian; optional Hijri and Jalali sub-paths; bring your own `CalendarSystem`.
+- **TypeScript-first.** Every hook, cell type, and payload is exported.
 
 ## Where Next
 
 - [Installation](./installation)
 - [Mental Model](./core-concepts/mental-model)
-- [Recipes](./recipes/single-date-picker)
+- [Providers](./hooks/providers)
+- [Mental model](./core-concepts/mental-model)

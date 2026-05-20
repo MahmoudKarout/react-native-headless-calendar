@@ -2,73 +2,110 @@
 sidebar_position: 2
 ---
 
-# DayCellInfo
+# Day Cell Info
 
-`DayCellInfo` describes a single cell of the day grid. The array `useCalendarSelector(selectDays).cells` contains one of these per visible cell (current-month and outside-month).
+Each visible day in the grid is described by a mode-specific cell type. All extend the same base fields.
 
-## Interface
+## Base Fields (`BaseDayCellFields`)
 
 ```ts
-interface DayCellInfo<T = CalendarDateValue> {
-  date: T;                                          // value in the active system
-  nativeDate: Date;                                 // for keys / formatting
-  label: string;                                    // already localised, e.g. "12"
+interface BaseDayCellFields<T = CalendarDateValue> {
+  date: T;
+  nativeDate: Date;
+  label: string;
   isCurrentMonth: boolean;
   isToday: boolean;
-  isSelected: boolean;                              // single | multiple member | range endpoint
-  inRange: boolean;                                 // strictly between range endpoints
+  isDisabled: boolean;
+  modifiers: Readonly<Record<string, boolean>>;
+}
+```
+
+Access cells via `use*CalendarSelector(select*Days).cells` or `s.days.cells`.
+
+## Mode-Specific Types
+
+### `SingleDayCellInfo`
+
+```ts
+interface SingleDayCellInfo extends BaseDayCellFields {
+  isSelected: boolean;
+}
+```
+
+### `RangeDayCellInfo`
+
+```ts
+interface RangeDayCellInfo extends BaseDayCellFields {
+  inRange: boolean;       // strictly between endpoints
   isRangeStart: boolean;
   isRangeEnd: boolean;
-  isDisabled: boolean;                              // bound | list | predicate
-  modifiers: Readonly<Record<string, boolean>>;     // matchers from <CalendarProvider modifiers>
+}
+```
+
+`inRange` is `false` on the start and end cells themselves — use `isRangeStart` / `isRangeEnd` for endpoint styling.
+
+When `disabledInRangeBehavior="include"`, a day can be both `inRange: true` and `isDisabled: true` (for example a blocked night inside a selected stay). Style those cells explicitly — the library does not hide them from the range highlight.
+
+### `MultipleDayCellInfo`
+
+```ts
+interface MultipleDayCellInfo extends BaseDayCellFields {
+  isSelected: boolean;
 }
 ```
 
 ## Rendering Pattern
 
 ```tsx
-function DayCell({ cell, onPress }: { cell: DayCellInfo; onPress: () => void }) {
+import { memo } from 'react';
+import { Pressable, Text } from 'react-native';
+import type { RangeDayCellInfo } from 'react-native-fast-calendar';
+
+export const DayCell = memo(function DayCell({
+  cell,
+  onPress,
+}: {
+  cell: RangeDayCellInfo;
+  onPress: (cell: RangeDayCellInfo) => void;
+}) {
   return (
     <Pressable
       disabled={cell.isDisabled}
-      onPress={onPress}
+      onPress={() => onPress(cell)}
       style={[
-        styles.cell,
-        !cell.isCurrentMonth && styles.outside,
+        !cell.isCurrentMonth && { opacity: 0.4 },
         cell.inRange && styles.inRange,
-        cell.isSelected && styles.selected,
-        cell.isToday && !cell.isSelected && styles.today,
-        cell.isDisabled && styles.disabled,
+        cell.isRangeStart && styles.start,
+        cell.isRangeEnd && styles.end,
         cell.modifiers.booked && styles.booked,
       ]}
     >
-      <Text style={cell.isSelected && styles.selectedText}>{cell.label}</Text>
+      <Text>{cell.label}</Text>
     </Pressable>
   );
-}
+});
 ```
+
+Pass `cell.date` back to `selectDate` — the store normalises it through the active system.
 
 ## Modifier Flags
 
-`modifiers` is the boolean output of every entry in `<CalendarProvider modifiers={…}>`:
+`modifiers` reflects every entry in the provider's `modifiers` prop:
 
 ```tsx
-<CalendarProvider
+<SingleDateProvider
   modifiers={{
-    booked: [/* dates */],
-    holiday: [/* { start, end } ranges */],
+    booked: [new Date(2024, 4, 7)],
+    holiday: [{ start: new Date(2024, 4, 20), end: new Date(2024, 4, 22) }],
     weekend: (d) => d.getDay() === 0 || d.getDay() === 6,
   }}
-/>
+>
 ```
 
-Inside a cell renderer:
-
 ```tsx
-{cell.modifiers.booked && <View style={styles.bookedDot} />}
-{cell.modifiers.weekend && <View style={styles.weekendTint} />}
+{cell.modifiers.booked && <View style={styles.dot} />}
 ```
 
 ## Stable Identity
 
-`cells` is recomputed only when one of the inputs changes (displayed month, mode, selection, bounds, modifiers). Wrap your day cell in `React.memo` and the cells whose `DayCellInfo` reference doesn't change will skip re-renders entirely.
+The store reuses cell object references when nothing visible changed. Wrap your cell component in `React.memo` — unchanged cells skip re-renders entirely.

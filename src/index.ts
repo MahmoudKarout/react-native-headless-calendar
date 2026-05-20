@@ -1,39 +1,88 @@
-/**
- * react-native-fast-calendar — hooks-first public surface.
- *
- * The library is intentionally headless: there is one provider component
- * (<CalendarProvider>) and two hooks — `useCalendarSelector` for reads
- * and `useCalendarActions` for writes. Pre-built selectors
- * (`selectDays`, `selectMonths`, `selectYears`, `selectCanConfirm`)
- * cover the common shapes. Consumers bring their own UI.
- */
+// ── Single-mode surface ────────────────────────────────────────────────────
 
-// Provider — the only required boundary for every hook below.
-export { Root as CalendarProvider } from './components/Root';
-export type { CalendarRootProps as CalendarProviderProps } from './components/Root';
+export { SingleDateProvider } from './components/SingleDateProvider';
+export type { SingleDateProviderProps } from './components/SingleDateProvider';
 
-// Public hooks — there are exactly two. Everything readable goes through
-// `useCalendarSelector(...)`; every mutator is on `useCalendarActions()`.
-export { useCalendarActions, useCalendarSelector } from './context';
-export type { CalendarActions } from './context';
-
-// Built-in selectors. Pass these to `useCalendarSelector` for the common
-// shapes; or write your own narrow `(s) => s.something` for anything bespoke.
 export {
-  selectCanConfirm,
-  selectDays,
-  selectMonths,
-  selectYears,
-} from './context';
+  selectSingleCanConfirm,
+  selectSingleDays,
+  selectSingleMonths,
+  selectSingleYears,
+  useSingleCalendarActions,
+  useSingleCalendarSelector,
+} from './contexts/single';
+export type { SingleCalendarActions } from './contexts/single';
 
-// Snapshot + derived view types so consumers can type their own selectors.
 export type {
-  CalendarDays,
-  CalendarMonthEntry,
-  CalendarMonths,
-  CalendarSnapshot,
-  CalendarYears,
-} from './store';
+  SingleCalendarDays,
+  SingleCalendarSnapshot,
+  SingleDayCellInfo,
+  SingleOnChange,
+  SingleOnClear,
+  SingleOnConfirm,
+  SingleSelectionPayload,
+} from './stores/SingleCalendarStore';
+
+// ── Range-mode surface ─────────────────────────────────────────────────────
+
+export { RangeDateProvider } from './components/RangeDateProvider';
+export type { RangeDateProviderProps } from './components/RangeDateProvider';
+
+export {
+  selectRangeCanConfirm,
+  selectRangeDays,
+  selectRangeMonths,
+  selectRangeYears,
+  useRangeCalendarActions,
+  useRangeCalendarSelector,
+} from './contexts/range';
+export type { RangeCalendarActions } from './contexts/range';
+
+export type {
+  DisabledInRangeBehavior,
+  RangeCalendarDays,
+  RangeCalendarSnapshot,
+  RangeDayCellInfo,
+  RangeOnChange,
+  RangeOnClear,
+  RangeOnConfirm,
+  RangeSelectionPayload,
+} from './stores/RangeCalendarStore';
+
+// ── Multiple-mode surface ──────────────────────────────────────────────────
+
+export { MultipleDateProvider } from './components/MultipleDateProvider';
+export type { MultipleDateProviderProps } from './components/MultipleDateProvider';
+
+export {
+  selectMultipleCanConfirm,
+  selectMultipleDays,
+  selectMultipleMonths,
+  selectMultipleYears,
+  useMultipleCalendarActions,
+  useMultipleCalendarSelector,
+} from './contexts/multiple';
+export type { MultipleCalendarActions } from './contexts/multiple';
+
+export type {
+  MultipleCalendarDays,
+  MultipleCalendarSnapshot,
+  MultipleDayCellInfo,
+  MultipleOnChange,
+  MultipleOnClear,
+  MultipleOnConfirm,
+  MultipleSelectionPayload,
+} from './stores/MultipleCalendarStore';
+
+// Shared types reused across modes.
+export type {
+  CalendarMatcher,
+  CalendarModifiers,
+  DateParts,
+  DisabledDateInput,
+  DisabledDateRangeInput,
+  Weekday,
+} from './types';
 
 // Calendar systems — also available via sub-exports for tree-shaking.
 export {
@@ -42,24 +91,6 @@ export {
   type GregorianDate,
   type GregorianSystemOptions,
 } from './systems/gregorian';
-
-// Public types.
-export type {
-  CalendarDateValue,
-  CalendarMatcher,
-  CalendarMode,
-  CalendarModifiers,
-  CalendarSelectionPayload,
-  CalendarSystem,
-  DateRange,
-  DayCellInfo,
-  DisabledDateInput,
-  DisabledDateRangeInput,
-  OnChange,
-  OnClear,
-  OnConfirm,
-  Weekday,
-} from './types';
 
 // Optional grid utilities for advanced use cases.
 export {

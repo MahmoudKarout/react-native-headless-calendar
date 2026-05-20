@@ -1,97 +1,42 @@
-# React Native Fast Calendar Documentation
+# react-native-fast-calendar — documentation site
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+Static docs built with [Docusaurus](https://docusaurus.io/), published to GitHub Pages.
 
-## Documentation Structure
+## Structure
 
 ```
 docs/
 ├── docs/
-│   ├── intro.md                    # Introduction
-│   ├── installation.md             # Installation guide
-│   ├── core-concepts/              # Core concepts
-│   │   ├── mental-model.md
-│   │   ├── headless-design.md
-│   │   ├── calendar-systems.md
-│   │   └── theming.md
-│   ├── components/                 # Components
-│   │   ├── simple-calendar.md
-│   │   ├── calendar-root.md
-│   │   ├── calendar-daygrid.md
-│   │   └── calendar-daycell.md
-│   ├── hooks/                      # Hooks (18 total)
-│   │   ├── use-calendar-store.md
-│   │   ├── use-calendar-selector.md
-│   │   ├── use-calendar-actions.md
-│   │   └── ...
-│   ├── types/                      # Types & Interfaces
-│   │   ├── calendar-system.md
-│   │   ├── calendar-theme.md
-│   │   ├── day-cell-info.md
-│   │   └── ...
-│   ├── systems/                    # Calendar Systems
-│   │   ├── gregorian.md
-│   │   ├── hijri.md
-│   │   ├── jalali.md
-│   │   └── custom-system.md
-│   ├── utilities/                  # Grid Utilities
-│   │   ├── build-month-grid.md
-│   │   ├── iso-week-number.md
-│   │   └── ...
-│   └── recipes/                    # Recipes & Examples
-│       ├── single-date-picker.md
-│       ├── date-range-picker.md
-│       └── ...
-└── src/
-    └── css/
-        └── custom.css
+│   ├── intro.md
+│   ├── installation.md
+│   ├── core-concepts/
+│   ├── hooks/           # providers, selector hook, actions hook, selectors
+│   ├── types/
+│   └── systems/
+├── src/
+│   └── pages/           # Landing page
+├── sidebars.ts
+└── docusaurus.config.ts
 ```
 
-## Installation
+## Commands
 
 ```bash
-yarn add
+cd docs
+yarn install
+yarn start      # dev server
+yarn build      # production build
+yarn deploy     # gh-pages
 ```
 
-## Local Development
+## Adding a page
 
-```bash
-npm start
-```
+1. Create `docs/docs/<section>/<slug>.md` with front matter (`sidebar_position`, `title`, …).
+2. Register the slug in `sidebars.ts`.
+3. Use the current API: `SingleDateProvider` / `RangeDateProvider` / `MultipleDateProvider` and matching hooks.
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+## Conventions
 
-## Build
-
-```bash
-npm run build
-```
-
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
-
-## Deployment
-
-```bash
-npm run deploy
-```
-
-## Documentation Features
-
-- **Comprehensive API Reference**: Every component, hook, type, and utility is documented
-- **Recipes**: Practical examples for common use cases
-- **TypeScript**: All examples and interfaces are fully typed
-- **Search**: Built-in search functionality
-- **Dark Mode**: Automatic dark mode support
-
-## Adding New Documentation
-
-1. Create a new `.md` file in the appropriate folder
-2. Add the file to `sidebars.ts` if needed
-3. Use the existing files as templates for structure
-
-## Writing Conventions
-
-- Use code blocks with language tags
-- Include runnable examples where possible
-- Document parameters and return types
-- Add cross-references to related topics
+- Code examples must match `src/index.ts` exports.
+- Prefer linking to [Providers](./docs/hooks/providers.md) for shared prop tables.
+- `firstDayOfWeek` defaults to Monday (`1`).

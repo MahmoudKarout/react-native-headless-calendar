@@ -2,34 +2,76 @@
 sidebar_position: 5
 ---
 
-# CalendarSelectionPayload
+# Selection Payloads
 
-Shape passed to `onConfirm` when `useCalendarActions().confirm()` fires.
+Each provider fires mode-specific payloads on `onChange` and `onConfirm`. Values are always native JS `Date` (and `DateParts`) regardless of the active calendar system.
 
-## Type
+## Single — `SingleSelectionPayload`
 
 ```ts
-interface CalendarSelectionPayload {
-  date?: Date;        // single mode
-  startDate?: Date;   // range mode
-  endDate?: Date;     // range mode
-  dates?: Date[];     // multiple mode
-  systemId: string;   // active calendar system id
+interface SingleSelectionPayload {
+  date: Date | undefined;
+  parts: DateParts | undefined; // { year, month, day } — month is 0-based
+  systemId: string;
 }
 ```
 
-Only the fields relevant to the active mode are populated. Every value is a native JS `Date` regardless of which calendar system is active — round-trip through `system.toNativeDate()` so consumers don't have to reach for system adapters in their callbacks.
+```tsx
+<SingleDateProvider
+  onConfirm={({ date, parts, systemId }) => {
+    if (!date) return;
+    saveBooking(date, parts!, systemId);
+  }}
+/>
+```
 
-## Usage
+## Range — `RangeSelectionPayload`
+
+```ts
+interface RangeSelectionPayload {
+  startDate: Date | undefined;
+  endDate: Date | undefined;
+  startParts: DateParts | undefined;
+  endParts: DateParts | undefined;
+  systemId: string;
+}
+```
 
 ```tsx
-<CalendarProvider
-  mode="range"
+<RangeDateProvider
   onConfirm={({ startDate, endDate, systemId }) => {
     if (!startDate || !endDate) return;
     bookHotel({ checkIn: startDate, checkOut: endDate, calendar: systemId });
   }}
->
-  {/* ... */}
-</CalendarProvider>
+/>
 ```
+
+With `disabledInRangeBehavior="reject"` (default), a second tap that would cross a disabled interior day does **not** update the range and does **not** fire `onChange`. Use `disabledInRangeBehavior="include"` if you need a payload for spans that contain disabled days and gate confirm in your own UI.
+
+## Multiple — `MultipleSelectionPayload`
+
+```ts
+interface MultipleSelectionPayload {
+  dates: readonly Date[];
+  parts: readonly DateParts[];
+  systemId: string;
+}
+```
+
+```tsx
+<MultipleDateProvider
+  onChange={({ dates }) => setPicked(dates)}
+/>
+```
+
+## When Payloads Fire
+
+| Event | `onChange` | `onConfirm` | `onClear` |
+| --- | --- | --- | --- |
+| `selectDate` (success) | ✓ | — | — |
+| `selectDate` (range rejected — disabled interior, default policy) | — | — | — |
+| `clear` (had selection) | ✓ | — | ✓ |
+| `clear` (empty) | — | — | ✓ |
+| `confirm()` | — | ✓ | — |
+
+`confirm()` is a no-op when `onConfirm` was not passed to the provider.

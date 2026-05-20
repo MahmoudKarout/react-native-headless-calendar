@@ -20,8 +20,8 @@ export const TOTAL_CELLS = ROWS * COLS;
 
 export const YEAR_PAGE_SIZE = 12;
 
-/** Default first column of the day grid — Sunday, matching the US convention. */
-export const DEFAULT_FIRST_DAY_OF_WEEK: Weekday = 0;
+/** Default first column of the day grid — Monday, matching the US convention. */
+export const DEFAULT_FIRST_DAY_OF_WEEK: Weekday = 1;
 
 export interface GridCell<T> {
   date: T;

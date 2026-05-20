@@ -1,5 +1,6 @@
-import React from 'react';
-import { render } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { Text, View } from 'react-native';
 
 import {
   useStableArray,
@@ -8,136 +9,215 @@ import {
   useStableRecord,
 } from '../../utils/stableProps';
 
-// Tiny harness: renders a noop component that pipes a hook through a
-// capture so we can poke its inputs from the test and snapshot the
-// output identity across renders.
-const makeHarness = <Args extends unknown[], Out>(
-  hook: (...args: Args) => Out
-) => {
-  let capture: Out;
-  const Harness: React.FC<{ args: Args }> = ({ args }) => {
-    capture = hook(...args);
-    return null;
-  };
-  return {
-    Harness,
-    get value() {
-      return capture;
-    },
-  };
-};
+// -- useStableCallback -------------------------------------------------------
 
-describe('useStableCallback', () => {
-  it('returns undefined when the callback is undefined and a stable wrapper otherwise', () => {
-    const h = makeHarness((cb: (() => void) | undefined) =>
-      useStableCallback(cb)
-    );
-    const { rerender } = render(<h.Harness args={[undefined]} />);
-    expect(h.value).toBeUndefined();
-    rerender(<h.Harness args={[() => undefined]} />);
-    const first = h.value;
-    expect(first).toBeDefined();
-    rerender(<h.Harness args={[() => undefined]} />);
-    expect(h.value).toBe(first);
+describe('useStableCallback()', () => {
+  it('returns the same wrapper across renders when callback is defined both times', () => {
+    const refs: Array<((x: number) => number) | undefined> = [];
+    const Comp = ({ cb }: { cb: (x: number) => number }) => {
+      const stable = useStableCallback(cb);
+      refs.push(stable);
+      return null;
+    };
+    const ui = render(<Comp cb={(x) => x + 1} />);
+    ui.rerender(<Comp cb={(x) => x + 2} />);
+    expect(refs[0]).toBeDefined();
+    expect(refs[0]).toBe(refs[1]);
   });
 
-  it('always invokes the latest callback identity', () => {
-    const h = makeHarness((cb: () => void) => useStableCallback(cb));
-    const a = jest.fn();
-    const b = jest.fn();
-    const { rerender } = render(<h.Harness args={[a]} />);
-    h.value!();
-    rerender(<h.Harness args={[b]} />);
-    h.value!();
-    expect(a).toHaveBeenCalledTimes(1);
-    expect(b).toHaveBeenCalledTimes(1);
+  it('always invokes the latest callback through the stable wrapper', () => {
+    let stable: ((x: number) => number) | undefined;
+    const Comp = ({ cb }: { cb: (x: number) => number }) => {
+      stable = useStableCallback(cb);
+      return null;
+    };
+    const ui = render(<Comp cb={(x) => x + 10} />);
+    expect(stable!(1)).toBe(11);
+    ui.rerender(<Comp cb={(x) => x * 100} />);
+    expect(stable!(2)).toBe(200);
   });
-});
 
-describe('useStablePredicate', () => {
-  it('returns the latest predicate result through a stable wrapper', () => {
-    const h = makeHarness((cb: ((n: number) => number) | undefined) =>
-      useStablePredicate(cb)
-    );
-    const double = (n: number) => n * 2;
-    const triple = (n: number) => n * 3;
-    const { rerender } = render(<h.Harness args={[double]} />);
-    const first = h.value;
-    expect(first!(2)).toBe(4);
-    rerender(<h.Harness args={[triple]} />);
-    expect(h.value).toBe(first);
-    expect(h.value!(2)).toBe(6);
-    rerender(<h.Harness args={[undefined]} />);
-    expect(h.value).toBeUndefined();
+  it('returns undefined when the underlying callback is undefined', () => {
+    const Comp = ({ cb }: { cb?: () => void }) => {
+      const stable = useStableCallback(cb);
+      return <Text testID="t">{stable ? 'fn' : 'none'}</Text>;
+    };
+    const ui = render(<Comp />);
+    expect(ui.getByTestId('t').props.children).toBe('none');
+  });
+
+  it('flips wrapper identity at defined ↔ undefined transitions', () => {
+    const refs: Array<((x: number) => number) | undefined> = [];
+    const Comp = ({ cb }: { cb?: (x: number) => number }) => {
+      refs.push(useStableCallback(cb));
+      return null;
+    };
+    const ui = render(<Comp cb={(x) => x} />);
+    ui.rerender(<Comp />);
+    ui.rerender(<Comp cb={(x) => x * 2} />);
+    expect(refs[0]).toBeDefined();
+    expect(refs[1]).toBeUndefined();
+    expect(refs[2]).toBeDefined();
+  });
+
+  it('re-exports useStablePredicate as an alias', () => {
+    expect(useStablePredicate).toBe(useStableCallback);
   });
 });
 
-describe('useStableArray', () => {
-  it('returns the previous reference when contents are strictly equal', () => {
-    const h = makeHarness((arr: readonly number[]) => useStableArray(arr));
-    const { rerender } = render(<h.Harness args={[[1, 2, 3]]} />);
-    const first = h.value;
-    rerender(<h.Harness args={[[1, 2, 3]]} />);
-    expect(h.value).toBe(first);
-    rerender(<h.Harness args={[[1, 2, 4]]} />);
-    expect(h.value).not.toBe(first);
-    rerender(<h.Harness args={[[1, 2]]} />);
-    // Length-mismatch path.
-    expect(h.value).toEqual([1, 2]);
+// -- useStableArray ----------------------------------------------------------
+
+describe('useStableArray()', () => {
+  it('returns the same reference when elements are === equal', () => {
+    const a = { id: 1 };
+    const b = { id: 2 };
+    const refs: ReadonlyArray<unknown>[] = [];
+    const Comp = ({ arr }: { arr: readonly unknown[] }) => {
+      refs.push(useStableArray(arr));
+      return null;
+    };
+    const ui = render(<Comp arr={[a, b]} />);
+    ui.rerender(<Comp arr={[a, b]} />);
+    expect(refs[0]).toBe(refs[1]);
+  });
+
+  it('returns a new reference when an element changes', () => {
+    const a = { id: 1 };
+    const b = { id: 2 };
+    const c = { id: 3 };
+    const refs: ReadonlyArray<unknown>[] = [];
+    const Comp = ({ arr }: { arr: readonly unknown[] }) => {
+      refs.push(useStableArray(arr));
+      return null;
+    };
+    const ui = render(<Comp arr={[a, b]} />);
+    ui.rerender(<Comp arr={[a, c]} />);
+    expect(refs[0]).not.toBe(refs[1]);
+    expect(refs[1]).toEqual([a, c]);
+  });
+
+  it('preserves identity across two empty arrays', () => {
+    const refs: ReadonlyArray<unknown>[] = [];
+    const Comp = ({ arr }: { arr: readonly unknown[] }) => {
+      refs.push(useStableArray(arr));
+      return null;
+    };
+    const ui = render(<Comp arr={[]} />);
+    ui.rerender(<Comp arr={[]} />);
+    expect(refs[0]).toBe(refs[1]);
+  });
+
+  it('returns a new reference when array length changes', () => {
+    const a = { id: 1 };
+    const refs: ReadonlyArray<unknown>[] = [];
+    const Comp = ({ arr }: { arr: readonly unknown[] }) => {
+      refs.push(useStableArray(arr));
+      return null;
+    };
+    const ui = render(<Comp arr={[a]} />);
+    ui.rerender(<Comp arr={[a, a]} />);
+    expect(refs[0]).not.toBe(refs[1]);
   });
 });
 
-describe('useStableRecord', () => {
-  // The record stabiliser has more interesting branches than the
-  // others — it has to account for prev/next being undefined (one or
-  // both) and for differing keys vs differing values.
-  it('caches a non-undefined record across re-renders with shallow-equal keys', () => {
-    const h = makeHarness((rec: Record<string, number> | undefined) =>
-      useStableRecord(rec)
-    );
-    const { rerender } = render(<h.Harness args={[{ a: 1 }]} />);
-    const first = h.value;
-    rerender(<h.Harness args={[{ a: 1 }]} />);
-    expect(h.value).toBe(first);
+// -- useStableRecord ---------------------------------------------------------
+
+describe('useStableRecord()', () => {
+  it('returns the same reference when all keys/values are ===', () => {
+    const fn = () => true;
+    const refs: Array<unknown> = [];
+    const Comp = ({
+      rec,
+    }: {
+      rec?: Readonly<Record<string, unknown>>;
+    }) => {
+      refs.push(useStableRecord(rec));
+      return null;
+    };
+    const ui = render(<Comp rec={{ a: fn, b: 1 }} />);
+    ui.rerender(<Comp rec={{ a: fn, b: 1 }} />);
+    expect(refs[0]).toBe(refs[1]);
   });
 
-  it('updates the cache when transitioning from undefined to defined', () => {
-    const h = makeHarness((rec: Record<string, number> | undefined) =>
-      useStableRecord(rec)
-    );
-    const { rerender } = render(<h.Harness args={[undefined]} />);
-    expect(h.value).toBeUndefined();
-    rerender(<h.Harness args={[{ a: 1 }]} />);
-    expect(h.value).toEqual({ a: 1 });
+  it('returns a new reference when a value changes', () => {
+    const refs: Array<unknown> = [];
+    const Comp = ({
+      rec,
+    }: {
+      rec?: Readonly<Record<string, unknown>>;
+    }) => {
+      refs.push(useStableRecord(rec));
+      return null;
+    };
+    const ui = render(<Comp rec={{ a: 1 }} />);
+    ui.rerender(<Comp rec={{ a: 2 }} />);
+    expect(refs[0]).not.toBe(refs[1]);
   });
 
-  it('updates the cache when transitioning from defined to undefined', () => {
-    const h = makeHarness((rec: Record<string, number> | undefined) =>
-      useStableRecord(rec)
-    );
-    const { rerender } = render(<h.Harness args={[{ a: 1 }]} />);
-    expect(h.value).toEqual({ a: 1 });
-    rerender(<h.Harness args={[undefined]} />);
-    expect(h.value).toBeUndefined();
+  it('preserves identity across two empty records', () => {
+    const refs: Array<unknown> = [];
+    const Comp = ({
+      rec,
+    }: {
+      rec?: Readonly<Record<string, unknown>>;
+    }) => {
+      refs.push(useStableRecord(rec));
+      return null;
+    };
+    const ui = render(<Comp rec={{}} />);
+    ui.rerender(<Comp rec={{}} />);
+    expect(refs[0]).toBe(refs[1]);
   });
 
-  it('replaces the cache when a key value differs', () => {
-    const h = makeHarness((rec: Record<string, number> | undefined) =>
-      useStableRecord(rec)
-    );
-    const { rerender } = render(<h.Harness args={[{ a: 1 }]} />);
-    const first = h.value;
-    rerender(<h.Harness args={[{ a: 2 }]} />);
-    expect(h.value).not.toBe(first);
-    expect(h.value).toEqual({ a: 2 });
+  it('returns a new reference when keys differ', () => {
+    const refs: Array<unknown> = [];
+    const Comp = ({
+      rec,
+    }: {
+      rec?: Readonly<Record<string, unknown>>;
+    }) => {
+      refs.push(useStableRecord(rec));
+      return null;
+    };
+    const ui = render(<Comp rec={{ a: 1 }} />);
+    ui.rerender(<Comp rec={{ a: 1, b: 2 }} />);
+    expect(refs[0]).not.toBe(refs[1]);
   });
 
-  it('replaces the cache when key sets differ', () => {
-    const h = makeHarness((rec: Record<string, number> | undefined) =>
-      useStableRecord(rec)
-    );
-    const { rerender } = render(<h.Harness args={[{ a: 1 }]} />);
-    rerender(<h.Harness args={[{ a: 1, b: 2 }]} />);
-    expect(h.value).toEqual({ a: 1, b: 2 });
+  it('flips between defined and undefined cleanly', () => {
+    const refs: Array<unknown> = [];
+    const Comp = ({
+      rec,
+    }: {
+      rec?: Readonly<Record<string, unknown>>;
+    }) => {
+      refs.push(useStableRecord(rec));
+      return null;
+    };
+    const ui = render(<Comp rec={{ a: 1 }} />);
+    ui.rerender(<Comp />);
+    ui.rerender(<Comp rec={{ a: 1 }} />);
+    expect(refs[1]).toBeUndefined();
+    expect(refs[2]).toBeDefined();
+  });
+
+  it('returns the same undefined across consecutive undefined inputs', () => {
+    const refs: Array<unknown> = [];
+    const Comp = ({
+      rec,
+    }: {
+      rec?: Readonly<Record<string, unknown>>;
+    }) => {
+      refs.push(useStableRecord(rec));
+      return null;
+    };
+    const ui = render(<Comp />);
+    ui.rerender(<Comp />);
+    expect(refs[0]).toBeUndefined();
+    expect(refs[1]).toBeUndefined();
   });
 });
+
+// Silence the noUnusedLocals warning if any.
+export const _utils = { act, useEffect, useRef, View } as const;
+export type _T = ReactNode;

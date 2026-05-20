@@ -49,14 +49,14 @@ describe('buildMonthGrid()', () => {
 
   it('handles a month whose first day is Sunday — no previous-month tail', () => {
     const sept2024 = sys.fromNativeDate(new Date(2024, 8, 1));
-    const grid = buildMonthGrid(sys, sept2024);
+    const grid = buildMonthGrid(sys, sept2024, 0);
     expect(grid[0]?.isCurrentMonth).toBe(true);
     expect((grid[0]?.date as GregorianDate).d).toBe(1);
   });
 
   it('fills the previous-month tail when the month starts mid-week', () => {
     const may2024 = sys.fromNativeDate(new Date(2024, 4, 1));
-    const grid = buildMonthGrid(sys, may2024);
+    const grid = buildMonthGrid(sys, may2024, 0);
     const offset = sys.weekday(sys.withDay(may2024, 1));
     for (let i = 0; i < offset; i += 1) {
       const cell = grid[i];
@@ -99,7 +99,8 @@ describe('buildMonthGrid()', () => {
     };
     const grid = buildMonthGrid(
       fakeSys as unknown as typeof sys,
-      sys.fromNativeDate(new Date(2024, 4, 1))
+      sys.fromNativeDate(new Date(2024, 4, 1)),
+      0
     );
     expect(grid).toHaveLength(TOTAL_CELLS);
     // Last cell is still in the current month — never overflows to next.
@@ -108,7 +109,7 @@ describe('buildMonthGrid()', () => {
 
   // -- firstDayOfWeek -----------------------------------------------------
 
-  it('defaults to Sunday — matches calling without firstDayOfWeek', () => {
+  it('uses DEFAULT_FIRST_DAY_OF_WEEK when no offset is provided', () => {
     const may2024 = sys.fromNativeDate(new Date(2024, 4, 15));
     const a = buildMonthGrid(sys, may2024);
     const b = buildMonthGrid(sys, may2024, DEFAULT_FIRST_DAY_OF_WEEK);
@@ -139,6 +140,24 @@ describe('buildMonthGrid()', () => {
     expect((grid[0]?.date as GregorianDate).d).toBe(1);
   });
 
+  it.each([2, 3, 4, 5] as const)(
+    'lines up day 1 with the expected column for firstDayOfWeek=%i',
+    (firstDayOfWeek) => {
+      // May 1, 2024 is Wednesday (weekday=3).
+      // Expected offset = (3 - firstDayOfWeek + 7) % 7.
+      const may2024 = sys.fromNativeDate(new Date(2024, 4, 1));
+      const grid = buildMonthGrid(sys, may2024, firstDayOfWeek);
+      const expectedOffset = (3 - firstDayOfWeek + 7) % 7;
+      expect((grid[expectedOffset]?.date as GregorianDate).d).toBe(1);
+      expect(grid[expectedOffset]?.isCurrentMonth).toBe(true);
+      // Cells before the offset come from the previous month.
+      for (let i = 0; i < expectedOffset; i += 1) {
+        expect(grid[i]?.isCurrentMonth).toBe(false);
+        expect((grid[i]?.date as GregorianDate).m).toBe(3);
+      }
+    }
+  );
+
   it('handles firstDayOfWeek=6 (Saturday) by wrapping the offset', () => {
     // May 1, 2024 is Wednesday (weekday=3). With Saturday as the first column,
     // the offset should wrap to (3 - 6 + 7) % 7 = 4 leading cells.
@@ -159,8 +178,10 @@ describe('rotateWeekdayLabels()', () => {
     expect(rotateWeekdayLabels(labels, 0)).toBe(labels);
   });
 
-  it('defaults to Sunday-first when no offset is provided', () => {
-    expect(rotateWeekdayLabels(labels)).toBe(labels);
+  it('uses DEFAULT_FIRST_DAY_OF_WEEK when no offset is provided', () => {
+    expect(rotateWeekdayLabels(labels)).toEqual(
+      rotateWeekdayLabels(labels, DEFAULT_FIRST_DAY_OF_WEEK)
+    );
   });
 
   it('rotates to Monday-first', () => {
@@ -312,19 +333,31 @@ describe('isExplicitlyDisabled()', () => {
 
 describe('usedRows()', () => {
   it('returns 6 for a month that fills all rows (May 2026 — Sun 1st row)', () => {
-    const grid = buildMonthGrid(sys, sys.fromNativeDate(new Date(2026, 4, 15)));
+    const grid = buildMonthGrid(
+      sys,
+      sys.fromNativeDate(new Date(2026, 4, 15)),
+      0
+    );
     // May 2026 starts on a Friday and ends on Sunday — covers 6 rows.
     expect(usedRows(grid)).toBe(6);
   });
 
   it('returns 5 for a typical month (May 2024 — Wed 1st)', () => {
-    const grid = buildMonthGrid(sys, sys.fromNativeDate(new Date(2024, 4, 15)));
+    const grid = buildMonthGrid(
+      sys,
+      sys.fromNativeDate(new Date(2024, 4, 15)),
+      0
+    );
     expect(usedRows(grid)).toBe(5);
   });
 
   it('returns 4 for a 28-day February that starts on the first column', () => {
     // Feb 2026 starts on a Sunday — exactly 4 rows of current-month cells.
-    const grid = buildMonthGrid(sys, sys.fromNativeDate(new Date(2026, 1, 15)));
+    const grid = buildMonthGrid(
+      sys,
+      sys.fromNativeDate(new Date(2026, 1, 15)),
+      0
+    );
     expect(usedRows(grid)).toBe(4);
   });
 

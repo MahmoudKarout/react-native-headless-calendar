@@ -1,20 +1,14 @@
 @import 'tailwindcss';
 @import 'uniwind';
 
-/*
- * Make Tailwind scan our examples + storybook stories. global.css lives at the
- * example/ root, so siblings such as src/ and .rnstorybook/ are already
- * covered, but we list them explicitly so the Oxide scanner cannot miss them.
- */
 @source './src';
-@source './.rnstorybook';
 
 /* ------------------------------------------------------------------ */
 /*  Design tokens                                                      */
 /* ------------------------------------------------------------------ */
 /*
  * Shared palette used across every example. Mirrors the docs DESIGN.md so
- * the example app, Storybook, and the documentation stay visually aligned.
+ * the example app, and the documentation stay visually aligned.
  */
 @layer theme {
   :root {

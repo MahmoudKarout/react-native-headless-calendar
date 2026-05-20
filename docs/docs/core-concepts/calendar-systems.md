@@ -8,35 +8,51 @@ A **calendar system** is an adapter implementing `CalendarSystem<T>`. The store 
 
 ## Built-in Systems
 
-| Module | Adapter | Peer dependency |
+| Import path | Export | Peer dependency |
 | --- | --- | --- |
-| `react-native-fast-calendar` | `gregorianSystem` | none |
-| `react-native-fast-calendar/systems/gregorian` | `gregorianSystem`, `createGregorianSystem({ locale })` | none |
+| `react-native-fast-calendar` | `gregorianSystem`, `createGregorianSystem` | none |
 | `react-native-fast-calendar/systems/hijri` | `hijriSystem` | `@tabby_ai/hijri-converter` |
 | `react-native-fast-calendar/systems/jalali` | `jalaliSystem` | `moment-jalaali` |
 
-The default `<CalendarProvider>` uses `gregorianSystem` — you don't need to import anything extra to render a calendar.
+If you omit `systems`, every provider defaults to `[gregorianSystem]`.
 
 ## Switching Systems
 
-Pass an array of systems and pick which one is active:
+Pass an array of systems and control which one is active:
 
 ```tsx
-import { CalendarProvider } from 'react-native-fast-calendar';
-import { gregorianSystem } from 'react-native-fast-calendar/systems/gregorian';
+import { SingleDateProvider } from 'react-native-fast-calendar';
+import { gregorianSystem } from 'react-native-fast-calendar';
 import { hijriSystem } from 'react-native-fast-calendar/systems/hijri';
 
-<CalendarProvider
+<SingleDateProvider
   systems={[gregorianSystem, hijriSystem]}
-  initialSystemId="hijri"
-  mode="single"
+  activeSystemId="hijri"
 >
   <MyCalendar />
-</CalendarProvider>
+</SingleDateProvider>
 ```
 
-To swap systems at runtime, change the provider's `key` together with `initialSystemId`, or change which system sits first in `systems`. Use `useCalendarSelector((s) => s.system.id)` to read the active system inside your UI.
+At runtime, call `setActiveSystem(id)` from `use*CalendarActions()`. Selection, bounds, and disabled lists are carried across systems by absolute instant (the day-of-month may change when switching calendars).
+
+Read the active id inside your UI:
+
+```tsx
+const systemId = useSingleCalendarSelector((s) => s.system.id);
+```
+
+## Localising Gregorian
+
+```tsx
+const french = createGregorianSystem({
+  label: 'Grégorien',
+  monthLabels: ['Janvier', 'Février', /* … */],
+  weekdayLabels: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
+});
+
+<SingleDateProvider systems={[french]} />
+```
 
 ## Implementing Your Own
 
-See [systems/custom-system](../systems/custom-system) for the full interface and a worked example. The minimum surface is roughly 25 small functions — getters, navigation, comparison, label arrays, and round-tripping through native `Date`.
+See [Custom System](../systems/custom-system) for the full interface and a worked example. The surface is roughly twenty small functions — getters, navigation, comparison, label arrays, and round-tripping through native `Date`.

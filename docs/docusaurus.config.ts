@@ -162,12 +162,7 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          to: '/docs/recipes/single-date-picker',
-          label: 'Recipes',
-          position: 'left',
-        },
-        {
-          to: '/docs/hooks/use-calendar-selector',
+          to: '/docs/hooks/providers',
           label: 'API',
           position: 'left',
         },
@@ -190,38 +185,18 @@ const config: Config = {
           ],
         },
         {
-          title: 'Recipes',
-          items: [
-            {
-              label: 'Single Date Picker',
-              to: '/docs/recipes/single-date-picker',
-            },
-            {
-              label: 'Date Range Picker',
-              to: '/docs/recipes/date-range-picker',
-            },
-            {
-              label: 'Bottom Sheet Picker',
-              to: '/docs/recipes/bottom-sheet-picker',
-            },
-            {
-              label: 'Flight Price Calendar',
-              to: '/docs/recipes/flight-price-calendar',
-            },
-          ],
-        },
-        {
           title: 'API',
           items: [
+            { label: 'Providers', to: '/docs/hooks/providers' },
             {
-              label: 'useCalendarSelector',
+              label: 'use*CalendarSelector',
               to: '/docs/hooks/use-calendar-selector',
             },
             {
-              label: 'useCalendarActions',
+              label: 'use*CalendarActions',
               to: '/docs/hooks/use-calendar-actions',
             },
-            { label: 'Selectors', to: '/docs/hooks/select-days' },
+            { label: 'Selectors', to: '/docs/hooks/selectors' },
           ],
         },
         {
