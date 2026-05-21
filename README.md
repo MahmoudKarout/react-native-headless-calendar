@@ -10,11 +10,7 @@ Build the calendar your design system deserves: three mode-specific providers, t
 
 ## Showcase
 
-
-| Single                | Range                | Multiple                |
-| --------------------- | -------------------- | ----------------------- |
-| Single date selection | Date range selection | Multiple date selection |
-| Single date           | Date range           | Multiple dates          |
+![Single, range, and multiple date calendar previews](./Preview.png)
 
 
 ---
@@ -23,13 +19,11 @@ Build the calendar your design system deserves: three mode-specific providers, t
 
 Selecting a day re-renders only the cells that actually changed — the rest of the grid stays untouched. No parent re-renders, no full-grid reconciliation, no wasted work.
 
+<video src="./no_useless_rerenders.mov" controls width="640"></video>
 
+> If the video doesn't play in your viewer, open [`no_useless_rerenders.mov`](./no_useless_rerenders.mov) directly.
 
-> If the video doesn't play in your viewer, open `[example/assets/no_useless_rerenders.mov](./example/assets/no_useless_rerenders.mov)` directly.
-
-
-
-React DevTools flamegraph showing zero unnecessary re-renders
+![React DevTools flamegraph showing zero unnecessary re-renders](./flamegraph.png)
 
 How it stays this fast:
 
