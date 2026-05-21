@@ -1,265 +1,439 @@
 # react-native-headless-calendar
 
-**Headless calendar primitives for React Native** — single date, date range, and multi-date selection with zero bundled UI, surgical re-renders, and pluggable calendar systems (Gregorian, Hijri, Jalali, or your own).
+Build your own React Native calendar without rebuilding calendar logic.
 
-Build the calendar your design system deserves: three mode-specific providers, two hooks each, typed selectors, and a store that owns grid math, bounds, disabled rules, and selection logic so you only wire pixels.
+`react-native-headless-calendar` gives you typed providers, tiny selector hooks, fast date-grid state, and calendar-system adapters for Gregorian, Hijri, Jalali, or your own system. You bring the UI. The library handles selection, navigation, bounds, disabled days, modifiers, payloads, and re-render control.
 
 **[Documentation](https://mahmoudkarout.github.io/react-native-headless-calendar/)** · **[Example app](./example)** · **[Contributing](./CONTRIBUTING.md)**
 
----
+![Single, range, and multiple date calendar previews](./Preview.png)
 
-## Showcase
+## Why developers reach for it
 
+- **Headless by design**: no shipped chrome, no theme object to fight, no fixed layout.
+- **Three explicit modes**: single date, date range, and multiple dates each have their own provider and typed hooks.
+- **Fast cell updates**: day cells subscribe to exactly the state they read through `useSyncExternalStore`.
+- **Calendar-system ready**: Gregorian is built in; Hijri and Jalali are opt-in sub-paths.
+- **Friendly escape hatches**: disabled rules, custom modifiers, bounds, grid utilities, month/year views, and custom calendar systems.
 
-| Single                | Range                | Multiple                |
-| --------------------- | -------------------- | ----------------------- |
-| Single date selection | Date range selection | Multiple date selection |
-| Single date           | Date range           | Multiple dates          |
-
-
----
-
-## Performance
-
-Selecting a day re-renders only the cells that actually changed — the rest of the grid stays untouched. No parent re-renders, no full-grid reconciliation, no wasted work.
-
-
-
-> If the video doesn't play in your viewer, open `[example/assets/no_useless_rerenders.mov](./example/assets/no_useless_rerenders.mov)` directly.
-
-
-
-React DevTools flamegraph showing zero unnecessary re-renders
-
-How it stays this fast:
-
-- `**useSyncExternalStore` selectors** — each `Day` subscribes to its own slice and bails out when the slice is referentially equal.
-- **Identity-stable day cells** — day descriptors are memoized in the store, so React's reconciler skips untouched cells.
-- **Action callers don't subscribe** — `useCalendarActions` returns stable functions, so buttons and handlers never re-render on selection changes.
-
----
-
-## Why this library?
-
-Most React Native calendars ship opinionated chrome you fight to restyle, or they re-render the whole grid on every tap. **react-native-headless-calendar** is the opposite:
-
-- **Headless** — no `<Calendar>` component, no theme object, no label dictionary.
-- **Fast** — `useSyncExternalStore` + identity-stable day cells; action callers never subscribe.
-- **Explicit** — one provider per selection mode; TypeScript knows `rangeStart` from `selectedDate`.
-- **Calendar-system agnostic** — swap Gregorian, Hijri, Jalali, or a custom adapter at runtime.
-
-Works on **iOS**, **Android**, and **React Native Web**.
-
----
-
-## Features
-
-### Performance
-
-- **Zero wasted re-renders on idle cells** — tap one day; only cells whose state changed update.
-- `**useSyncExternalStore`** — granular subscriptions; components read exactly what they need.
-- **Stable `use*CalendarActions()`** — `selectDate`, navigation, and `confirm` never trigger re-renders when called from handlers or `React.memo` children.
-- **Identity-stable `days.cells`** — unchanged cells keep the same object reference; wrap day cells in `React.memo` for free skip-renders.
-
-### Headless API
-
-- **Three providers** — `SingleDateProvider`, `RangeDateProvider`, `MultipleDateProvider` (no `mode` prop guessing).
-- **Two hooks per mode** — `use*CalendarSelector` (read) + `use*CalendarActions` (write, subscription-free).
-- **Built-in selectors** — `select*Days`, `select*Months`, `select*Years`, `select*CanConfirm`.
-- **Lifecycle callbacks** — `onChange`, `onConfirm`, `onClear` with typed payloads (`Date` + `DateParts` + `systemId`).
-- **Live prop sync** — bounds, modifiers, and callbacks update via `configure()` without remounting.
-
-### Selection modes
-
-
-| Mode     | Provider               | Best for                                       |
-| -------- | ---------------------- | ---------------------------------------------- |
-| Single   | `SingleDateProvider`   | Forms, filters, one-day pickers                |
-| Range    | `RangeDateProvider`    | Hotels, travel, booking (check-in / check-out) |
-| Multiple | `MultipleDateProvider` | Shifts, multi-day events, capped multi-pick    |
-
-
-**Range extras:** `allowSameDay`, `minRangeDays`, `maxRangeDays`, `**disabledInRangeBehavior`** (`reject`  `include`  `exclude`) when the span between start and end crosses disabled days.
-
-**Multiple extras:** `maxSelected` cap.
-
-### Bounds & disabled rules
-
-- `minDate` / `maxDate` — inclusive bounds (any input your active `CalendarSystem.from()` accepts).
-- `disabledDates` — explicit disabled days.
-- `disabledRanges` — inclusive disabled ranges.
-- `disabled` — predicate on native `Date`.
-- `modifiers` — named matchers → `cell.modifiers[name]` for styling (booked, holiday, …).
-
-### Calendar systems
-
-- **Gregorian** — built in, zero extra date-library deps.
-- **Hijri** — opt-in sub-path `react-native-headless-calendar/systems/hijri` (`@tabby_ai/hijri-converter`).
-- **Jalali (Persian)** — opt-in sub-path `react-native-headless-calendar/systems/jalali` (`moment-jalaali`).
-- **Custom systems** — implement `CalendarSystem<T>` for any calendar.
-- **Runtime switch** — `activeSystemId` + `setActiveSystem()`; selection and bounds carry across systems by absolute instant.
-- **Accurate built-ins** — Gregorian, Hijri, and Jalali use dedicated converters; not hand-rolled approximations.
-
-### Views & navigation
-
-- Day grid with weekday labels, month/year labels, today highlighting, outside-month dimming.
-- Month picker and year pager snapshots via selectors.
-- `goPrevMonth` / `goNextMonth`, `goToMonth`, `goToYear`, year page prev/next.
-- `firstDayOfWeek` — `0` (Sunday) … `6` (Saturday); **defaults to Monday (`1`)**.
-
-### Developer experience
-
-- **TypeScript-first** — typed providers, snapshots, cell info, and selection payloads.
-- **Tree-shakeable sub-paths** for optional calendar systems.
-- **Exported grid utilities** — `buildMonthGrid`, `matchDate`, `isBetween`, `getYearPage`, … for advanced layouts.
-- **React 18+** — `useSyncExternalStore`; compatible with modern React Native (≥ 0.70).
-
----
+Works with **iOS**, **Android**, and **React Native Web**.
 
 ## Install
 
 ```bash
 yarn add react-native-headless-calendar
-# or
+```
+
+```bash
 npm install react-native-headless-calendar
 ```
 
-### Requirements
+Peer requirements:
 
+| Peer | Minimum |
+| --- | --- |
+| `react` | `>=18.0.0` |
+| `react-native` | `>=0.70.0` |
 
-| Peer           | Minimum |
-| -------------- | ------- |
-| `react`        | ≥ 18.0  |
-| `react-native` | ≥ 0.70  |
+Optional calendar-system peers:
 
+| System | Install | Import |
+| --- | --- | --- |
+| Hijri | `yarn add @tabby_ai/hijri-converter` | `react-native-headless-calendar/systems/hijri` |
+| Jalali | `yarn add moment-jalaali` | `react-native-headless-calendar/systems/jalali` |
 
-### Optional peers
+## 60-second calendar
 
+The library exposes state. Your components decide how it looks.
 
-| Package                     | Import path                                     |
-| --------------------------- | ----------------------------------------------- |
-| `@tabby_ai/hijri-converter` | `react-native-headless-calendar/systems/hijri`  |
-| `moment-jalaali`            | `react-native-headless-calendar/systems/jalali` |
-
-
----
-
-When a range would include disabled days in the interior, `disabledInRangeBehavior` controls the outcome:
-
-
-| Value              | Behavior                                                                 |
-| ------------------ | ------------------------------------------------------------------------ |
-| `reject` (default) | Second tap ignored; `rangeStart` kept                                    |
-| `include`          | Full range stored; interior disabled cells stay `isDisabled` + `inRange` |
-| `exclude`          | `rangeEnd` clamped to the day before the first disabled interior day     |
-
-
-[Full docs → disabled days inside a range](https://mahmoudkarout.github.io/react-native-headless-calendar/docs/hooks/providers#disabled-days-inside-a-range)
-
----
-
-## Multi-calendar systems
+![Quick start calendar example preview](./QuickStartExamplePreview.png)
 
 ```tsx
-import { SingleDateProvider } from 'react-native-headless-calendar';
-import { gregorianSystem } from 'react-native-headless-calendar';
+import { memo, useCallback } from 'react';
+import { Pressable, Text, View } from 'react-native';
+import {
+  SingleDateProvider,
+  selectSingleDays,
+  useSingleCalendarActions,
+  useSingleCalendarSelector,
+  type SingleDayCellInfo,
+} from 'react-native-headless-calendar';
+
+export function Calendar() {
+  return (
+    <SingleDateProvider onChange={(selection) => console.log(selection.date)}>
+     <View style={{ gap: 12 }}>
+        <CalendarHeader />
+        <Weekdays />
+      </View>
+      <Days />
+    </SingleDateProvider>
+  );
+}
+
+function CalendarHeader() {
+  const title = useSingleCalendarSelector(
+    (s) => s.days.displayedMonthLabel + ' ' + s.days.displayedYearLabel
+  );
+  const { goPrevMonth, goNextMonth } = useSingleCalendarActions();
+
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: 280 }}>
+      <Pressable onPress={goPrevMonth}>
+        <Text>Prev</Text>
+      </Pressable>
+      <Text>{title}</Text>
+      <Pressable onPress={goNextMonth}>
+        <Text>Next</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function Weekdays() {
+  const labels = useSingleCalendarSelector((s) => s.days.weekdayLabels);
+
+  return (
+    <View style={{ flexDirection: 'row' }}>
+      {labels.map((label) => (
+        <Text key={label} style={{ width: 40, textAlign: 'center' }}>
+          {label.slice(0, 2)}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+function Days() {
+  const days = useSingleCalendarSelector(selectSingleDays);
+  const { selectDate } = useSingleCalendarActions();
+
+  const onPress = useCallback(
+    (cell: SingleDayCellInfo) => selectDate(cell.date),
+    [selectDate]
+  );
+
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: 280 }}>
+      {days.cells.map((cell) => (
+        <DayCell
+          key={cell.nativeDate.toISOString()}
+          cell={cell}
+          onPress={onPress}
+        />
+      ))}
+    </View>
+  );
+}
+
+const DayCell = memo(function DayCell({
+  cell,
+  onPress,
+}: {
+  cell: SingleDayCellInfo;
+  onPress: (cell: SingleDayCellInfo) => void;
+}) {
+  return (
+    <Pressable
+      disabled={cell.isDisabled}
+      onPress={() => onPress(cell)}
+      style={{
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: cell.isCurrentMonth ? 1 : 0.35,
+        backgroundColor: cell.isSelected ? '#111827' : 'transparent',
+        borderRadius: 20,
+      }}
+    >
+      <Text style={{ color: cell.isSelected ? 'white' : '#111827' }}>
+        {cell.label}
+      </Text>
+    </Pressable>
+  );
+});
+```
+
+That is the core mental model:
+
+1. Wrap your UI in a mode-specific provider.
+2. Read small pieces of state with a selector hook.
+3. Trigger changes with an actions hook.
+4. Render every pixel yourself.
+
+## Selection modes
+
+Choose the provider that matches the product behavior. No `mode` prop, no runtime guessing.
+
+| Use case | Provider | Read hook | Action hook |
+| --- | --- | --- | --- |
+| One date | `SingleDateProvider` | `useSingleCalendarSelector` | `useSingleCalendarActions` |
+| Start and end date | `RangeDateProvider` | `useRangeCalendarSelector` | `useRangeCalendarActions` |
+| Many dates | `MultipleDateProvider` | `useMultipleCalendarSelector` | `useMultipleCalendarActions` |
+
+Range mode adds `initialStart`, `initialEnd`, `allowSameDay`, `minRangeDays`, `maxRangeDays`, and `disabledInRangeBehavior`.
+
+Multiple mode adds `initialDates` and `maxSelected`.
+
+## Range picker example
+
+```tsx
+import {
+  RangeDateProvider,
+  selectRangeDays,
+  useRangeCalendarActions,
+  useRangeCalendarSelector,
+} from 'react-native-headless-calendar';
+
+function BookingCalendar() {
+  return (
+    <RangeDateProvider
+      minDate={new Date()}
+      allowSameDay
+      maxRangeDays={14}
+      disabledInRangeBehavior="reject"
+      onConfirm={({ startDate, endDate }) => {
+        console.log({ startDate, endDate });
+      }}
+    >
+      <RangeGrid />
+    </RangeDateProvider>
+  );
+}
+
+function RangeGrid() {
+  const days = useRangeCalendarSelector(selectRangeDays);
+  const canConfirm = useRangeCalendarSelector((s) => !!s.rangeStart && !!s.rangeEnd);
+  const { selectDate, confirm } = useRangeCalendarActions();
+
+  return (
+    <>
+      {days.cells.map((cell) => (
+        <Pressable
+          key={cell.nativeDate.toISOString()}
+          disabled={cell.isDisabled}
+          onPress={() => selectDate(cell.date)}
+        >
+          <Text>
+            {cell.label}
+            {cell.isRangeStart ? ' start' : ''}
+            {cell.isRangeEnd ? ' end' : ''}
+            {cell.isInRange ? ' in range' : ''}
+          </Text>
+        </Pressable>
+      ))}
+
+      <Pressable disabled={!canConfirm} onPress={confirm}>
+        <Text>Confirm</Text>
+      </Pressable>
+    </>
+  );
+}
+```
+
+## Built for quiet performance
+
+Selecting a day re-renders only the cells whose state changed. The rest of the grid keeps its identity.
+
+![Selecting days re-renders only the affected cells](./rerenders.gif)
+
+![React DevTools flamegraph showing zero unnecessary re-renders](./flamegraph.png)
+
+What makes that work:
+
+- `use*CalendarSelector` subscribes through `useSyncExternalStore`.
+- `use*CalendarActions` returns stable functions and does not subscribe.
+- `days.cells` reuse object identity for unchanged cells.
+- `React.memo` day cells can skip untouched dates naturally.
+
+Rule of thumb: components that only call actions should use `use*CalendarActions`; components that render state should use the selector hook.
+
+## Calendar systems
+
+Gregorian is available from the root export. Hijri and Jalali are optional sub-paths so apps only install what they use.
+
+```tsx
+import {
+  SingleDateProvider,
+  gregorianSystem,
+} from 'react-native-headless-calendar';
 import { hijriSystem } from 'react-native-headless-calendar/systems/hijri';
 import { jalaliSystem } from 'react-native-headless-calendar/systems/jalali';
 
+export function MultiSystemCalendar() {
+  return (
+    <SingleDateProvider
+      systems={[gregorianSystem, hijriSystem, jalaliSystem]}
+      activeSystemId="hijri"
+    >
+      <MyCalendar />
+    </SingleDateProvider>
+  );
+}
+```
+
+Switch at runtime with `setActiveSystem(id)`:
+
+```tsx
+function SystemSwitch() {
+  const { setActiveSystem } = useSingleCalendarActions();
+
+  return (
+    <View>
+      <Pressable onPress={() => setActiveSystem('gregorian')}>
+        <Text>Gregorian</Text>
+      </Pressable>
+      <Pressable onPress={() => setActiveSystem('hijri')}>
+        <Text>Hijri</Text>
+      </Pressable>
+      <Pressable onPress={() => setActiveSystem('jalali')}>
+        <Text>Jalali</Text>
+      </Pressable>
+    </View>
+  );
+}
+```
+
+Selections and bounds are carried across systems by absolute native `Date`, while labels and date parts come from the active system.
+
+## Disabled dates and modifiers
+
+Use bounds, explicit dates, ranges, predicates, and named modifiers to keep product rules close to the provider.
+
+```tsx
 <SingleDateProvider
-  systems={[gregorianSystem, hijriSystem, jalaliSystem]}
-  activeSystemId="hijri"
+  minDate="2026-01-01"
+  maxDate="2026-12-31"
+  disabledDates={['2026-02-14']}
+  disabledRanges={[{ start: '2026-04-01', end: '2026-04-05' }]}
+  disabled={(date) => date.getDay() === 0}
+  modifiers={{
+    weekend: (date) => date.getDay() === 5 || date.getDay() === 6,
+    payday: ['2026-01-31', '2026-02-28'],
+  }}
 >
   <MyCalendar />
 </SingleDateProvider>
 ```
 
----
+Each day cell receives:
 
-## API overview
+```ts
+cell.isDisabled;
+cell.modifiers.weekend;
+cell.modifiers.payday;
+```
+
+For ranges that cross disabled interior days, `disabledInRangeBehavior` controls the result:
+
+| Value | Behavior |
+| --- | --- |
+| `reject` | Ignore the second tap and keep the current `rangeStart`. |
+| `include` | Store the full range; disabled interior cells remain marked disabled. |
+| `exclude` | Clamp `rangeEnd` to the day before the first disabled interior day. |
+
+## API map
 
 ### Providers
 
+| Provider | Initial selection props | Extra props |
+| --- | --- | --- |
+| `SingleDateProvider` | `initialDate` | - |
+| `RangeDateProvider` | `initialStart`, `initialEnd` | `allowSameDay`, `minRangeDays`, `maxRangeDays`, `disabledInRangeBehavior` |
+| `MultipleDateProvider` | `initialDates` | `maxSelected` |
 
-| Export                 | Selection   |
-| ---------------------- | ----------- |
-| `SingleDateProvider`   | One date    |
-| `RangeDateProvider`    | Start + end |
-| `MultipleDateProvider` | Many dates  |
+Shared provider props:
 
+`systems`, `activeSystemId`, `minDate`, `maxDate`, `disabledDates`, `disabledRanges`, `disabled`, `modifiers`, `firstDayOfWeek`, `onChange`, `onConfirm`, `onClear`.
 
-**Shared props:** `systems`, `activeSystemId`, `minDate`, `maxDate`, `disabledDates`, `disabledRanges`, `disabled`, `modifiers`, `firstDayOfWeek`, `onChange`, `onConfirm`, `onClear`.
-
-**Range-only:** `initialStart`, `initialEnd`, `allowSameDay`, `minRangeDays`, `maxRangeDays`, `disabledInRangeBehavior`.
-
-**Multiple-only:** `initialDates`, `maxSelected`.
-
-### Hooks (per mode)
-
-
-| Hook                                                                                     | Re-renders when               |
-| ---------------------------------------------------------------------------------------- | ----------------------------- |
-| `useSingleCalendarSelector` / `useRangeCalendarSelector` / `useMultipleCalendarSelector` | Selector return value changes |
-| `useSingleCalendarActions` / `useRangeCalendarActions` / `useMultipleCalendarActions`    | **Never** (stable identity)   |
-
+`firstDayOfWeek` uses `0` for Sunday through `6` for Saturday and defaults to Monday (`1`).
 
 ### Selectors
 
-
-| Single                   | Range                   | Multiple                   |
-| ------------------------ | ----------------------- | -------------------------- |
-| `selectSingleDays`       | `selectRangeDays`       | `selectMultipleDays`       |
-| `selectSingleMonths`     | `selectRangeMonths`     | `selectMultipleMonths`     |
-| `selectSingleYears`      | `selectRangeYears`      | `selectMultipleYears`      |
+| Single | Range | Multiple |
+| --- | --- | --- |
+| `selectSingleDays` | `selectRangeDays` | `selectMultipleDays` |
+| `selectSingleMonths` | `selectRangeMonths` | `selectMultipleMonths` |
+| `selectSingleYears` | `selectRangeYears` | `selectMultipleYears` |
 | `selectSingleCanConfirm` | `selectRangeCanConfirm` | `selectMultipleCanConfirm` |
 
+Every mode also supports inline selectors:
 
-### Types & systems
+```tsx
+const monthLabel = useSingleCalendarSelector(
+  (s) => s.days.displayedMonthLabel
+);
+```
+
+### Actions
+
+Each mode exposes the same action names:
 
 ```ts
-// Selection payloads
-SingleSelectionPayload | RangeSelectionPayload | MultipleSelectionPayload
-
-// Range policy
-DisabledInRangeBehavior  // 'reject' | 'include' | 'exclude'
-
-// Cell info (for custom day components)
-SingleDayCellInfo | RangeDayCellInfo | MultipleDayCellInfo
-
-// Calendar systems
-gregorianSystem, createGregorianSystem
-// + systems/hijri, systems/jalali sub-paths
+selectDate(input);
+clear();
+confirm();
+goPrevMonth();
+goNextMonth();
+setDisplayedDate(input);
+selectMonth(index);
+selectYear(year);
+prevYearPage();
+nextYearPage();
+setActiveSystem(id);
+isConfirmable();
 ```
 
----
+### Selection payloads
 
-## Architecture
+Callbacks receive native `Date` values plus active-system date parts and `systemId`.
 
-Each provider owns one external store. Callbacks live on the store, not in context, so the actions object stays identity-stable for the provider's lifetime.
-
+```ts
+type SingleSelectionPayload = {
+  date: Date | undefined;
+  parts: DateParts | undefined;
+  systemId: string;
+};
 ```
-SingleDateProvider / RangeDateProvider / MultipleDateProvider
- └── *CalendarStore
-      ├── snapshot  ← use*CalendarSelector
-      └── actions   ← use*CalendarActions (no subscription)
+
+Range and multiple payloads follow the same idea with start/end or date arrays.
+
+## Advanced building blocks
+
+The package exports grid utilities for custom layouts and tests:
+
+```ts
+import {
+  buildMonthGrid,
+  getYearPage,
+  isBetween,
+  isoWeekNumber,
+  matchDate,
+  rotateWeekdayLabels,
+} from 'react-native-headless-calendar';
 ```
 
-**Rule of thumb:** day cells that only call `selectDate` should use `**use*CalendarActions` only** — not the selector hook.
+You can also implement `CalendarSystem<T>` to support another calendar. A system controls parsing, month math, labels, comparison, formatting, and conversion to/from native `Date`.
 
----
+## Example app
 
-## Keywords
+The example app includes single, range, and multiple calendars with day, month, year, and system-switching views.
 
-`react-native` · `calendar` · `date-picker` · `datepicker` · `headless-calendar` · `date-range-picker` · `multi-date-picker` · `gregorian` · `hijri` · `islamic-calendar` · `jalali` · `persian-calendar` · `expo` · `ios` · `android` · `react-native-web` · `typescript`
+```bash
+yarn
+yarn example start
+```
 
----
+## Documentation
 
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
+- [Installation](https://mahmoudkarout.github.io/react-native-headless-calendar/docs/installation)
+- [Mental model](https://mahmoudkarout.github.io/react-native-headless-calendar/docs/core-concepts/mental-model)
+- [Providers](https://mahmoudkarout.github.io/react-native-headless-calendar/docs/hooks/providers)
+- [Selectors](https://mahmoudkarout.github.io/react-native-headless-calendar/docs/hooks/selectors)
+- [Calendar systems](https://mahmoudkarout.github.io/react-native-headless-calendar/docs/core-concepts/calendar-systems)
+- [Custom systems](https://mahmoudkarout.github.io/react-native-headless-calendar/docs/systems/custom-system)
 
 ## License
 
-MIT © [Mahmoud Karout](https://github.com/MahmoudKarout)
-
-Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
+MIT
