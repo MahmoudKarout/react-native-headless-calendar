@@ -19,9 +19,7 @@ Build the calendar your design system deserves: three mode-specific providers, t
 
 Selecting a day re-renders only the cells that actually changed — the rest of the grid stays untouched. No parent re-renders, no full-grid reconciliation, no wasted work.
 
-<video src="./no_useless_rerenders.mov" controls width="640"></video>
-
-> If the video doesn't play in your viewer, open [`no_useless_rerenders.mov`](./no_useless_rerenders.mov) directly.
+![Selecting days re-renders only the affected cells](./rerenders.gif)
 
 ![React DevTools flamegraph showing zero unnecessary re-renders](./flamegraph.png)
 
