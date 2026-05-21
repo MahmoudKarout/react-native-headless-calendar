@@ -236,7 +236,11 @@ function RangeGrid() {
 
 Selecting a day re-renders only the cells whose state changed. The rest of the grid keeps its identity.
 
-![Selecting days re-renders only the affected cells](./rerenders.gif)
+<img
+  src="./rerenders.gif"
+  alt="Selecting days re-renders only the affected cells"
+  width="360"
+/>
 
 ![React DevTools flamegraph showing zero unnecessary re-renders](./flamegraph.png)
 
