@@ -46,6 +46,8 @@ Optional calendar-system peers:
 
 The library exposes state. Your components decide how it looks.
 
+![Quick start calendar example preview](./QuickStartExamplePreview.png)
+
 ```tsx
 import { memo, useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -60,8 +62,10 @@ import {
 export function Calendar() {
   return (
     <SingleDateProvider onChange={(selection) => console.log(selection.date)}>
-      <CalendarHeader />
-      <Weekdays />
+     <View style={{ gap: 12 }}>
+        <CalendarHeader />
+        <Weekdays />
+      </View>
       <Days />
     </SingleDateProvider>
   );
@@ -74,7 +78,7 @@ function CalendarHeader() {
   const { goPrevMonth, goNextMonth } = useSingleCalendarActions();
 
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: 280 }}>
       <Pressable onPress={goPrevMonth}>
         <Text>Prev</Text>
       </Pressable>
@@ -175,10 +179,8 @@ Multiple mode adds `initialDates` and `maxSelected`.
 ## Range picker example
 
 ```tsx
-import { Pressable, Text } from 'react-native';
 import {
   RangeDateProvider,
-  selectRangeCanConfirm,
   selectRangeDays,
   useRangeCalendarActions,
   useRangeCalendarSelector,
@@ -202,7 +204,7 @@ function BookingCalendar() {
 
 function RangeGrid() {
   const days = useRangeCalendarSelector(selectRangeDays);
-  const canConfirm = useRangeCalendarSelector(selectRangeCanConfirm);
+  const canConfirm = useRangeCalendarSelector((s) => !!s.rangeStart && !!s.rangeEnd);
   const { selectDate, confirm } = useRangeCalendarActions();
 
   return (
@@ -217,7 +219,7 @@ function RangeGrid() {
             {cell.label}
             {cell.isRangeStart ? ' start' : ''}
             {cell.isRangeEnd ? ' end' : ''}
-            {cell.inRange ? ' in range' : ''}
+            {cell.isInRange ? ' in range' : ''}
           </Text>
         </Pressable>
       ))}
