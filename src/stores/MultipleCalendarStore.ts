@@ -1,11 +1,7 @@
 /**
  * MultipleCalendarStore — external store for multi-day selection.
  */
-import type {
-  CalendarDateValue,
-  CalendarSystem,
-  DateParts,
-} from '../types';
+import type { CalendarDateValue, CalendarSystem, DateParts } from '../types';
 import {
   BaseCalendarStore,
   type BaseCalendarSnapshotShared,
@@ -25,24 +21,28 @@ export type MultipleOnConfirm = (payload: MultipleSelectionPayload) => void;
 export type MultipleOnClear = () => void;
 export type MultipleOnChange = (payload: MultipleSelectionPayload) => void;
 
-export interface MultipleDayCellInfo<T = CalendarDateValue>
-  extends BaseDayCellFields<T> {
+export interface MultipleDayCellInfo<
+  T = CalendarDateValue,
+> extends BaseDayCellFields<T> {
   isSelected: boolean;
 }
 
-export type MultipleCalendarDays<T = CalendarDateValue> =
-  CalendarDaysView<MultipleDayCellInfo<T>>;
+export type MultipleCalendarDays<T = CalendarDateValue> = CalendarDaysView<
+  MultipleDayCellInfo<T>
+>;
 
-export interface MultipleCalendarSnapshot<T = CalendarDateValue>
-  extends BaseCalendarSnapshotShared<T> {
+export interface MultipleCalendarSnapshot<
+  T = CalendarDateValue,
+> extends BaseCalendarSnapshotShared<T> {
   readonly mode: 'multiple';
   selectedDates: readonly T[];
   maxSelected: number | undefined;
   days: MultipleCalendarDays<T>;
 }
 
-export interface MultipleCalendarStoreOptions<T = CalendarDateValue>
-  extends BaseCalendarStoreOptions<T> {
+export interface MultipleCalendarStoreOptions<
+  T = CalendarDateValue,
+> extends BaseCalendarStoreOptions<T> {
   initialDates?: readonly unknown[];
   maxSelected?: number;
   onConfirm?: MultipleOnConfirm;

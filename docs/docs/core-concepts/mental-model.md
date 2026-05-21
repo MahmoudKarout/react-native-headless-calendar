@@ -41,17 +41,17 @@ Each provider:
 
 Shared props (all three modes):
 
-| Prop | Role |
-| --- | --- |
-| `systems` | Calendar adapters; defaults to `[gregorianSystem]`. |
-| `activeSystemId` | Controlled active system id. |
-| `minDate` / `maxDate` | Inclusive bounds. |
-| `disabledDates` | Explicit list of disabled days. |
-| `disabledRanges` | Inclusive disabled ranges. |
-| `disabled` | Predicate on native `Date`. |
-| `modifiers` | Named matchers → boolean flags on each cell. |
-| `firstDayOfWeek` | `0` = Sunday … `6` = Saturday; **defaults to Monday (`1`)**. |
-| `onChange` / `onConfirm` / `onClear` | Selection lifecycle callbacks. |
+| Prop                                 | Role                                                         |
+| ------------------------------------ | ------------------------------------------------------------ |
+| `systems`                            | Calendar adapters; defaults to `[gregorianSystem]`.          |
+| `activeSystemId`                     | Controlled active system id.                                 |
+| `minDate` / `maxDate`                | Inclusive bounds.                                            |
+| `disabledDates`                      | Explicit list of disabled days.                              |
+| `disabledRanges`                     | Inclusive disabled ranges.                                   |
+| `disabled`                           | Predicate on native `Date`.                                  |
+| `modifiers`                          | Named matchers → boolean flags on each cell.                 |
+| `firstDayOfWeek`                     | `0` = Sunday … `6` = Saturday; **defaults to Monday (`1`)**. |
+| `onChange` / `onConfirm` / `onClear` | Selection lifecycle callbacks.                               |
 
 Mode-specific props are documented on [Providers](../hooks/providers).
 
@@ -80,12 +80,12 @@ Components re-render only when the selector's return value changes (`Object.is`)
 
 Pre-derived views maintained by the store. Pass them straight to the selector hook:
 
-| Selector | Returns | Typical use |
-| --- | --- | --- |
-| `select*Days` | `{ weekdayLabels, cells, displayedMonthLabel, displayedYearLabel }` | Month grid |
-| `select*Months` | `{ months, activeMonth }` | Month picker |
-| `select*Years` | `{ years, activeYear }` | Year pager |
-| `select*CanConfirm` | `boolean` | Enable "Done" button |
+| Selector            | Returns                                                             | Typical use          |
+| ------------------- | ------------------------------------------------------------------- | -------------------- |
+| `select*Days`       | `{ weekdayLabels, cells, displayedMonthLabel, displayedYearLabel }` | Month grid           |
+| `select*Months`     | `{ months, activeMonth }`                                           | Month picker         |
+| `select*Years`      | `{ years, activeYear }`                                             | Year pager           |
+| `select*CanConfirm` | `boolean`                                                           | Enable "Done" button |
 
 The `cells` array is **identity-stable**: unchanged cells keep the same object reference across commits. Wrap your day cell in `React.memo` for free skip-renders.
 
@@ -121,10 +121,14 @@ See [Providers — RangeDateProvider](../hooks/providers#disabled-days-inside-a-
 ## Typical Layout
 
 ```tsx
-<RangeDateProvider minRangeDays={2} maxRangeDays={14} disabledInRangeBehavior="reject">
-  <MyHeader />   {/* useRangeCalendarSelector(selectRangeDays) */}
-  <MyDayGrid />  {/* cells + useRangeCalendarActions().selectDate */}
-  <MyFooter />   {/* useRangeCalendarActions().confirm / clear */}
+<RangeDateProvider
+  minRangeDays={2}
+  maxRangeDays={14}
+  disabledInRangeBehavior="reject"
+>
+  <MyHeader /> {/* useRangeCalendarSelector(selectRangeDays) */}
+  <MyDayGrid /> {/* cells + useRangeCalendarActions().selectDate */}
+  <MyFooter /> {/* useRangeCalendarActions().confirm / clear */}
 </RangeDateProvider>
 ```
 

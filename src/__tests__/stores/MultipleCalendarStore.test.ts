@@ -11,7 +11,11 @@ const sys2: CalendarSystem<GregorianDate> = {
   id: 'greg2',
 };
 
-const makeStore = (overrides: Partial<ConstructorParameters<typeof MultipleCalendarStore>[0]> = {}) =>
+const makeStore = (
+  overrides: Partial<
+    ConstructorParameters<typeof MultipleCalendarStore>[0]
+  > = {}
+) =>
   new MultipleCalendarStore({
     systems: [sys],
     ...overrides,

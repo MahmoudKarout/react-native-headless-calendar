@@ -33,5 +33,5 @@
     "types": ["jest", "node"],
     "verbatimModuleSyntax": true
   },
-  "exclude": ["docs", "node_modules", "lib"]
+  "exclude": ["docs", "node_modules", "lib", "example"]
 }

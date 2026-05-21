@@ -3,14 +3,14 @@ sidebar_position: 2
 title: use*CalendarSelector
 ---
 
-# use*CalendarSelector
+# use\*CalendarSelector
 
 Subscribe to any slice of the store snapshot with granular re-renders. Each selection mode has its own hook — use the one that matches your provider.
 
-| Provider | Hook |
-| --- | --- |
-| `SingleDateProvider` | `useSingleCalendarSelector` |
-| `RangeDateProvider` | `useRangeCalendarSelector` |
+| Provider               | Hook                          |
+| ---------------------- | ----------------------------- |
+| `SingleDateProvider`   | `useSingleCalendarSelector`   |
+| `RangeDateProvider`    | `useRangeCalendarSelector`    |
 | `MultipleDateProvider` | `useMultipleCalendarSelector` |
 
 ## Signature
@@ -64,11 +64,11 @@ years: CalendarYears;
 
 Mode-specific fields:
 
-| Mode | Extra fields |
-| --- | --- |
-| Single | `selectedDate` |
-| Range | `rangeStart`, `rangeEnd`, `allowSameDay`, `minRangeDays`, `maxRangeDays`, `disabledInRangeBehavior` |
-| Multiple | `selectedDates`, `maxSelected` |
+| Mode     | Extra fields                                                                                        |
+| -------- | --------------------------------------------------------------------------------------------------- |
+| Single   | `selectedDate`                                                                                      |
+| Range    | `rangeStart`, `rangeEnd`, `allowSameDay`, `minRangeDays`, `maxRangeDays`, `disabledInRangeBehavior` |
+| Multiple | `selectedDates`, `maxSelected`                                                                      |
 
 The `days` view is also available as `s.days` when you need a custom selector:
 

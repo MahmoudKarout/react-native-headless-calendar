@@ -11,9 +11,8 @@ interface MonthViewProps {
 
 export function MonthView({ onChange }: MonthViewProps) {
   const { selectMonth } = useMultipleCalendarActions();
-  const { months, activeMonth } = useMultipleCalendarSelector(
-    selectMultipleMonths
-  );
+  const { months, activeMonth } =
+    useMultipleCalendarSelector(selectMultipleMonths);
   return (
     <View className="flex-row flex-wrap gap-1.5">
       {months.map((m) => {

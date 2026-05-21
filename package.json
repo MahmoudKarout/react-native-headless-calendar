@@ -50,7 +50,7 @@
     "example": "yarn workspace react-native-headless-calendar-example",
     "clean": "del-cli lib",
     "prepare": "bob build",
-    "typecheck": "tsc",
+    "typecheck": "tsc && tsc -p example",
     "lint": "oxlint && prettier --check \"**/*.{ts,tsx}\"",
     "test": "TZ=UTC jest",
     "test:coverage": "TZ=UTC jest --coverage",

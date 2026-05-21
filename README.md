@@ -30,17 +30,17 @@ npm install react-native-headless-calendar
 
 Peer requirements:
 
-| Peer | Minimum |
-| --- | --- |
-| `react` | `>=18.0.0` |
+| Peer           | Minimum    |
+| -------------- | ---------- |
+| `react`        | `>=18.0.0` |
 | `react-native` | `>=0.70.0` |
 
 Optional calendar-system peers:
 
-| System | Install | Import |
-| --- | --- | --- |
-| Hijri | `yarn add @tabby_ai/hijri-converter` | `react-native-headless-calendar/systems/hijri` |
-| Jalali | `yarn add moment-jalaali` | `react-native-headless-calendar/systems/jalali` |
+| System | Install                              | Import                                          |
+| ------ | ------------------------------------ | ----------------------------------------------- |
+| Hijri  | `yarn add @tabby_ai/hijri-converter` | `react-native-headless-calendar/systems/hijri`  |
+| Jalali | `yarn add moment-jalaali`            | `react-native-headless-calendar/systems/jalali` |
 
 ## 60-second calendar
 
@@ -62,7 +62,7 @@ import {
 export function Calendar() {
   return (
     <SingleDateProvider onChange={(selection) => console.log(selection.date)}>
-     <View style={{ gap: 12 }}>
+      <View style={{ gap: 12 }}>
         <CalendarHeader />
         <Weekdays />
       </View>
@@ -78,7 +78,13 @@ function CalendarHeader() {
   const { goPrevMonth, goNextMonth } = useSingleCalendarActions();
 
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: 280 }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: 280,
+      }}
+    >
       <Pressable onPress={goPrevMonth}>
         <Text>Prev</Text>
       </Pressable>
@@ -166,11 +172,11 @@ That is the core mental model:
 
 Choose the provider that matches the product behavior. No `mode` prop, no runtime guessing.
 
-| Use case | Provider | Read hook | Action hook |
-| --- | --- | --- | --- |
-| One date | `SingleDateProvider` | `useSingleCalendarSelector` | `useSingleCalendarActions` |
-| Start and end date | `RangeDateProvider` | `useRangeCalendarSelector` | `useRangeCalendarActions` |
-| Many dates | `MultipleDateProvider` | `useMultipleCalendarSelector` | `useMultipleCalendarActions` |
+| Use case           | Provider               | Read hook                     | Action hook                  |
+| ------------------ | ---------------------- | ----------------------------- | ---------------------------- |
+| One date           | `SingleDateProvider`   | `useSingleCalendarSelector`   | `useSingleCalendarActions`   |
+| Start and end date | `RangeDateProvider`    | `useRangeCalendarSelector`    | `useRangeCalendarActions`    |
+| Many dates         | `MultipleDateProvider` | `useMultipleCalendarSelector` | `useMultipleCalendarActions` |
 
 Range mode adds `initialStart`, `initialEnd`, `allowSameDay`, `minRangeDays`, `maxRangeDays`, and `disabledInRangeBehavior`.
 
@@ -204,7 +210,9 @@ function BookingCalendar() {
 
 function RangeGrid() {
   const days = useRangeCalendarSelector(selectRangeDays);
-  const canConfirm = useRangeCalendarSelector((s) => !!s.rangeStart && !!s.rangeEnd);
+  const canConfirm = useRangeCalendarSelector(
+    (s) => !!s.rangeStart && !!s.rangeEnd
+  );
   const { selectDate, confirm } = useRangeCalendarActions();
 
   return (
@@ -331,21 +339,21 @@ cell.modifiers.payday;
 
 For ranges that cross disabled interior days, `disabledInRangeBehavior` controls the result:
 
-| Value | Behavior |
-| --- | --- |
-| `reject` | Ignore the second tap and keep the current `rangeStart`. |
+| Value     | Behavior                                                              |
+| --------- | --------------------------------------------------------------------- |
+| `reject`  | Ignore the second tap and keep the current `rangeStart`.              |
 | `include` | Store the full range; disabled interior cells remain marked disabled. |
-| `exclude` | Clamp `rangeEnd` to the day before the first disabled interior day. |
+| `exclude` | Clamp `rangeEnd` to the day before the first disabled interior day.   |
 
 ## API map
 
 ### Providers
 
-| Provider | Initial selection props | Extra props |
-| --- | --- | --- |
-| `SingleDateProvider` | `initialDate` | - |
-| `RangeDateProvider` | `initialStart`, `initialEnd` | `allowSameDay`, `minRangeDays`, `maxRangeDays`, `disabledInRangeBehavior` |
-| `MultipleDateProvider` | `initialDates` | `maxSelected` |
+| Provider               | Initial selection props      | Extra props                                                               |
+| ---------------------- | ---------------------------- | ------------------------------------------------------------------------- |
+| `SingleDateProvider`   | `initialDate`                | -                                                                         |
+| `RangeDateProvider`    | `initialStart`, `initialEnd` | `allowSameDay`, `minRangeDays`, `maxRangeDays`, `disabledInRangeBehavior` |
+| `MultipleDateProvider` | `initialDates`               | `maxSelected`                                                             |
 
 Shared provider props:
 
@@ -355,19 +363,17 @@ Shared provider props:
 
 ### Selectors
 
-| Single | Range | Multiple |
-| --- | --- | --- |
-| `selectSingleDays` | `selectRangeDays` | `selectMultipleDays` |
-| `selectSingleMonths` | `selectRangeMonths` | `selectMultipleMonths` |
-| `selectSingleYears` | `selectRangeYears` | `selectMultipleYears` |
+| Single                   | Range                   | Multiple                   |
+| ------------------------ | ----------------------- | -------------------------- |
+| `selectSingleDays`       | `selectRangeDays`       | `selectMultipleDays`       |
+| `selectSingleMonths`     | `selectRangeMonths`     | `selectMultipleMonths`     |
+| `selectSingleYears`      | `selectRangeYears`      | `selectMultipleYears`      |
 | `selectSingleCanConfirm` | `selectRangeCanConfirm` | `selectMultipleCanConfirm` |
 
 Every mode also supports inline selectors:
 
 ```tsx
-const monthLabel = useSingleCalendarSelector(
-  (s) => s.days.displayedMonthLabel
-);
+const monthLabel = useSingleCalendarSelector((s) => s.days.displayedMonthLabel);
 ```
 
 ### Actions

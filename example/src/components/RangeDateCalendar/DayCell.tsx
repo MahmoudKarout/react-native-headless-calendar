@@ -10,13 +10,7 @@ interface DayCellProps {
   onPress: (cell: RangeDayCellInfo) => void;
 }
 
-type RangeState =
-  | 'default'
-  | 'today'
-  | 'inside'
-  | 'start'
-  | 'end'
-  | 'single';
+type RangeState = 'default' | 'today' | 'inside' | 'start' | 'end' | 'single';
 
 function getRangeState(cell: RangeDayCellInfo): RangeState {
   if (cell.isRangeStart && cell.isRangeEnd) return 'single';

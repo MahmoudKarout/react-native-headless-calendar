@@ -44,7 +44,7 @@ const customHijriSystem = createHijriSystem({
   label: 'Hijri',
 });
 
-<SingleDateProvider systems={[customHijriSystem]} />
+<SingleDateProvider systems={[customHijriSystem]} />;
 ```
 
 ## Converter Interface
@@ -54,14 +54,14 @@ Your converter must implement:
 ```ts
 interface HijriConverter {
   toHijri(gregorian: { year: number; month: number; day: number }): {
-    hy: number;  // Hijri year
-    hm: number;  // Hijri month (0-11)
-    hd: number;  // Hijri day
+    hy: number; // Hijri year
+    hm: number; // Hijri month (0-11)
+    hd: number; // Hijri day
   };
   toGregorian(hijri: { hy: number; hm: number; hd: number }): {
-    gy: number;  // Gregorian year
-    gm: number;  // Gregorian month (0-11)
-    gd: number;  // Gregorian day
+    gy: number; // Gregorian year
+    gm: number; // Gregorian month (0-11)
+    gd: number; // Gregorian day
   };
 }
 ```
@@ -74,9 +74,18 @@ interface HijriConverter {
 const arabicHijriSystem = createHijriSystem({
   label: 'هجري',
   monthLabels: [
-    'المحرم', 'صفر', 'ربيع الأول', 'ربيع الآخر',
-    'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان',
-    'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
+    'المحرم',
+    'صفر',
+    'ربيع الأول',
+    'ربيع الآخر',
+    'جمادى الأولى',
+    'جمادى الآخرة',
+    'رجب',
+    'شعبان',
+    'رمضان',
+    'شوال',
+    'ذو القعدة',
+    'ذو الحجة',
   ],
   weekdayLabels: ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'],
 });
@@ -99,9 +108,9 @@ interface HijriSystemOptions {
 
 ```ts
 interface HijriDate {
-  readonly hy: number;  // Hijri year
-  readonly hm: number;  // Hijri month 0-11
-  readonly hd: number;  // Hijri day 1-30
+  readonly hy: number; // Hijri year
+  readonly hm: number; // Hijri month 0-11
+  readonly hd: number; // Hijri day 1-30
 }
 ```
 

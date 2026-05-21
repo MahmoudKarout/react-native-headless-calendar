@@ -8,9 +8,6 @@
     // augments to add `className`, `contentContainerClassName`, etc.
     "customConditions": []
   },
-  "include": [
-    "./uniwind-types.d.ts",
-    "./global.css.d.ts",
-    "./src",
-  ]
+  "exclude": ["node_modules"],
+  "include": ["./uniwind-types.d.ts", "./global.css.d.ts", "./src"]
 }

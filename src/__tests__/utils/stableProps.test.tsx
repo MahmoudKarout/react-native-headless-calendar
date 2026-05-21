@@ -58,7 +58,6 @@ describe('useStableCallback()', () => {
     expect(refs[1]).toBeUndefined();
     expect(refs[2]).toBeDefined();
   });
-
 });
 
 // -- useStableArray ----------------------------------------------------------
@@ -122,11 +121,7 @@ describe('useStableRecord()', () => {
   it('returns the same reference when all keys/values are ===', () => {
     const fn = () => true;
     const refs: Array<unknown> = [];
-    const Comp = ({
-      rec,
-    }: {
-      rec?: Readonly<Record<string, unknown>>;
-    }) => {
+    const Comp = ({ rec }: { rec?: Readonly<Record<string, unknown>> }) => {
       refs.push(useStableRecord(rec));
       return null;
     };
@@ -137,11 +132,7 @@ describe('useStableRecord()', () => {
 
   it('returns a new reference when a value changes', () => {
     const refs: Array<unknown> = [];
-    const Comp = ({
-      rec,
-    }: {
-      rec?: Readonly<Record<string, unknown>>;
-    }) => {
+    const Comp = ({ rec }: { rec?: Readonly<Record<string, unknown>> }) => {
       refs.push(useStableRecord(rec));
       return null;
     };
@@ -152,11 +143,7 @@ describe('useStableRecord()', () => {
 
   it('preserves identity across two empty records', () => {
     const refs: Array<unknown> = [];
-    const Comp = ({
-      rec,
-    }: {
-      rec?: Readonly<Record<string, unknown>>;
-    }) => {
+    const Comp = ({ rec }: { rec?: Readonly<Record<string, unknown>> }) => {
       refs.push(useStableRecord(rec));
       return null;
     };
@@ -167,11 +154,7 @@ describe('useStableRecord()', () => {
 
   it('returns a new reference when keys differ', () => {
     const refs: Array<unknown> = [];
-    const Comp = ({
-      rec,
-    }: {
-      rec?: Readonly<Record<string, unknown>>;
-    }) => {
+    const Comp = ({ rec }: { rec?: Readonly<Record<string, unknown>> }) => {
       refs.push(useStableRecord(rec));
       return null;
     };
@@ -182,11 +165,7 @@ describe('useStableRecord()', () => {
 
   it('flips between defined and undefined cleanly', () => {
     const refs: Array<unknown> = [];
-    const Comp = ({
-      rec,
-    }: {
-      rec?: Readonly<Record<string, unknown>>;
-    }) => {
+    const Comp = ({ rec }: { rec?: Readonly<Record<string, unknown>> }) => {
       refs.push(useStableRecord(rec));
       return null;
     };
@@ -199,11 +178,7 @@ describe('useStableRecord()', () => {
 
   it('returns the same undefined across consecutive undefined inputs', () => {
     const refs: Array<unknown> = [];
-    const Comp = ({
-      rec,
-    }: {
-      rec?: Readonly<Record<string, unknown>>;
-    }) => {
+    const Comp = ({ rec }: { rec?: Readonly<Record<string, unknown>> }) => {
       refs.push(useStableRecord(rec));
       return null;
     };

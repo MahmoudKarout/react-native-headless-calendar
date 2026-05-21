@@ -14,7 +14,9 @@ const sys2: CalendarSystem<GregorianDate> = {
 const d = (y: number, m: number, day: number) =>
   sys.fromNativeDate(new Date(y, m, day));
 
-const makeStore = (overrides: Partial<ConstructorParameters<typeof RangeCalendarStore>[0]> = {}) =>
+const makeStore = (
+  overrides: Partial<ConstructorParameters<typeof RangeCalendarStore>[0]> = {}
+) =>
   new RangeCalendarStore({
     systems: [sys],
     ...overrides,
@@ -451,7 +453,9 @@ describe('RangeCalendarStore — disabledInRangeBehavior=include', () => {
     });
     const cell15 = store
       .getSnapshot()
-      .days.cells.find((c) => c.isCurrentMonth && c.nativeDate.getDate() === 15);
+      .days.cells.find(
+        (c) => c.isCurrentMonth && c.nativeDate.getDate() === 15
+      );
     expect(cell15?.isDisabled).toBe(true);
     expect(cell15?.inRange).toBe(true);
   });

@@ -12,20 +12,20 @@ Each selection mode has its own provider component. All three share the same bou
 
 These work on `SingleDateProvider`, `RangeDateProvider`, and `MultipleDateProvider`:
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `systems` | `readonly CalendarSystem[]` | Defaults to `[gregorianSystem]`. |
-| `activeSystemId` | `string` | Controlled active system. Unknown ids fall back to `systems[0]`. |
-| `minDate` | `unknown` | Earliest selectable day (inclusive). |
-| `maxDate` | `unknown` | Latest selectable day (inclusive). |
-| `disabledDates` | `readonly unknown[]` | Individual disabled days. |
-| `disabledRanges` | `readonly { start, end }[]` | Inclusive disabled ranges. |
-| `disabled` | `(nativeDate: Date) => boolean` | Dynamic disable predicate. |
-| `modifiers` | `CalendarModifiers` | Named matchers → `cell.modifiers[name]`. |
-| `firstDayOfWeek` | `0 \| 1 \| … \| 6` | First column of the grid. **Default: `1` (Monday).** |
-| `onChange` | mode-specific payload | Fires after every successful `selectDate` or `clear`. |
-| `onConfirm` | mode-specific payload | Fires when `confirm()` is called. |
-| `onClear` | `() => void` | Fires when `clear()` is called. |
+| Prop             | Type                            | Description                                                      |
+| ---------------- | ------------------------------- | ---------------------------------------------------------------- |
+| `systems`        | `readonly CalendarSystem[]`     | Defaults to `[gregorianSystem]`.                                 |
+| `activeSystemId` | `string`                        | Controlled active system. Unknown ids fall back to `systems[0]`. |
+| `minDate`        | `unknown`                       | Earliest selectable day (inclusive).                             |
+| `maxDate`        | `unknown`                       | Latest selectable day (inclusive).                               |
+| `disabledDates`  | `readonly unknown[]`            | Individual disabled days.                                        |
+| `disabledRanges` | `readonly { start, end }[]`     | Inclusive disabled ranges.                                       |
+| `disabled`       | `(nativeDate: Date) => boolean` | Dynamic disable predicate.                                       |
+| `modifiers`      | `CalendarModifiers`             | Named matchers → `cell.modifiers[name]`.                         |
+| `firstDayOfWeek` | `0 \| 1 \| … \| 6`              | First column of the grid. **Default: `1` (Monday).**             |
+| `onChange`       | mode-specific payload           | Fires after every successful `selectDate` or `clear`.            |
+| `onConfirm`      | mode-specific payload           | Fires when `confirm()` is called.                                |
+| `onClear`        | `() => void`                    | Fires when `clear()` is called.                                  |
 
 Date inputs (`minDate`, `initialDate`, …) accept anything your active system's `from()` understands — native `Date`, ISO strings, or the system's native value.
 
@@ -40,8 +40,8 @@ Date inputs (`minDate`, `initialDate`, …) accept anything your active system's
 </SingleDateProvider>
 ```
 
-| Prop | Description |
-| --- | --- |
+| Prop          | Description                                      |
+| ------------- | ------------------------------------------------ |
 | `initialDate` | Pre-selects a date and sets the displayed month. |
 
 **Payload** (`SingleSelectionPayload`):
@@ -68,13 +68,13 @@ Hooks: `useSingleCalendarSelector`, `useSingleCalendarActions`, `selectSingleDay
 </RangeDateProvider>
 ```
 
-| Prop | Default | Description |
-| --- | --- | --- |
-| `initialStart` | — | First range endpoint. |
-| `initialEnd` | — | Second endpoint (optional). |
-| `allowSameDay` | `false` | Allow start === end as a one-day range. |
-| `minRangeDays` | — | Minimum inclusive span (in days). |
-| `maxRangeDays` | — | Maximum inclusive span (in days). |
+| Prop                      | Default    | Description                                                                               |
+| ------------------------- | ---------- | ----------------------------------------------------------------------------------------- |
+| `initialStart`            | —          | First range endpoint.                                                                     |
+| `initialEnd`              | —          | Second endpoint (optional).                                                               |
+| `allowSameDay`            | `false`    | Allow start === end as a one-day range.                                                   |
+| `minRangeDays`            | —          | Minimum inclusive span (in days).                                                         |
+| `maxRangeDays`            | —          | Maximum inclusive span (in days).                                                         |
 | `disabledInRangeBehavior` | `'reject'` | What to do when a range would include disabled days **between** start and end. See below. |
 
 ### Disabled days inside a range
@@ -83,11 +83,11 @@ Disabled rules (`disabledDates`, `disabledRanges`, `disabled`, bounds) always bl
 
 When the user picks a second endpoint that would span one or more disabled days in the **interior**, `disabledInRangeBehavior` controls the outcome:
 
-| Value | Behavior | Typical use |
-| --- | --- | --- |
-| `'reject'` | The second tap is ignored. `rangeStart` stays set; `rangeEnd` stays `undefined`. No `onChange`. | Hotel booking — unavailable nights must not appear in the stay. |
-| `'include'` | The full range is stored. Interior cells keep `isDisabled: true` and `inRange: true` so your UI can strike them through or show a warning. `selectRangeCanConfirm` still returns `true`. | Analytics / filters where you want the span visible even if some days are blocked. |
-| `'exclude'` | `rangeEnd` is clamped to the day **before** the first disabled interior day (largest clean range on the start side). If that would be a same-day range and `allowSameDay` is `false`, `rangeEnd` is dropped instead. | “Pick as much as you can” flows without rejecting the tap entirely. |
+| Value       | Behavior                                                                                                                                                                                                             | Typical use                                                                        |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `'reject'`  | The second tap is ignored. `rangeStart` stays set; `rangeEnd` stays `undefined`. No `onChange`.                                                                                                                      | Hotel booking — unavailable nights must not appear in the stay.                    |
+| `'include'` | The full range is stored. Interior cells keep `isDisabled: true` and `inRange: true` so your UI can strike them through or show a warning. `selectRangeCanConfirm` still returns `true`.                             | Analytics / filters where you want the span visible even if some days are blocked. |
+| `'exclude'` | `rangeEnd` is clamped to the day **before** the first disabled interior day (largest clean range on the start side). If that would be a same-day range and `allowSameDay` is `false`, `rangeEnd` is dropped instead. | “Pick as much as you can” flows without rejecting the tap entirely.                |
 
 **Example:** start = Aug 1, disabled = Aug 5, user taps Aug 10.
 
@@ -134,10 +134,10 @@ Hooks: `useRangeCalendarSelector`, `useRangeCalendarActions`, `selectRangeDays`,
 </MultipleDateProvider>
 ```
 
-| Prop | Description |
-| --- | --- |
+| Prop           | Description                                                |
+| -------------- | ---------------------------------------------------------- |
 | `initialDates` | Pre-selected dates; first entry seeds the displayed month. |
-| `maxSelected` | Cap on how many dates can be selected. |
+| `maxSelected`  | Cap on how many dates can be selected.                     |
 
 **Payload** (`MultipleSelectionPayload`):
 

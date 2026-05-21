@@ -59,19 +59,17 @@ interface MultipleSelectionPayload {
 ```
 
 ```tsx
-<MultipleDateProvider
-  onChange={({ dates }) => setPicked(dates)}
-/>
+<MultipleDateProvider onChange={({ dates }) => setPicked(dates)} />
 ```
 
 ## When Payloads Fire
 
-| Event | `onChange` | `onConfirm` | `onClear` |
-| --- | --- | --- | --- |
-| `selectDate` (success) | ✓ | — | — |
-| `selectDate` (range rejected — disabled interior, default policy) | — | — | — |
-| `clear` (had selection) | ✓ | — | ✓ |
-| `clear` (empty) | — | — | ✓ |
-| `confirm()` | — | ✓ | — |
+| Event                                                             | `onChange` | `onConfirm` | `onClear` |
+| ----------------------------------------------------------------- | ---------- | ----------- | --------- |
+| `selectDate` (success)                                            | ✓          | —           | —         |
+| `selectDate` (range rejected — disabled interior, default policy) | —          | —           | —         |
+| `clear` (had selection)                                           | ✓          | —           | ✓         |
+| `clear` (empty)                                                   | —          | —           | ✓         |
+| `confirm()`                                                       | —          | ✓           | —         |
 
 `confirm()` is a no-op when `onConfirm` was not passed to the provider.

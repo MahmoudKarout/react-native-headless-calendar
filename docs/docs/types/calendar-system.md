@@ -52,9 +52,9 @@ interface CalendarSystem<T = CalendarDateValue> {
 
 ## Type Parameters
 
-| Parameter | Description |
-|-----------|-------------|
-| `T` | The date representation type for this calendar system (opaque to the core) |
+| Parameter | Description                                                                |
+| --------- | -------------------------------------------------------------------------- |
+| `T`       | The date representation type for this calendar system (opaque to the core) |
 
 ## Properties
 
@@ -78,7 +78,7 @@ A human-readable label displayed in system switchers.
 ```ts
 const system: CalendarSystem = {
   id: 'gregorian',
-  label: 'Gregorian',  // or 'Grégorien', 'ميلادي', etc.
+  label: 'Gregorian', // or 'Grégorien', 'ميلادي', etc.
   // ...
 };
 ```
@@ -107,6 +107,7 @@ const date = system.fromNativeDate(native);
 #### `from(input: unknown): T`
 
 Best-effort conversion from any input. Handles:
+
 - `Date` objects
 - ISO strings
 - Numeric timestamps
@@ -114,10 +115,10 @@ Best-effort conversion from any input. Handles:
 - System-specific date objects
 
 ```ts
-system.from(new Date());           // Date
-system.from('2024-05-15');        // ISO string
-system.from(1715731200000);       // Timestamp
-system.from(moment());            // Moment
+system.from(new Date()); // Date
+system.from('2024-05-15'); // ISO string
+system.from(1715731200000); // Timestamp
+system.from(moment()); // Moment
 system.from({ y: 2024, m: 4, d: 15 }); // System-specific
 ```
 

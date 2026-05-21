@@ -1,7 +1,9 @@
 import { cellsAreEquivalent } from '../../stores/cellUtils';
 import type { BaseDayCellFields } from '../../stores/storeTypes';
 
-const baseCell = (overrides: Partial<BaseDayCellFields> = {}): BaseDayCellFields => ({
+const baseCell = (
+  overrides: Partial<BaseDayCellFields> = {}
+): BaseDayCellFields => ({
   date: { y: 2024, m: 4, d: 15 },
   nativeDate: new Date(2024, 4, 15),
   label: '15',
@@ -18,9 +20,7 @@ describe('cellsAreEquivalent()', () => {
   });
 
   it('returns true when extraEqual is provided and agrees', () => {
-    expect(
-      cellsAreEquivalent(baseCell(), baseCell(), () => true)
-    ).toBe(true);
+    expect(cellsAreEquivalent(baseCell(), baseCell(), () => true)).toBe(true);
   });
 
   it('returns false when label differs', () => {
@@ -39,8 +39,6 @@ describe('cellsAreEquivalent()', () => {
   });
 
   it('returns false when extraEqual rejects', () => {
-    expect(
-      cellsAreEquivalent(baseCell(), baseCell(), () => false)
-    ).toBe(false);
+    expect(cellsAreEquivalent(baseCell(), baseCell(), () => false)).toBe(false);
   });
 });

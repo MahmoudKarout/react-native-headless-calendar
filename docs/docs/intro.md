@@ -17,10 +17,10 @@ keywords:
 
 The library exports **three providers** (one per selection mode), **two hooks per mode**, and **built-in selectors** for the shapes you'll render most often.
 
-| Mode | Provider | Read hook | Write hook |
-| --- | --- | --- | --- |
-| Single date | `SingleDateProvider` | `useSingleCalendarSelector` | `useSingleCalendarActions` |
-| Date range | `RangeDateProvider` | `useRangeCalendarSelector` | `useRangeCalendarActions` |
+| Mode           | Provider               | Read hook                     | Write hook                   |
+| -------------- | ---------------------- | ----------------------------- | ---------------------------- |
+| Single date    | `SingleDateProvider`   | `useSingleCalendarSelector`   | `useSingleCalendarActions`   |
+| Date range     | `RangeDateProvider`    | `useRangeCalendarSelector`    | `useRangeCalendarActions`    |
 | Multiple dates | `MultipleDateProvider` | `useMultipleCalendarSelector` | `useMultipleCalendarActions` |
 
 ```tsx
@@ -56,9 +56,15 @@ function Calendar() {
   return (
     <View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Pressable onPress={goPrevMonth}><Text>‹</Text></Pressable>
-        <Text>{days.displayedMonthLabel} {days.displayedYearLabel}</Text>
-        <Pressable onPress={goNextMonth}><Text>›</Text></Pressable>
+        <Pressable onPress={goPrevMonth}>
+          <Text>‹</Text>
+        </Pressable>
+        <Text>
+          {days.displayedMonthLabel} {days.displayedYearLabel}
+        </Text>
+        <Pressable onPress={goNextMonth}>
+          <Text>›</Text>
+        </Pressable>
       </View>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -84,7 +90,9 @@ function Calendar() {
       <Pressable onPress={confirm} disabled={!canConfirm}>
         <Text>Done</Text>
       </Pressable>
-      <Pressable onPress={clear}><Text>Clear</Text></Pressable>
+      <Pressable onPress={clear}>
+        <Text>Clear</Text>
+      </Pressable>
     </View>
   );
 }

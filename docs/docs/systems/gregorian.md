@@ -40,13 +40,23 @@ Use `createGregorianSystem()` to customize labels:
 const frenchSystem = createGregorianSystem({
   label: 'Grégorien',
   monthLabels: [
-    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre',
   ],
   weekdayLabels: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
 });
 
-<SingleDateProvider systems={[frenchSystem]} />
+<SingleDateProvider systems={[frenchSystem]} />;
 ```
 
 ### Options
@@ -72,9 +82,9 @@ Dates are represented as frozen `{ y, m, d }` objects:
 
 ```ts
 interface GregorianDate {
-  readonly y: number;  // Year (e.g., 2024)
-  readonly m: number;  // Month 0-11 (0 = January)
-  readonly d: number;  // Day 1-31
+  readonly y: number; // Year (e.g., 2024)
+  readonly m: number; // Month 0-11 (0 = January)
+  readonly d: number; // Day 1-31
 }
 
 // Example
@@ -131,18 +141,25 @@ import { createGregorianSystem } from 'react-native-headless-calendar/systems/gr
 const spanishSystem = createGregorianSystem({
   label: 'Gregorian',
   monthLabels: [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre',
   ],
   weekdayLabels: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
 });
 
 function SpanishCalendar() {
   return (
-    <SingleDateProvider
-      systems={[spanishSystem]}
-      firstDayOfWeek={1}
-    >
+    <SingleDateProvider systems={[spanishSystem]} firstDayOfWeek={1}>
       {/* render your day grid with `useSingleCalendarSelector(selectSingleDays)` */}
     </SingleDateProvider>
   );

@@ -12,7 +12,9 @@ const sys2WithId: CalendarSystem<GregorianDate> = { ...sys2, id: 'greg2' };
 const d = (y: number, m: number, day: number) =>
   sys.fromNativeDate(new Date(y, m, day));
 
-const makeStore = (overrides: Partial<ConstructorParameters<typeof SingleCalendarStore>[0]> = {}) =>
+const makeStore = (
+  overrides: Partial<ConstructorParameters<typeof SingleCalendarStore>[0]> = {}
+) =>
   new SingleCalendarStore({
     systems: [sys],
     initialDate: d(2024, 4, 15),
@@ -251,7 +253,9 @@ describe('SingleCalendarStore — configure / reconcile', () => {
       minDate: new Date(2024, 4, 10),
       maxDate: new Date(2024, 4, 20),
       disabledDates: [new Date(2024, 4, 12)],
-      disabledRanges: [{ start: new Date(2024, 4, 13), end: new Date(2024, 4, 14) }],
+      disabledRanges: [
+        { start: new Date(2024, 4, 13), end: new Date(2024, 4, 14) },
+      ],
       disabled: (nd) => nd.getDate() === 18,
     });
     store.selectDate(new Date(2024, 4, 12));
@@ -273,7 +277,9 @@ describe('SingleCalendarStore — configure / reconcile', () => {
       minDate: new Date(2024, 4, 10),
       maxDate: new Date(2024, 4, 20),
       disabledDates: [new Date(2024, 4, 12)],
-      disabledRanges: [{ start: new Date(2024, 4, 13), end: new Date(2024, 4, 14) }],
+      disabledRanges: [
+        { start: new Date(2024, 4, 13), end: new Date(2024, 4, 14) },
+      ],
     });
     store.configure({ systems: [sys] });
     const s = store.getSnapshot();
@@ -398,7 +404,10 @@ describe('SingleCalendarStore — system switching', () => {
     store.subscribe(listener);
     // Hand-call replaceSystem via setActiveSystem after replacing systems list
     // so the system is the same instance.
-    store.configure({ systems: [sys, sys2WithId], activeSystemId: 'gregorian' });
+    store.configure({
+      systems: [sys, sys2WithId],
+      activeSystemId: 'gregorian',
+    });
     expect(listener).not.toHaveBeenCalled();
   });
 

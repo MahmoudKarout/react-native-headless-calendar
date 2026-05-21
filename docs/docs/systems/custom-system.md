@@ -13,7 +13,7 @@ import type { CalendarSystem, Weekday } from 'react-native-headless-calendar';
 
 interface EthiopianDate {
   readonly year: number;
-  readonly month: number;  // 0-12 (13 months!)
+  readonly month: number; // 0-12 (13 months!)
   readonly day: number;
 }
 
@@ -27,11 +27,19 @@ function createEthiopianSystem(): CalendarSystem<EthiopianDate> {
     today() {
       const now = new Date();
       // Convert from Gregorian
-      return { year: now.getFullYear() - 8, month: now.getMonth(), day: now.getDate() };
+      return {
+        year: now.getFullYear() - 8,
+        month: now.getMonth(),
+        day: now.getDate(),
+      };
     },
 
     fromNativeDate(date: Date) {
-      return { year: date.getFullYear() - 8, month: date.getMonth(), day: date.getDate() };
+      return {
+        year: date.getFullYear() - 8,
+        month: date.getMonth(),
+        day: date.getDate(),
+      };
     },
 
     from(input: unknown) {
@@ -64,12 +72,17 @@ function createEthiopianSystem(): CalendarSystem<EthiopianDate> {
       const totalMonths = d.year * 13 + d.month + n;
       const year = Math.floor(totalMonths / 13);
       const month = totalMonths % 13;
-      return { year, month, day: Math.min(d.day, this.daysInMonth({ year, month, day: 1 })) };
+      return {
+        year,
+        month,
+        day: Math.min(d.day, this.daysInMonth({ year, month, day: 1 })),
+      };
     },
     addYears: (d, n) => ({ ...d, year: d.year + n }),
 
     // Comparison
-    isSame: (a, b) => a.year === b.year && a.month === b.month && a.day === b.day,
+    isSame: (a, b) =>
+      a.year === b.year && a.month === b.month && a.day === b.day,
     isBefore: (a, b) => {
       if (a.year !== b.year) return a.year < b.year;
       if (a.month !== b.month) return a.month < b.month;
@@ -83,8 +96,19 @@ function createEthiopianSystem(): CalendarSystem<EthiopianDate> {
 
     // Labels
     monthLabels: () => [
-      'Meskerem', 'Tikimt', 'Hidar', 'Tahsas', 'Tir', 'Yakatit',
-      'Megabit', 'Miazia', 'Genbot', 'Sene', 'Hamle', 'Nehase', 'Pagumen'
+      'Meskerem',
+      'Tikimt',
+      'Hidar',
+      'Tahsas',
+      'Tir',
+      'Yakatit',
+      'Megabit',
+      'Miazia',
+      'Genbot',
+      'Sene',
+      'Hamle',
+      'Nehase',
+      'Pagumen',
     ],
     weekdayLabels: () => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     formatDay: (d) => String(d.day),

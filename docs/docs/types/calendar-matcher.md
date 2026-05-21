@@ -8,9 +8,9 @@ A `CalendarMatcher` selects which native dates match a modifier or disabled rule
 
 ```ts
 type CalendarMatcher =
-  | readonly DisabledDateInput[]           // individual days
-  | readonly DisabledDateRangeInput[]      // inclusive ranges
-  | ((nativeDate: Date) => boolean);       // predicate
+  | readonly DisabledDateInput[] // individual days
+  | readonly DisabledDateRangeInput[] // inclusive ranges
+  | ((nativeDate: Date) => boolean); // predicate
 ```
 
 `DisabledDateInput` is `unknown` — the active system's `from()` normalises each value.
@@ -59,7 +59,10 @@ An empty array matches nothing.
 The same matching logic powers `matchDate` in `react-native-headless-calendar` for advanced use outside the store:
 
 ```ts
-import { matchDate, createGregorianSystem } from 'react-native-headless-calendar';
+import {
+  matchDate,
+  createGregorianSystem,
+} from 'react-native-headless-calendar';
 
 const sys = createGregorianSystem();
 matchDate(sys, date, (d) => d.getMonth() === 5);

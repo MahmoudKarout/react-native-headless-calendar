@@ -42,7 +42,7 @@ const customJalaliSystem = createJalaliSystem({
   label: 'Jalali',
 });
 
-<SingleDateProvider systems={[customJalaliSystem]} />
+<SingleDateProvider systems={[customJalaliSystem]} />;
 ```
 
 ## Converter Interface
@@ -52,9 +52,9 @@ Your converter must implement:
 ```ts
 interface JalaliConverter {
   toJalali(date: Date): {
-    jy: number;  // Jalali year
-    jm: number;  // Jalali month (0-11)
-    jd: number;  // Jalali day
+    jy: number; // Jalali year
+    jm: number; // Jalali month (0-11)
+    jd: number; // Jalali day
   };
   toGregorian(jy: number, jm: number, jd: number): Date;
 }
@@ -68,11 +68,28 @@ interface JalaliConverter {
 const farsiJalaliSystem = createJalaliSystem({
   label: 'جلالی',
   monthLabels: [
-    'فروردین', 'اردیبهشت', 'خرداد', 'تیر',
-    'مرداد', 'شهریور', 'مهر', 'آبان',
-    'آذر', 'دی', 'بهمن', 'اسفند'
+    'فروردین',
+    'اردیبهشت',
+    'خرداد',
+    'تیر',
+    'مرداد',
+    'شهریور',
+    'مهر',
+    'آبان',
+    'آذر',
+    'دی',
+    'بهمن',
+    'اسفند',
   ],
-  weekdayLabels: ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'],
+  weekdayLabels: [
+    'شنبه',
+    'یکشنبه',
+    'دوشنبه',
+    'سه‌شنبه',
+    'چهارشنبه',
+    'پنج‌شنبه',
+    'جمعه',
+  ],
 });
 ```
 
@@ -93,9 +110,9 @@ interface JalaliSystemOptions {
 
 ```ts
 interface JalaliDate {
-  readonly jy: number;  // Jalali year
-  readonly jm: number;  // Jalali month 0-11
-  readonly jd: number;  // Jalali day 1-31
+  readonly jy: number; // Jalali year
+  readonly jm: number; // Jalali month 0-11
+  readonly jd: number; // Jalali day 1-31
 }
 ```
 

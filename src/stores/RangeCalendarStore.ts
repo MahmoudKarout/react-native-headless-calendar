@@ -1,11 +1,7 @@
 /**
  * RangeCalendarStore — external store for date-range selection.
  */
-import type {
-  CalendarDateValue,
-  CalendarSystem,
-  DateParts,
-} from '../types';
+import type { CalendarDateValue, CalendarSystem, DateParts } from '../types';
 import { isBetween } from '../utils/grid';
 import {
   BaseCalendarStore,
@@ -50,18 +46,21 @@ export type RangeOnChange = (payload: RangeSelectionPayload) => void;
  */
 export type DisabledInRangeBehavior = 'reject' | 'include' | 'exclude';
 
-export interface RangeDayCellInfo<T = CalendarDateValue>
-  extends BaseDayCellFields<T> {
+export interface RangeDayCellInfo<
+  T = CalendarDateValue,
+> extends BaseDayCellFields<T> {
   inRange: boolean;
   isRangeStart: boolean;
   isRangeEnd: boolean;
 }
 
-export type RangeCalendarDays<T = CalendarDateValue> =
-  CalendarDaysView<RangeDayCellInfo<T>>;
+export type RangeCalendarDays<T = CalendarDateValue> = CalendarDaysView<
+  RangeDayCellInfo<T>
+>;
 
-export interface RangeCalendarSnapshot<T = CalendarDateValue>
-  extends BaseCalendarSnapshotShared<T> {
+export interface RangeCalendarSnapshot<
+  T = CalendarDateValue,
+> extends BaseCalendarSnapshotShared<T> {
   readonly mode: 'range';
   rangeStart: T | undefined;
   rangeEnd: T | undefined;
@@ -72,8 +71,9 @@ export interface RangeCalendarSnapshot<T = CalendarDateValue>
   days: RangeCalendarDays<T>;
 }
 
-export interface RangeCalendarStoreOptions<T = CalendarDateValue>
-  extends BaseCalendarStoreOptions<T> {
+export interface RangeCalendarStoreOptions<
+  T = CalendarDateValue,
+> extends BaseCalendarStoreOptions<T> {
   initialStart?: unknown;
   initialEnd?: unknown;
   allowSameDay?: boolean;
@@ -92,10 +92,9 @@ type RangeSnapshotBody<T> = Omit<
   'days' | 'months' | 'years'
 >;
 
-export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore<
-  T,
-  RangeCalendarSnapshot<T>
-> {
+export class RangeCalendarStore<
+  T = CalendarDateValue,
+> extends BaseCalendarStore<T, RangeCalendarSnapshot<T>> {
   private onConfirmCb: RangeOnConfirm | undefined;
   private onClearCb: RangeOnClear | undefined;
   private onChangeCb: RangeOnChange | undefined;
@@ -140,7 +139,11 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     let initialEnd = opts.initialEnd ? system.from(opts.initialEnd) : undefined;
 
     // Order the seed pair so downstream interior checks are well-defined.
-    if (initialStart && initialEnd && system.isBefore(initialEnd, initialStart)) {
+    if (
+      initialStart &&
+      initialEnd &&
+      system.isBefore(initialEnd, initialStart)
+    ) {
       [initialStart, initialEnd] = [initialEnd, initialStart];
     }
 
@@ -279,11 +282,7 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
     // and they straddle at least one day. Same-day ranges have no
     // interior to validate.
     if (nextStart && nextEnd && !system.isSame(nextStart, nextEnd)) {
-      const sanitized = this.applyDisabledInteriorPolicy(
-        s,
-        nextStart,
-        nextEnd
-      );
+      const sanitized = this.applyDisabledInteriorPolicy(s, nextStart, nextEnd);
       if (sanitized.rejected) return;
       nextStart = sanitized.start;
       nextEnd = sanitized.end;
@@ -332,9 +331,7 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
       day: s.system.day(d),
     });
     return {
-      startDate: s.rangeStart
-        ? s.system.toNativeDate(s.rangeStart)
-        : undefined,
+      startDate: s.rangeStart ? s.system.toNativeDate(s.rangeStart) : undefined,
       endDate: s.rangeEnd ? s.system.toNativeDate(s.rangeEnd) : undefined,
       startParts: s.rangeStart ? toParts(s.rangeStart) : undefined,
       endParts: s.rangeEnd ? toParts(s.rangeEnd) : undefined,
@@ -455,11 +452,7 @@ export class RangeCalendarStore<T = CalendarDateValue> extends BaseCalendarStore
       startN.getMonth(),
       startN.getDate() + 1
     );
-    const stop = new Date(
-      endN.getFullYear(),
-      endN.getMonth(),
-      endN.getDate()
-    );
+    const stop = new Date(endN.getFullYear(), endN.getMonth(), endN.getDate());
     while (cursor < stop) {
       const dateT = system.fromNativeDate(cursor);
       if (this.isDateDisabled(dateT, s)) return dateT;

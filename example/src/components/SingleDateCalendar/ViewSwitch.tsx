@@ -28,7 +28,6 @@ interface ViewSwitchProps {
 }
 
 export function ViewSwitch({ value, onChange }: ViewSwitchProps) {
-  
   return (
     <View className="bg-surface-muted rounded-md flex-row p-0.5 mb-3">
       {viewKinds.map((tab) => {

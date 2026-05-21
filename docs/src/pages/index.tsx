@@ -307,11 +307,10 @@ export default function Home(): JSX.Element {
             <p className={styles.heroSubtitle}>
               Selection state, grid layout, range rules, disabled dates, and
               100% accurate Gregorian, Hijri, and Jalali systems are all built
-              in. Tap a day and only that
-              cell re-renders — every other day gets{' '}
+              in. Tap a day and only that cell re-renders — every other day gets{' '}
               <strong>0 wasted re-renders</strong>. No more rewriting tedious
-              calendar
-              code; just compose your design system on top of two hooks.
+              calendar code; just compose your design system on top of two
+              hooks.
             </p>
 
             <div className={styles.ctaRow}>
@@ -360,7 +359,6 @@ export default function Home(): JSX.Element {
               </code>
             </div>
           </div>
-
         </section>
 
         {/* STATS */}
@@ -387,7 +385,11 @@ export default function Home(): JSX.Element {
             />
             <div className={styles.modeGrid}>
               {MODES.map((mode) => (
-                <Link key={mode.name} className={styles.modeCard} to={mode.href}>
+                <Link
+                  key={mode.name}
+                  className={styles.modeCard}
+                  to={mode.href}
+                >
                   <h3 className={styles.modeCardTitle}>
                     <code>{mode.name}</code>
                   </h3>
@@ -500,7 +502,6 @@ export default function Home(): JSX.Element {
             </div>
           </div>
         </section>
-
 
         {/* CTA */}
         <section className={styles.ctaSection}>

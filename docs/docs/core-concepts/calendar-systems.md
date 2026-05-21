@@ -8,11 +8,11 @@ A **calendar system** is an adapter implementing `CalendarSystem<T>`. The store 
 
 ## Built-in Systems
 
-| Import path | Export | Peer dependency |
-| --- | --- | --- |
-| `react-native-headless-calendar` | `gregorianSystem`, `createGregorianSystem` | none |
-| `react-native-headless-calendar/systems/hijri` | `hijriSystem` | `@tabby_ai/hijri-converter` |
-| `react-native-headless-calendar/systems/jalali` | `jalaliSystem` | `moment-jalaali` |
+| Import path                                     | Export                                     | Peer dependency             |
+| ----------------------------------------------- | ------------------------------------------ | --------------------------- |
+| `react-native-headless-calendar`                | `gregorianSystem`, `createGregorianSystem` | none                        |
+| `react-native-headless-calendar/systems/hijri`  | `hijriSystem`                              | `@tabby_ai/hijri-converter` |
+| `react-native-headless-calendar/systems/jalali` | `jalaliSystem`                             | `moment-jalaali`            |
 
 If you omit `systems`, every provider defaults to `[gregorianSystem]`.
 
@@ -30,7 +30,7 @@ import { hijriSystem } from 'react-native-headless-calendar/systems/hijri';
   activeSystemId="hijri"
 >
   <MyCalendar />
-</SingleDateProvider>
+</SingleDateProvider>;
 ```
 
 At runtime, call `setActiveSystem(id)` from `use*CalendarActions()`. Selection, bounds, and disabled lists are carried across systems by absolute instant (the day-of-month may change when switching calendars).
@@ -46,11 +46,11 @@ const systemId = useSingleCalendarSelector((s) => s.system.id);
 ```tsx
 const french = createGregorianSystem({
   label: 'Grégorien',
-  monthLabels: ['Janvier', 'Février', /* … */],
+  monthLabels: ['Janvier', 'Février' /* … */],
   weekdayLabels: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
 });
 
-<SingleDateProvider systems={[french]} />
+<SingleDateProvider systems={[french]} />;
 ```
 
 ## Implementing Your Own

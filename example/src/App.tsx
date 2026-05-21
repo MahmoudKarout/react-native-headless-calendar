@@ -4,10 +4,7 @@ import {
   SingleDateCalendar,
   type SingleDateCalendarProps,
 } from './components/SingleDateCalendar/SingleDateCalendar';
-import {
-  RangeDateCalendar,
-  type RangeDateCalendarProps,
-} from './components/RangeDateCalendar/RangeDateCalendar';
+import { RangeDateCalendar } from './components/RangeDateCalendar/RangeDateCalendar';
 import {
   SafeAreaListener,
   type EdgeInsets,

@@ -1,11 +1,7 @@
 /**
  * SingleCalendarStore — external store for single-date selection.
  */
-import type {
-  CalendarDateValue,
-  CalendarSystem,
-  DateParts,
-} from '../types';
+import type { CalendarDateValue, CalendarSystem, DateParts } from '../types';
 import {
   BaseCalendarStore,
   type BaseCalendarSnapshotShared,
@@ -25,23 +21,27 @@ export type SingleOnConfirm = (payload: SingleSelectionPayload) => void;
 export type SingleOnClear = () => void;
 export type SingleOnChange = (payload: SingleSelectionPayload) => void;
 
-export interface SingleDayCellInfo<T = CalendarDateValue>
-  extends BaseDayCellFields<T> {
+export interface SingleDayCellInfo<
+  T = CalendarDateValue,
+> extends BaseDayCellFields<T> {
   isSelected: boolean;
 }
 
-export type SingleCalendarDays<T = CalendarDateValue> =
-  CalendarDaysView<SingleDayCellInfo<T>>;
+export type SingleCalendarDays<T = CalendarDateValue> = CalendarDaysView<
+  SingleDayCellInfo<T>
+>;
 
-export interface SingleCalendarSnapshot<T = CalendarDateValue>
-  extends BaseCalendarSnapshotShared<T> {
+export interface SingleCalendarSnapshot<
+  T = CalendarDateValue,
+> extends BaseCalendarSnapshotShared<T> {
   readonly mode: 'single';
   selectedDate: T | undefined;
   days: SingleCalendarDays<T>;
 }
 
-export interface SingleCalendarStoreOptions<T = CalendarDateValue>
-  extends BaseCalendarStoreOptions<T> {
+export interface SingleCalendarStoreOptions<
+  T = CalendarDateValue,
+> extends BaseCalendarStoreOptions<T> {
   initialDate?: unknown;
   onConfirm?: SingleOnConfirm;
   onClear?: SingleOnClear;

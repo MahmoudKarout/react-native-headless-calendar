@@ -20,9 +20,7 @@ See [CalendarMatcher](./calendar-matcher) for matcher shapes.
 <RangeDateProvider
   modifiers={{
     booked: [new Date(2024, 4, 7), new Date(2024, 4, 8)],
-    holiday: [
-      { start: new Date(2024, 11, 24), end: new Date(2024, 11, 26) },
-    ],
+    holiday: [{ start: new Date(2024, 11, 24), end: new Date(2024, 11, 26) }],
     weekend: (d) => d.getDay() === 0 || d.getDay() === 6,
   }}
 >
@@ -33,8 +31,12 @@ See [CalendarMatcher](./calendar-matcher) for matcher shapes.
 Inside a cell:
 
 ```tsx
-{cell.modifiers.booked && <View style={styles.bookedDot} />}
-{cell.modifiers.weekend && <View style={styles.weekendBg} />}
+{
+  cell.modifiers.booked && <View style={styles.bookedDot} />;
+}
+{
+  cell.modifiers.weekend && <View style={styles.weekendBg} />;
+}
 ```
 
 ## Performance

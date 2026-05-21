@@ -61,8 +61,9 @@ describe('SingleDateProvider', () => {
   }
 
   it('renders selectors and exposes actions', () => {
-    let captured: { actions: ReturnType<typeof useSingleCalendarActions> } | null =
-      null;
+    let captured: {
+      actions: ReturnType<typeof useSingleCalendarActions>;
+    } | null = null;
     const ui = render(
       <SingleDateProvider initialDate={new Date(2024, 4, 15)}>
         <SingleProbe onMount={(api) => (captured = api as never)} />
@@ -92,13 +93,19 @@ describe('SingleDateProvider', () => {
       return <Text testID="weekdays">{days.weekdayLabels.join(',')}</Text>;
     };
     const ui = render(
-      <SingleDateProvider initialDate={new Date(2024, 4, 15)} firstDayOfWeek={1}>
+      <SingleDateProvider
+        initialDate={new Date(2024, 4, 15)}
+        firstDayOfWeek={1}
+      >
         <Probe />
       </SingleDateProvider>
     );
     const labelsMon = ui.getByTestId('weekdays').props.children;
     ui.rerender(
-      <SingleDateProvider initialDate={new Date(2024, 4, 15)} firstDayOfWeek={0}>
+      <SingleDateProvider
+        initialDate={new Date(2024, 4, 15)}
+        firstDayOfWeek={0}
+      >
         <Probe />
       </SingleDateProvider>
     );
@@ -125,10 +132,22 @@ describe('SingleDateProvider', () => {
             testID="setDisplayed"
             onPress={() => actions.setDisplayedDate(new Date(2025, 0, 1))}
           />
-          <Pressable testID="selectMonth" onPress={() => actions.selectMonth(2)} />
-          <Pressable testID="selectYear" onPress={() => actions.selectYear(2030)} />
-          <Pressable testID="prevYearPage" onPress={() => actions.prevYearPage()} />
-          <Pressable testID="nextYearPage" onPress={() => actions.nextYearPage()} />
+          <Pressable
+            testID="selectMonth"
+            onPress={() => actions.selectMonth(2)}
+          />
+          <Pressable
+            testID="selectYear"
+            onPress={() => actions.selectYear(2030)}
+          />
+          <Pressable
+            testID="prevYearPage"
+            onPress={() => actions.prevYearPage()}
+          />
+          <Pressable
+            testID="nextYearPage"
+            onPress={() => actions.nextYearPage()}
+          />
           <Pressable
             testID="setSystem"
             onPress={() => actions.setActiveSystem('greg2')}
@@ -137,10 +156,7 @@ describe('SingleDateProvider', () => {
       );
     };
     const ui = render(
-      <SingleDateProvider
-        systems={[sys, sys2]}
-        onConfirm={onConfirm}
-      >
+      <SingleDateProvider systems={[sys, sys2]} onConfirm={onConfirm}>
         <Probe />
       </SingleDateProvider>
     );

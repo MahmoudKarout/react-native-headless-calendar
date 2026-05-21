@@ -22,7 +22,9 @@ export interface RangeDateCalendarProps {
   onConfirm?: RangeOnConfirm;
 }
 
-export function RangeDateCalendar(props: RangeDateProviderProps) {
+export function RangeDateCalendar(
+  props: Omit<RangeDateProviderProps, 'children'>
+) {
   const [view, setView] = useState<'day' | 'month' | 'year'>('day');
 
   const toggleDayView = () => setView('day');

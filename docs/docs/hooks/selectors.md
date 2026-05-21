@@ -7,14 +7,14 @@ title: Built-in Selectors
 
 Pre-built selector functions for the three most common views. Pass them to the matching `use*CalendarSelector` hook.
 
-| Single | Range | Multiple |
-| --- | --- | --- |
-| `selectSingleDays` | `selectRangeDays` | `selectMultipleDays` |
-| `selectSingleMonths` | `selectRangeMonths` | `selectMultipleMonths` |
-| `selectSingleYears` | `selectRangeYears` | `selectMultipleYears` |
+| Single                   | Range                   | Multiple                   |
+| ------------------------ | ----------------------- | -------------------------- |
+| `selectSingleDays`       | `selectRangeDays`       | `selectMultipleDays`       |
+| `selectSingleMonths`     | `selectRangeMonths`     | `selectMultipleMonths`     |
+| `selectSingleYears`      | `selectRangeYears`      | `selectMultipleYears`      |
 | `selectSingleCanConfirm` | `selectRangeCanConfirm` | `selectMultipleCanConfirm` |
 
-## select*Days
+## select\*Days
 
 Everything needed to render a month grid.
 
@@ -50,15 +50,15 @@ function Grid() {
 
 ### Cell types
 
-| Mode | Type | Selection fields |
-| --- | --- | --- |
-| Single | `SingleDayCellInfo` | `isSelected` |
-| Range | `RangeDayCellInfo` | `inRange`, `isRangeStart`, `isRangeEnd` |
-| Multiple | `MultipleDayCellInfo` | `isSelected` |
+| Mode     | Type                  | Selection fields                        |
+| -------- | --------------------- | --------------------------------------- |
+| Single   | `SingleDayCellInfo`   | `isSelected`                            |
+| Range    | `RangeDayCellInfo`    | `inRange`, `isRangeStart`, `isRangeEnd` |
+| Multiple | `MultipleDayCellInfo` | `isSelected`                            |
 
 All share [base day-cell fields](../types/day-cell-info). See [DayCellInfo](../types/day-cell-info) for the full interface.
 
-## select*Months
+## select\*Months
 
 ```ts
 interface CalendarMonths {
@@ -72,7 +72,7 @@ const { months, activeMonth } = useSingleCalendarSelector(selectSingleMonths);
 const { selectMonth } = useSingleCalendarActions();
 ```
 
-## select*Years
+## select\*Years
 
 ```ts
 interface CalendarYears {
@@ -86,12 +86,12 @@ const { years, activeYear } = useRangeCalendarSelector(selectRangeYears);
 const { selectYear, prevYearPage, nextYearPage } = useRangeCalendarActions();
 ```
 
-## select*CanConfirm
+## select\*CanConfirm
 
 ```tsx
 const canConfirm = useMultipleCalendarSelector(selectMultipleCanConfirm);
 
-<Button onPress={confirm} disabled={!canConfirm} title="Done" />
+<Button onPress={confirm} disabled={!canConfirm} title="Done" />;
 ```
 
 Recomputes when the selection state that gates `confirm()` changes.

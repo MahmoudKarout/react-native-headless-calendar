@@ -36,7 +36,7 @@ interface SingleDayCellInfo extends BaseDayCellFields {
 
 ```ts
 interface RangeDayCellInfo extends BaseDayCellFields {
-  inRange: boolean;       // strictly between endpoints
+  inRange: boolean; // strictly between endpoints
   isRangeStart: boolean;
   isRangeEnd: boolean;
 }
@@ -103,7 +103,9 @@ Pass `cell.date` back to `selectDate` — the store normalises it through the ac
 ```
 
 ```tsx
-{cell.modifiers.booked && <View style={styles.dot} />}
+{
+  cell.modifiers.booked && <View style={styles.dot} />;
+}
 ```
 
 ## Stable Identity

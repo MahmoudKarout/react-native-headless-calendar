@@ -24,7 +24,6 @@ yarn add moment-jalaali
 
 Required only when you import `react-native-headless-calendar/systems/jalali`.
 
-
 ## Requirements
 
 - React `>= 18.0.0`

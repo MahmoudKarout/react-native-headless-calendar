@@ -43,9 +43,7 @@ export function createCalendarContext<
     return store;
   }
 
-  function useCalendarSelector<T>(
-    selector: (snapshot: Snapshot) => T
-  ): T {
+  function useCalendarSelector<T>(selector: (snapshot: Snapshot) => T): T {
     const store = useStore();
     return useSyncExternalStore(store.subscribe, () =>
       selector(store.getSnapshot())
