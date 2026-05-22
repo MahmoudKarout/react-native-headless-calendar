@@ -13,7 +13,6 @@ export function Header() {
   const displayedYearLabel = useSingleCalendarSelector(
     (s) => s.days.displayedYearLabel
   );
-  const systemId = useSingleCalendarSelector((s) => s.system.id);
 
   return (
     <View className="flex-row items-center justify-between mb-2">
@@ -21,9 +20,6 @@ export function Header() {
       <View className="items-center">
         <Text className="text-foreground text-sm font-semibold">
           {displayedMonthLabel} {displayedYearLabel}
-        </Text>
-        <Text className="text-muted text-[10px] font-medium tracking-widest uppercase mt-0.5">
-          {systemId}
         </Text>
       </View>
       <IconButton onPress={goNextMonth} label="›" />

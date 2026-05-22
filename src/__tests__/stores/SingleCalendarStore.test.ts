@@ -91,8 +91,8 @@ describe('SingleCalendarStore — selectDate / clear / confirm', () => {
     store.selectDate(new Date(2024, 4, 20));
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({
-        date: expect.any(Date),
-        parts: { year: 2024, month: 4, day: 20 },
+        gregorianDate: expect.any(Date),
+        system: { year: 2024, month: 4, day: 20 },
         systemId: 'gregorian',
       })
     );
@@ -106,7 +106,7 @@ describe('SingleCalendarStore — selectDate / clear / confirm', () => {
     expect(store.getSnapshot().selectedDate).toBeUndefined();
     expect(onClear).toHaveBeenCalled();
     expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ date: undefined, parts: undefined })
+      expect.objectContaining({ gregorianDate: undefined, system: undefined })
     );
   });
 

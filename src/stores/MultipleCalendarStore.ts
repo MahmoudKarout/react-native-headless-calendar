@@ -10,11 +10,15 @@ import {
   resolveInitialSystem,
 } from './BaseCalendarStore';
 import type { BaseDayCellFields, CalendarDaysView } from './storeTypes';
+import { toPayloadDate } from '../utils/payloadDate';
 
 export interface MultipleSelectionPayload {
-  dates: readonly Date[];
-  parts: readonly DateParts[];
+  /** Always Gregorian, each anchored at UTC midnight of the selected day. */
+  gregorianDates: readonly Date[];
+  /** Identifier of the active calendar system at the time of selection. */
   systemId: string;
+  /** Selected days expressed in the active calendar system (month is 0-indexed). Aligned with `gregorianDates` by index. */
+  system: readonly DateParts[];
 }
 
 export type MultipleOnConfirm = (payload: MultipleSelectionPayload) => void;
@@ -189,13 +193,13 @@ export class MultipleCalendarStore<
   private buildPayload(): MultipleSelectionPayload {
     const s = this.snapshot;
     return {
-      dates: s.selectedDates.map((d) => s.system.toNativeDate(d)),
-      parts: s.selectedDates.map((d) => ({
+      gregorianDates: s.selectedDates.map((d) => toPayloadDate(s.system, d)),
+      systemId: s.system.id,
+      system: s.selectedDates.map((d) => ({
         year: s.system.year(d),
         month: s.system.month(d),
         day: s.system.day(d),
       })),
-      systemId: s.system.id,
     };
   }
 

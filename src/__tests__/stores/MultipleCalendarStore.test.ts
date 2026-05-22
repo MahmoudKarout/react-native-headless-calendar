@@ -123,8 +123,8 @@ describe('MultipleCalendarStore — clear / confirm', () => {
     store.confirm();
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({
-        dates: expect.any(Array),
-        parts: [
+        gregorianDates: expect.any(Array),
+        system: [
           { year: 2024, month: 4, day: 10 },
           { year: 2024, month: 4, day: 12 },
         ],
