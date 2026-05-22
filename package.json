@@ -231,5 +231,8 @@
       "lefthook"
     ],
     "version": "0.62.0"
+  },
+  "dependencies": {
+    "@shopify/flash-list": "^2.3.1"
   }
 }

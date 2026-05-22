@@ -1,12 +1,14 @@
 {
   "expo": {
     "name": "FastCalendar Example",
+    "scheme": "fastcalendar",
     "slug": "react-native-headless-calendar-example",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "experiments": {
-      "reactCompiler": true
+      "reactCompiler": true,
+      "typedRoutes": true
     },
     "userInterfaceStyle": "automatic",
     "splash": {
@@ -29,6 +31,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": ["expo-router"]
   }
 }

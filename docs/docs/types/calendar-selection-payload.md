@@ -4,23 +4,23 @@ sidebar_position: 5
 
 # Selection Payloads
 
-Each provider fires mode-specific payloads on `onChange` and `onConfirm`. Values are always native JS `Date` (and `DateParts`) regardless of the active calendar system.
+Each provider fires mode-specific payloads on `onChange` and `onConfirm`. The Gregorian fields are always native JS `Date` values anchored at **UTC midnight** of the selected day, so `JSON.stringify` / `toISOString` round-trip cleanly regardless of the user's timezone. The `system` field carries the same selection expressed in the active calendar system.
 
 ## Single — `SingleSelectionPayload`
 
 ```ts
 interface SingleSelectionPayload {
-  date: Date | undefined;
-  parts: DateParts | undefined; // { year, month, day } — month is 0-based
+  gregorianDate: Date | undefined;
   systemId: string;
+  system: DateParts | undefined; // { year, month, day } — month is 0-based
 }
 ```
 
 ```tsx
 <SingleDateProvider
-  onConfirm={({ date, parts, systemId }) => {
-    if (!date) return;
-    saveBooking(date, parts!, systemId);
+  onConfirm={({ gregorianDate, system, systemId }) => {
+    if (!gregorianDate || !system) return;
+    saveBooking(gregorianDate, system, systemId);
   }}
 />
 ```
@@ -29,19 +29,25 @@ interface SingleSelectionPayload {
 
 ```ts
 interface RangeSelectionPayload {
-  startDate: Date | undefined;
-  endDate: Date | undefined;
-  startParts: DateParts | undefined;
-  endParts: DateParts | undefined;
+  gregorianStartDate: Date | undefined;
+  gregorianEndDate: Date | undefined;
   systemId: string;
+  system: {
+    start: DateParts | undefined;
+    end: DateParts | undefined;
+  };
 }
 ```
 
 ```tsx
 <RangeDateProvider
-  onConfirm={({ startDate, endDate, systemId }) => {
-    if (!startDate || !endDate) return;
-    bookHotel({ checkIn: startDate, checkOut: endDate, calendar: systemId });
+  onConfirm={({ gregorianStartDate, gregorianEndDate, systemId }) => {
+    if (!gregorianStartDate || !gregorianEndDate) return;
+    bookHotel({
+      checkIn: gregorianStartDate,
+      checkOut: gregorianEndDate,
+      calendar: systemId,
+    });
   }}
 />
 ```
@@ -52,14 +58,16 @@ With `disabledInRangeBehavior="reject"` (default), a second tap that would cross
 
 ```ts
 interface MultipleSelectionPayload {
-  dates: readonly Date[];
-  parts: readonly DateParts[];
+  gregorianDates: readonly Date[];
   systemId: string;
+  system: readonly DateParts[]; // aligned with `gregorianDates` by index
 }
 ```
 
 ```tsx
-<MultipleDateProvider onChange={({ dates }) => setPicked(dates)} />
+<MultipleDateProvider
+  onChange={({ gregorianDates }) => setPicked(gregorianDates)}
+/>
 ```
 
 ## When Payloads Fire

@@ -23,9 +23,9 @@ export function SingleDateCalendar(props: SingleDateCalendarProps) {
 
   return (
     <SingleDateProvider {...props}>
-      <View className="bg-card border-hairline border-border rounded-xl p-4 shadow-sm w-[326px] h-[483px] justify-between">
+      <View className="bg-card border-2 border-border rounded-xl p-4 shadow-sm w-[326px] h-[483px] justify-between">
         <View>
-          <SystemSwitch />
+          {props?.systems && props?.systems?.length > 1 && <SystemSwitch />}
           <Header />
           <ViewSwitch value={view} onChange={setView} />
           {view === 'day' && <DayView />}

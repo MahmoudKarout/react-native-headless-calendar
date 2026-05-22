@@ -1,13 +1,14 @@
 {
   "extends": "../tsconfig",
   "compilerOptions": {
-    // The example app is consumer code — it doesn't need the strict-api
-    // condition that the library itself ships under. Dropping it lets the
-    // standard `react-native` type exports load, which is what Uniwind's
-    // `declare module 'react-native'` augmentation (in uniwind-types.d.ts)
-    // augments to add `className`, `contentContainerClassName`, etc.
     "customConditions": []
   },
   "exclude": ["node_modules"],
-  "include": ["./uniwind-types.d.ts", "./global.css.d.ts", "./src"]
+  "include": [
+    "./uniwind-types.d.ts",
+    "./global.css.d.ts",
+    "./src",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
 }

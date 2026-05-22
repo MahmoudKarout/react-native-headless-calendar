@@ -6,6 +6,9 @@ Build your own React Native calendar without rebuilding calendar logic.
 
 **[Documentation](https://mahmoudkarout.github.io/react-native-headless-calendar/)** · **[Example app](./example)** · **[Contributing](./CONTRIBUTING.md)**
 
+> [!WARNING]
+> This library is currently in beta. APIs are still subject to breaking changes before a stable release.
+
 ![Single, range, and multiple date calendar previews](./Preview.png)
 
 ## Why developers reach for it
@@ -199,8 +202,8 @@ function BookingCalendar() {
       allowSameDay
       maxRangeDays={14}
       disabledInRangeBehavior="reject"
-      onConfirm={({ startDate, endDate }) => {
-        console.log({ startDate, endDate });
+      onConfirm={({ gregorianStartDate, gregorianEndDate }) => {
+        console.log({ gregorianStartDate, gregorianEndDate });
       }}
     >
       <RangeGrid />
@@ -401,9 +404,9 @@ Callbacks receive native `Date` values plus active-system date parts and `system
 
 ```ts
 type SingleSelectionPayload = {
-  date: Date | undefined;
-  parts: DateParts | undefined;
+  gregorianDate: Date | undefined;
   systemId: string;
+  system: DateParts | undefined;
 };
 ```
 

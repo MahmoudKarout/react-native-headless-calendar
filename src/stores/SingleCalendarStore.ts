@@ -10,11 +10,15 @@ import {
   resolveInitialSystem,
 } from './BaseCalendarStore';
 import type { BaseDayCellFields, CalendarDaysView } from './storeTypes';
+import { toPayloadDate } from '../utils/payloadDate';
 
 export interface SingleSelectionPayload {
-  date: Date | undefined;
-  parts: DateParts | undefined;
+  /** Always Gregorian, anchored at UTC midnight of the selected day. */
+  gregorianDate: Date | undefined;
+  /** Identifier of the active calendar system at the time of selection. */
   systemId: string;
+  /** Selected day expressed in the active calendar system (month is 0-indexed). */
+  system: DateParts | undefined;
 }
 
 export type SingleOnConfirm = (payload: SingleSelectionPayload) => void;
@@ -161,15 +165,15 @@ export class SingleCalendarStore<
     const s = this.snapshot;
     const sel = s.selectedDate;
     return {
-      date: sel ? s.system.toNativeDate(sel) : undefined,
-      parts: sel
+      gregorianDate: sel ? toPayloadDate(s.system, sel) : undefined,
+      systemId: s.system.id,
+      system: sel
         ? {
             year: s.system.year(sel),
             month: s.system.month(sel),
             day: s.system.day(sel),
           }
         : undefined,
-      systemId: s.system.id,
     };
   }
 

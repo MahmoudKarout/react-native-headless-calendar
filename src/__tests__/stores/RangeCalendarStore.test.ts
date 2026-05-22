@@ -221,8 +221,10 @@ describe('RangeCalendarStore — clear / confirm / payload', () => {
     store.confirm();
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({
-        startParts: { year: 2024, month: 4, day: 10 },
-        endParts: { year: 2024, month: 4, day: 20 },
+        system: {
+          start: { year: 2024, month: 4, day: 10 },
+          end: { year: 2024, month: 4, day: 20 },
+        },
         systemId: 'gregorian',
       })
     );
@@ -253,10 +255,9 @@ describe('RangeCalendarStore — clear / confirm / payload', () => {
     store.confirm();
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({
-        startDate: undefined,
-        endDate: undefined,
-        startParts: undefined,
-        endParts: undefined,
+        gregorianStartDate: undefined,
+        gregorianEndDate: undefined,
+        system: { start: undefined, end: undefined },
       })
     );
   });
@@ -267,10 +268,9 @@ describe('RangeCalendarStore — clear / confirm / payload', () => {
     store.confirm();
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({
-        startDate: undefined,
-        endDate: undefined,
-        startParts: undefined,
-        endParts: undefined,
+        gregorianStartDate: undefined,
+        gregorianEndDate: undefined,
+        system: { start: undefined, end: undefined },
       })
     );
   });

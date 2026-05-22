@@ -47,7 +47,7 @@ Date inputs (`minDate`, `initialDate`, …) accept anything your active system's
 **Payload** (`SingleSelectionPayload`):
 
 ```ts
-{ date?: Date; parts?: { year, month, day }; systemId: string }
+{ gregorianDate?: Date; systemId: string; system?: { year, month, day } }
 ```
 
 Hooks: `useSingleCalendarSelector`, `useSingleCalendarActions`, `selectSingleDays`, `selectSingleMonths`, `selectSingleYears`, `selectSingleCanConfirm`.
@@ -62,7 +62,7 @@ Hooks: `useSingleCalendarSelector`, `useSingleCalendarActions`, `selectSingleDay
   minRangeDays={2}
   maxRangeDays={14}
   disabledInRangeBehavior="reject"
-  onConfirm={({ startDate, endDate, startParts, endParts, systemId }) => {}}
+  onConfirm={({ gregorianStartDate, gregorianEndDate, system, systemId }) => {}}
 >
   {children}
 </RangeDateProvider>
@@ -112,11 +112,13 @@ Exported type: `DisabledInRangeBehavior` from `react-native-headless-calendar`.
 
 ```ts
 {
-  startDate?: Date;
-  endDate?: Date;
-  startParts?: DateParts;
-  endParts?: DateParts;
+  gregorianStartDate?: Date;
+  gregorianEndDate?: Date;
   systemId: string;
+  system: {
+    start?: DateParts;
+    end?: DateParts;
+  };
 }
 ```
 
@@ -128,7 +130,7 @@ Hooks: `useRangeCalendarSelector`, `useRangeCalendarActions`, `selectRangeDays`,
 <MultipleDateProvider
   initialDates={[new Date()]}
   maxSelected={5}
-  onConfirm={({ dates, parts, systemId }) => {}}
+  onConfirm={({ gregorianDates, system, systemId }) => {}}
 >
   {children}
 </MultipleDateProvider>
@@ -142,7 +144,7 @@ Hooks: `useRangeCalendarSelector`, `useRangeCalendarActions`, `selectRangeDays`,
 **Payload** (`MultipleSelectionPayload`):
 
 ```ts
-{ dates: readonly Date[]; parts: readonly DateParts[]; systemId: string }
+{ gregorianDates: readonly Date[]; systemId: string; system: readonly DateParts[] }
 ```
 
 Hooks: `useMultipleCalendarSelector`, `useMultipleCalendarActions`, `selectMultipleDays`, …
@@ -152,7 +154,7 @@ Hooks: `useMultipleCalendarSelector`, `useMultipleCalendarActions`, `selectMulti
 Providers call `store.configure(...)` on every render (via `useLayoutEffect`). Inline callbacks and arrays are stabilised internally so you can write:
 
 ```tsx
-onConfirm={({ date }) => setPicked(date)}
+onConfirm={({ gregorianDate }) => setPicked(gregorianDate)}
 systems={[gregorianSystem]}
 modifiers={{ booked: [someDate] }}
 ```

@@ -11,13 +11,20 @@ import {
   resolveInitialSystem,
 } from './BaseCalendarStore';
 import type { BaseDayCellFields, CalendarDaysView } from './storeTypes';
+import { toPayloadDate } from '../utils/payloadDate';
 
 export interface RangeSelectionPayload {
-  startDate: Date | undefined;
-  endDate: Date | undefined;
-  startParts: DateParts | undefined;
-  endParts: DateParts | undefined;
+  /** Range start as a Gregorian `Date`, anchored at UTC midnight. */
+  gregorianStartDate: Date | undefined;
+  /** Range end as a Gregorian `Date`, anchored at UTC midnight. */
+  gregorianEndDate: Date | undefined;
+  /** Identifier of the active calendar system at the time of selection. */
   systemId: string;
+  /** Range endpoints expressed in the active calendar system (month is 0-indexed). */
+  system: {
+    start: DateParts | undefined;
+    end: DateParts | undefined;
+  };
 }
 
 export type RangeOnConfirm = (payload: RangeSelectionPayload) => void;
@@ -331,11 +338,17 @@ export class RangeCalendarStore<
       day: s.system.day(d),
     });
     return {
-      startDate: s.rangeStart ? s.system.toNativeDate(s.rangeStart) : undefined,
-      endDate: s.rangeEnd ? s.system.toNativeDate(s.rangeEnd) : undefined,
-      startParts: s.rangeStart ? toParts(s.rangeStart) : undefined,
-      endParts: s.rangeEnd ? toParts(s.rangeEnd) : undefined,
+      gregorianStartDate: s.rangeStart
+        ? toPayloadDate(s.system, s.rangeStart)
+        : undefined,
+      gregorianEndDate: s.rangeEnd
+        ? toPayloadDate(s.system, s.rangeEnd)
+        : undefined,
       systemId: s.system.id,
+      system: {
+        start: s.rangeStart ? toParts(s.rangeStart) : undefined,
+        end: s.rangeEnd ? toParts(s.rangeEnd) : undefined,
+      },
     };
   }
 

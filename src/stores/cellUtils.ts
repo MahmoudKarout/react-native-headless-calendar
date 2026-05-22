@@ -1,4 +1,4 @@
-import { shallowModifiersEqual } from './BaseCalendarStore';
+import { shallowModifiersEqual } from '../utils/shallowModifiersEqual';
 import type { BaseDayCellFields } from './storeTypes';
 
 /** Shallow cell equality for the shared base fields plus optional mode flags. */
