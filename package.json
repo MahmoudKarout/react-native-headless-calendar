@@ -1,6 +1,6 @@
 {
   "name": "react-native-headless-calendar",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A fast, headless, calendar-system-agnostic (Gregorian, Hijri, Jalali, or your own) React Native calendar for building fully custom date pickers, range pickers, and multi-date calendars.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
